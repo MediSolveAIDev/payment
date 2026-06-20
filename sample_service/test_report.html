@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>sample_service 테스트 리포트</title>
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #f5f7fa; color: #1a202c; font-size: 14px; line-height: 1.6;
+}
+.page-header {
+    background: linear-gradient(135deg, #276749 0%, #38a169 100%);
+    color: #fff; padding: 28px 40px 24px;
+}
+.page-header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; }
+.page-header .meta { opacity: 0.85; font-size: 0.85rem; }
+.summary-bar {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    padding: 18px 40px; background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.stat-card { border-radius: 8px; padding: 10px 18px; min-width: 100px; text-align: center; }
+.stat-card .num { font-size: 1.7rem; font-weight: 800; line-height: 1; }
+.stat-card .lbl { font-size: 0.72rem; margin-top: 4px; opacity: 0.7; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.stat-total { background: #ebf4ff; color: #1a365d; }
+.stat-pass  { background: #f0fff4; color: #22543d; }
+.stat-fail  { background: #fff5f5; color: #742a2a; }
+.content { padding: 24px 40px 60px; max-width: 1200px; }
+.overall-ok  { background:#c6f6d5; border:1px solid #68d391; color:#22543d; border-radius:8px; padding:12px 18px; margin-bottom:20px; font-weight:700; }
+.overall-fail{ background:#fed7d7; border:2px solid #fc8181; color:#742a2a; border-radius:8px; padding:12px 18px; margin-bottom:20px; font-weight:700; }
+.class-section { margin-bottom: 32px; }
+.class-title {
+    font-size: 1rem; font-weight: 700; color: #2d3748;
+    border-left: 4px solid #38a169; padding-left: 10px; margin-bottom: 10px;
+}
+table { width:100%; border-collapse:collapse; background:#fff; border-radius:0 0 8px 8px;
+        box-shadow:0 1px 3px rgba(0,0,0,.07); overflow:hidden; font-size:0.82rem; }
+thead th { background:#f7fafc; color:#718096; font-weight:700; font-size:0.72rem;
+           text-transform:uppercase; letter-spacing:0.05em; padding:8px 12px;
+           text-align:left; border-bottom:2px solid #e2e8f0; }
+tbody tr { border-bottom:1px solid #edf2f7; }
+tbody tr:last-child { border-bottom:none; }
+tbody tr:hover { background:#f7fafc; }
+tbody tr.row-fail { background:#fff5f5; }
+td { padding:7px 12px; vertical-align:top; }
+td.tc-name { font-family:"SFMono-Regular",Consolas,monospace; font-size:0.78rem; color:#2d3748; max-width:320px; word-break:break-all; }
+td.tc-desc { color:#4a5568; }
+.badge { display:inline-block; border-radius:4px; padding:2px 9px; font-size:0.72rem; font-weight:700; }
+.badge.pass { background:#c6f6d5; color:#22543d; }
+.badge.fail { background:#fed7d7; color:#742a2a; border:1px solid #fc8181; }
+</style>
+</head>
+<body>
+<div class="page-header">
+  <h1>sample_service (Django) 테스트 리포트</h1>
+  <div class="meta">생성 시각: 2026-06-19 10:41 UTC | 실행 시간: 0.238s</div>
+</div>
+<div class="summary-bar">
+  <div class="stat-card stat-total"><div class="num">75</div><div class="lbl">전체</div></div>
+  <div class="stat-card stat-pass"><div class="num">74</div><div class="lbl">통과</div></div>
+  <div class="stat-card stat-fail"><div class="num">0</div><div class="lbl">실패</div></div>
+</div>
+<div class="content">
+<div class="overall-ok">✅ 전체 통과 — Ran 75 tests in 0.238s: OK</div>
+  <section class="class-section">
+    <h2 class="class-title">AuthFlowTest (8건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_login_creates_user_with_customer_key</td><td class="tc-desc">로그인 성공 — 활성 서비스 있으면 /plans 로 유도(새 흐름)</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_login_page_without_active_service_redirects_to_root</td><td class="tc-desc">활성 서비스 없이 /login(GET) → / 로 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_login_rejects_invalid_email</td><td class="tc-desc">잘못된 이메일 형식 → 200(에러 표시), 사용자 미생성</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_login_required_redirect_uses_login_path</td><td class="tc-desc">/plans 비로그인 접근: 활성 서비스 없으면 /(서비스 먼저)</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_login_with_active_service_creates_user_and_redirects</td><td class="tc-desc">활성 서비스 세팅 후 POST /login → 사용자 생성 + /plans 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_plans_with_service_no_login_redirects_to_login</td><td class="tc-desc">활성 서비스 있고 비로그인 → /login 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_root_is_services_no_login_required</td><td class="tc-desc">비로그인으로 /(GET) → 서비스 선택 화면 200(로그인 리다이렉트 아님)</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_services_page_shows_registered_emails</td><td class="tc-desc">첫 화면(서비스 선택)에 현재 등록된 이메일 목록이 함께 표시된다</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">BillingSuccessRegistersCardTest (3건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_success_registers_card_and_redirects_next</td><td class="tc-desc">authKey/customerKey 정상 → register_card 호출 + next 경로로 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_success_rejects_bad_customer_key</td><td class="tc-desc">customerKey 불일치 → register_card 미호출 + /card 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_success_rejects_external_next</td><td class="tc-desc">외부 URL next 는 무시하고 /card 로(오픈 리다이렉트 방지)</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">CardVaultClientTest (6건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_change_card_removed</td><td class="tc-desc">카드 변경 전용 함수(change_card)는 제거되었다 — 재등록(register_card)로 통합</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_create_one_off_no_auth_key</td><td class="tc-desc">create_one_off_payment 본문에 auth_key/customer_key 가 없다(카드 보관함 전환)</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_create_subscription_no_auth_key</td><td class="tc-desc">create_subscription 본문에 auth_key/customer_key 가 없다(카드 보관함 전환)</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_delete_card_deletes_cards</td><td class="tc-desc">delete_card → DELETE /api/v1/cards/{external_user_id}</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_get_card_gets_cards</td><td class="tc-desc">get_card → GET /api/v1/cards/{external_user_id}</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_register_card_posts_cards</td><td class="tc-desc">register_card → POST /api/v1/cards, 본문 {external_user_id, customer_key, auth_key}</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">CardViewTest (5건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_card_delete_calls_api_and_redirects</td><td class="tc-desc">POST /card (delete=1) → delete_card 호출 + /card 리다이렉트 + 성공 메시지</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_card_delete_conflict_shows_message</td><td class="tc-desc">사용 중 카드 삭제(409) → 에러 메시지 표시</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_card_no_card_shows_register</td><td class="tc-desc">카드 미등록(404)이면 등록 유도 화면 — '카드 등록창 열기' 노출</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_card_requires_login</td><td class="tc-desc">비로그인 /card → 활성 서비스 없으면 / 로 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_card_shows_registered_card</td><td class="tc-desc">등록 카드가 있으면 마스킹 번호 + '카드 변경(재등록)'/'카드 삭제' 노출</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">GetPaymentsClientTest (2건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_calls_correct_path</td><td class="tc-desc">get_payments(uid) → _request("GET", "/api/v1/payments/{uid}")["payments"]</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_returns_empty_on_no_history</td><td class="tc-desc">결제 내역이 없으면 빈 리스트 반환</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">HistoryViewTest (5건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_history_renders_oneoff_records_and_cancel_button</td><td class="tc-desc">OneOffRecord 있으면 단건 내역 + 미취소 건에 취소 버튼 표시</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_history_renders_subscription_payments</td><td class="tc-desc">get_payments mock 으로 구독 결제 내역이 렌더된다</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_history_requires_login</td><td class="tc-desc">비로그인 접근 → 활성 서비스 없으면 / 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_history_server_error_shows_message</td><td class="tc-desc">get_payments 예외 시 에러 메시지 표시 후 페이지 정상 렌더</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_history_shows_oneoff_cancel_fee_and_refund</td><td class="tc-desc">서버 API가 반환한 단건 취소 수수료/환불 예정액이 결제내역에 표시된다</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">MySubscriptionViewTest (3건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_my_no_subscription</td><td class="tc-desc"></td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_my_renders_subscription</td><td class="tc-desc"></td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_my_requires_login</td><td class="tc-desc">비로그인 /my → 활성 서비스 없으면 / 로</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">MyViewPastDueTest (2건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_past_due_shows_manual_pay_button</td><td class="tc-desc">PAST_DUE 상태에서 '수동 결제' 버튼이 렌더된다</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_suspended_shows_manual_pay_button</td><td class="tc-desc">SUSPENDED 상태에서도 '수동 결제' 버튼이 렌더된다(기존 동작 유지)</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">OneOffCancelRecordTest (2건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_cancel_api_error_does_not_update_record</td><td class="tc-desc">API 에러 시 canceled 상태 변경 없이 /history 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_cancel_updates_record_and_redirects_to_history</td><td class="tc-desc">취소 성공 시 canceled=True 업데이트 + /history 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">OneOffCancelViewTest (4건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_cancel_api_error_shows_message</td><td class="tc-desc">PaymentAPIError(취소불가 포함) → messages.error + /history 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_cancel_connection_error_shows_message</td><td class="tc-desc">연결 오류(Exception) → messages.error + /pay 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_cancel_requires_login</td><td class="tc-desc">비로그인 POST → 활성 서비스 없으면 / 로 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_cancel_success_redirects_with_message</td><td class="tc-desc">성공 시 messages.success + /history 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">OneOffPaymentFlowTest (5건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_pay_form_renders</td><td class="tc-desc"></td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_pay_post_404_redirects_to_card</td><td class="tc-desc">카드 미등록(404)으로 결제 실패 시 카드 등록 화면(/card?next=/pay)으로 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_pay_post_charges_registered_card</td><td class="tc-desc">POST /pay → 등록 카드로 즉시 결제(토스 인증 없이 create_one_off_payment 호출)</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_pay_rejects_bad_amount</td><td class="tc-desc"></td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_pay_requires_login</td><td class="tc-desc">비로그인 /pay → 활성 서비스 없으면 / 로 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">OneOffRecordCreationTest (2건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_oneoff_api_error_does_not_create_record</td><td class="tc-desc">API 에러 시 OneOffRecord 생성 안 됨</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_oneoff_success_creates_record</td><td class="tc-desc">POST /pay 성공 → OneOffRecord 생성(카드 보관함 전환: 즉시 결제)</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">PlansViewTest (3건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_plans_shows_auto_renew_false_badge</td><td class="tc-desc">auto_renew=False 인 요금제에 '자동결제 안함' 배지가 표시된다</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_plans_shows_extra_info</td><td class="tc-desc">extra_info 가 있으면 key: value 목록이 표시된다</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_plans_shows_first_amount</td><td class="tc-desc"></td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">ReauthRedirectTest (4건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_action_view_cancel_401_redirects_to_reauth_with_message</td><td class="tc-desc">_action_view(cancel) — 401 에러 시 /services?reauth=&lt;service_id&gt; 리다이렉트 + 경고 메시지</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_history_401_redirects_to_reauth</td><td class="tc-desc">history_view — 401 에러 시 /services?reauth=svc-reauth 로 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_my_401_redirects_to_reauth</td><td class="tc-desc">my_view — 401 에러 시 /services?reauth=svc-reauth 로 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_plans_401_redirects_to_reauth</td><td class="tc-desc">plans_view — 401 에러 시 /services?reauth=svc-reauth 로 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">ServiceFlowRedirectTest (6건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_save_key_logged_in_redirects_to_plans</td><td class="tc-desc">로그인 상태에서 키 저장 → /plans 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_save_key_not_logged_in_redirects_to_login</td><td class="tc-desc">비로그인 상태에서 키 저장 → /login 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_select_logged_in_redirects_to_plans</td><td class="tc-desc">로그인 상태에서 저장된 서비스 선택 → /plans 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_select_not_logged_in_redirects_to_login</td><td class="tc-desc">비로그인 상태에서 저장된 서비스 선택 → /login 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_select_with_email_logs_in_and_redirects_to_plans</td><td class="tc-desc">비로그인 상태라도 이메일을 함께 선택해 서비스 시작 → 그 이메일로 로그인 + /plans</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_select_with_invalid_email_rejected</td><td class="tc-desc">이메일 형식이 잘못되면 로그인하지 않고 /services 로 에러 복귀</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">ServicesSelectTest (7건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_save_key_missing_fields_shows_error</td><td class="tc-desc">필수 필드 누락 — 에러 메시지 + /services 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_save_key_persists_and_activates</td><td class="tc-desc">POST /services/save-key — ServiceCredential 생성 + session service_id 설정 + /plans</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_save_key_update_or_create</td><td class="tc-desc">기존 서비스 키 갱신 — update_or_create 동작 확인</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_select_requires_saved_key</td><td class="tc-desc">저장 키 없이 select → /services 리다이렉트 + 에러 메시지</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_select_with_saved_key_activates</td><td class="tc-desc">저장된 키가 있는 서비스 select → 활성화 + /plans(로그인 상태)</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_services_lists_and_marks_saved</td><td class="tc-desc">GET /services — 서버 목록 렌더 + 저장 안 된 서비스에 키 입력 폼 노출</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_services_marks_saved_service</td><td class="tc-desc">이미 저장된 서비스는 '키 저장됨' + 선택 버튼 표시</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">SignRequestCompatTest (2건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_get_empty_body_matches_server_vector</td><td class="tc-desc"></td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_post_with_body_matches_server_vector</td><td class="tc-desc"></td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+  <section class="class-section">
+    <h2 class="class-title">SubscribeFlowTest (5건)</h2>
+    <table>
+      <thead><tr><th>테스트케이스</th><th>설명</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td class="tc-name">test_billing_success_requires_login</td><td class="tc-desc"></td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_subscribe_page_guides_to_card_when_missing</td><td class="tc-desc">등록 카드가 없으면(404) 카드 등록 화면(/card?next=…)으로 유도하는 링크 노출</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_subscribe_page_shows_confirm_when_card_exists</td><td class="tc-desc">등록 카드가 있으면 확인 화면 — 토스 SDK 없이 '구독하기' 버튼 노출</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_subscribe_post_404_redirects_to_card</td><td class="tc-desc">카드 미등록(404)으로 구독 실패 시 카드 등록 화면(/card?next=…)으로 리다이렉트</td><td><span class="badge pass">통과</span></td></tr>
+        <tr><td class="tc-name">test_subscribe_post_creates_subscription_without_auth_key</td><td class="tc-desc">POST /subscribe/&lt;id&gt; → 토스 authKey 없이 create_subscription 호출</td><td><span class="badge pass">통과</span></td></tr>
+      </tbody></table>
+  </section>
+</div>
+</body>
+</html>

@@ -1,0 +1,113 @@
+{% extends "shop/base.html" %}
+{% load humanize %}
+{% block title %}결제 내역{% endblock %}
+{% block content %}
+{% comment %}
+   결제 내역 화면 — Django의 {# #} 주석은 한 줄만 지원하므로 여러 줄은 {% comment %} 사용.
+   ① 구독 결제: 서버 GET /api/v1/payments/{uid} 중 kind=SUBSCRIPTION
+   ② 단건 결제: 로컬 OneOffRecord + 서버가 반환한 취소 수수료 정보 결합
+{% endcomment %}
+<div class="page-head">
+  <h1>결제 내역</h1>
+  <p>구독 정기결제(서버 조회)와 단건 결제(로컬 기록 + 서버 취소정보)를 한 화면에서 봅니다.</p>
+</div>
+
+{% if pay_error %}<div class="msg msg-error"><span>⚠️</span><span>{{ pay_error }}</span></div>{% endif %}
+
+<h2 style="font-size:16px;font-weight:600;margin:4px 0 10px">구독 결제</h2>
+{% if sub_payments %}
+<div class="table-card">
+  <table class="list">
+    <thead><tr>
+      <th>주문번호</th><th>유형</th><th>상태</th><th class="num">금액</th><th>요청일시</th><th>승인일시</th><th>실패정보</th>
+    </tr></thead>
+    <tbody>
+      {% for p in sub_payments %}
+      <tr>
+        <td class="mono" style="font-size:12px">{{ p.order_id }}</td>
+        <td><span class="badge">{{ p.payment_type|default:"-" }}</span></td>
+        <td><span class="badge st-{{ p.status }}">{{ p.status }}</span></td>
+        <td class="num"><b>{{ p.amount|intcomma }}원</b></td>
+        <td class="muted" style="font-size:12px">{{ p.requested_at|default:"-" }}</td>
+        <td class="muted" style="font-size:12px">{{ p.approved_at|default:"-" }}</td>
+        <td style="font-size:12px;color:var(--red)">
+          {% if p.failure_code %}{{ p.failure_code }}{% if p.failure_message %}<br><span class="muted">{{ p.failure_message }}</span>{% endif %}{% else %}<span class="muted">-</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card"><p class="muted">구독 결제 내역이 없습니다.{% if not pay_error %} 구독 후 결제가 발생하면 여기에 표시됩니다.{% endif %}</p></div>
+{% endif %}
+
+<h2 style="font-size:16px;font-weight:600;margin:22px 0 10px">단건 결제</h2>
+{% if oneoff_records %}
+<div class="table-card">
+  <table class="list">
+    <thead><tr>
+      <th>상품명</th><th class="num">금액</th><th class="num">취소 수수료</th><th class="num">환불액</th><th class="num">실수령액</th>
+      <th>주문번호</th><th>일시</th><th>상태</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for rec in oneoff_records %}
+      <tr>
+        <td><b>{{ rec.order_name }}</b></td>
+        <td class="num"><b>{{ rec.amount|intcomma }}원</b></td>
+        {# 취소 전: '취소 시 차감될 예상' 수수료/환불액 · (부분)취소 후: 서버 기록 실제 값 #}
+        <td class="num" style="color:var(--red)">{{ rec.cancel_fee|intcomma }}원
+          {% if rec.cancel_fee_percent %}<span class="muted" style="font-size:11px">({{ rec.cancel_fee_percent }}%)</span>{% endif %}</td>
+        <td class="num">{{ rec.cancel_refund_amount|intcomma }}원</td>
+        {# 실수령액 = 결제금액 − 누적 환불액(부분취소 반영). 서버 net_amount 사용 #}
+        <td class="num"><b>{{ rec.net_amount|intcomma }}원</b></td>
+        <td class="mono" style="font-size:12px">{{ rec.order_id }}</td>
+        <td class="muted" style="font-size:12px">{{ rec.created_at }}</td>
+        {# 상태는 서버 기준(어드민 취소도 반영): 취소됨 / 부분취소 / 완료 #}
+        <td>{% if rec.cancel_state == '취소됨' %}<span class="badge st-CANCELED">취소됨</span>
+            {% elif rec.cancel_state == '부분취소' %}<span class="badge st-PAST_DUE">부분취소</span>
+            {% else %}<span class="badge st-DONE">완료</span>{% endif %}</td>
+        <td>
+          {# 서버가 취소 가능(cancelable)이라고 한 건만 취소 버튼 노출 — 이미 (부분)취소된 건은 숨김 #}
+          {% if rec.cancelable %}
+          <form method="post" action="/pay/cancel" style="display:inline">
+            {% csrf_token %}
+            <input type="hidden" name="order_id" value="{{ rec.order_id }}">
+            <button class="btn btn-danger sm" type="submit"
+                    onclick="return confirm('이 결제를 취소(환불)하시겠습니까?\n취소 수수료 {{ rec.cancel_fee }}원이 차감되고 {{ rec.cancel_refund_amount }}원이 환불됩니다.')">취소</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card"><p class="muted">단건 결제 내역이 없습니다. <a href="/pay">일반 결제</a>를 진행하면 여기에 기록됩니다.</p></div>
+{% endif %}
+
+<details class="dev-note">
+  <summary>🔍 <b>개발자 노트</b> — 내역 조회와 취소 수수료 <span class="hint">GET /api/v1/payments/{uid}</span></summary>
+  <div class="body">
+    <div class="api">
+      <h4>호출하는 API</h4>
+      <div class="ep"><span class="m">GET</span> <code>/api/v1/payments/{external_user_id}</code> — 구독+단건 결제 전체(최신 50건) <code>get_payments()</code></div>
+      <div class="ep"><span class="m post">POST</span> <code>/api/v1/payments/{order_id}/cancel</code> — 단건 취소 <code>cancel_one_off_payment()</code></div>
+    </div>
+    <div>
+      <h4>핵심 규칙</h4>
+      <ul>
+        <li>응답의 각 결제에 <code>cancelable / cancel_fee / cancel_refund_amount / cancel_fee_percent</code>가 포함 —
+          <b style="color:#fff">취소 전엔 예상값, 취소 후엔 실제값</b>. 수수료 계산을 직접 구현하지 말 것</li>
+        <li>단건 결제의 상품명·취소여부는 이 서비스의 로컬 DB(<code>OneOffRecord</code>)와 <code>order_id</code>로 매칭해 표시</li>
+        <li>취소 정책이 꺼진 서비스(<code>cancellation_enabled=False</code>)는 취소 시 <code>CANCEL_DISABLED</code> 에러가 반환된다</li>
+      </ul>
+    </div>
+    <div>
+      <h4>구현 위치</h4>
+      <ul><li><code class="file">shop/views.py</code> → <code>history_view()</code> (두 데이터 결합 로직 주석 참고)</li></ul>
+    </div>
+  </div>
+</details>
+{% endblock %}

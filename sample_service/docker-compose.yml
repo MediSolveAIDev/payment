@@ -1,0 +1,43 @@
+# sample_service(Django 데모 상점) — 테스트 전용 단일 컨테이너.
+# payment_system(결제서버) 연동을 브라우저에서 눌러 확인하는 용도다(운영용 아님).
+#
+# 실행:  docker compose up -d --build      (이 sample_service 디렉터리에서)
+# 접속:  http://localhost:8001
+# 종료:  docker compose down
+#
+# 전제: 결제서버(payment_system)가 prod compose로 떠 있어야 한다.
+#       sample을 결제서버의 도커 네트워크(payment_system_default)에 붙여,
+#       FastAPI app 컨테이너에 내부 HTTP(app:8000)로 직접 연결한다.
+#       (nginx의 https://localhost 는 자체 서명 인증서라 컨테이너에서 호스트명/TLS가 안 맞음 →
+#        테스트는 nginx를 거치지 않고 app에 직접 붙는 게 가장 확실하다.)
+
+services:
+  sample:
+    build: .
+    # .env(서비스 키·토스 클라이언트 키 등)를 컨테이너 환경변수로 주입
+    env_file:
+      - .env
+    environment:
+      # 같은 도커 네트워크의 결제서버 app 컨테이너를 이름으로 직접 호출(TLS·포트 매핑 불필요).
+      PAYMENT_API_BASE: http://app:8000
+      DEBUG: "True"
+      # SQLite를 볼륨에 둬서 컨테이너를 내려도(down) 데이터 유지(아래 sample-db 볼륨).
+      SQLITE_PATH: /app/data/db.sqlite3
+    networks:
+      - payment_net
+    ports:
+      - "8001:8000"     # 브라우저 접속용(호스트 8001 → 컨테이너 8000)
+    volumes:
+      - sample-db:/app/data   # DB 영속 — `docker compose down -v` 로만 삭제됨
+    restart: "no"        # 테스트 전용 — 자동 재시작 안 함
+
+# DB 영속용 named volume — down/up/재빌드에도 유지된다(완전 삭제는 down -v).
+volumes:
+  sample-db:
+
+# 결제서버(payment_system) compose가 만든 네트워크에 합류한다.
+# 이름 확인: docker network ls | grep payment   (보통 payment_system_default)
+networks:
+  payment_net:
+    external: true
+    name: payment_system_default

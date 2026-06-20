@@ -1,0 +1,107 @@
+{% extends "shop/base.html" %}
+{% load humanize %}
+{% block title %}내 구독{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>내 구독</h1>
+  <p>구독 상태에 따라 가능한 동작(취소·재개·카드 변경·수동 결제)이 달라집니다 — 버튼이 상태 머신을 그대로 보여줍니다.</p>
+</div>
+
+{% if error %}<div class="msg msg-error"><span>⚠️</span><span>{{ error }}</span></div>{% endif %}
+
+{% if sub %}
+{% if sub.status == 'PAST_DUE' %}
+<div class="msg msg-warn"><span>⏳</span>
+  <span><b>결제가 연체된 상태입니다(PAST_DUE).</b> 서버가 자동 재시도 중이며{% if sub.retry_count %} (현재 {{ sub.retry_count }}회 시도됨){% endif %},
+  아래 <b>수동 결제</b>로 즉시 정상화할 수 있습니다. 연체 중에도 접근은 허용됩니다.</span></div>
+{% elif sub.status == 'SUSPENDED' %}
+<div class="msg msg-error"><span>⛔</span>
+  <span><b>재시도 한도를 넘어 정지된 상태입니다(SUSPENDED).</b> 접근이 차단되며, 유예 기간 안에
+  <b>수동 결제</b> 또는 <b>카드 변경 후 수동 결제</b>로 복구할 수 있습니다.</span></div>
+{% elif sub.status == 'CANCELED' %}
+<div class="msg msg-warn"><span>📅</span>
+  <span><b>취소 예약 상태입니다(CANCELED).</b> 만료일까지는 이용 가능하며, 만료 전이라면 <b>재개</b>로 되돌릴 수 있습니다.</span></div>
+{% endif %}
+
+<div class="card accent">
+  <div class="row">
+    <div>
+      <div style="font-weight:600;font-size:18px">
+        {{ sub.plan_name }}
+        <span class="badge st-{{ sub.status }}">{{ sub.status }}</span>
+        <span class="badge {% if sub.access_allowed %}st-DONE{% else %}st-FAILED{% endif %}">접근 {{ sub.access_allowed|yesno:"허용,차단" }}</span>
+      </div>
+      <div class="divider"></div>
+      <div class="muted" style="display:grid;gap:4px;font-size:13.5px">
+        <span>이용 기간 &nbsp;<b style="color:var(--ink)">{{ sub.current_period_start }} ~ {{ sub.current_period_end }}</b></span>
+        <span>다음 결제 &nbsp;<b style="color:var(--ink)">{{ sub.next_billing_at|default:"예정 없음" }}</b></span>
+        <span>결제 카드 &nbsp;<b style="color:var(--ink)" class="mono">{{ sub.card.number|default:"-" }}</b>
+          {% if sub.retry_count %}· <span style="color:var(--amber)">재시도 {{ sub.retry_count }}회</span>{% endif %}</span>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap">
+    {% if sub.status == 'ACTIVE' or sub.status == 'TRIAL' %}
+      {# 정상·체험: 취소 + 카드 변경 #}
+      <form method="post" action="/my/cancel" onsubmit="return confirm('만료일까지 이용 후 종료됩니다. 취소할까요?')">
+        {% csrf_token %}<button class="btn btn-danger" type="submit">구독 취소</button></form>
+      <a class="btn btn-ghost" href="/card">카드 변경</a>
+    {% elif sub.status == 'PAST_DUE' %}
+      {# 연체: 수동 결제(주 동작) + 카드 변경 + 취소 #}
+      <form method="post" action="/my/pay">{% csrf_token %}
+        <button class="btn btn-primary" type="submit">지금 수동 결제</button></form>
+      <a class="btn btn-ghost" href="/card">카드 변경</a>
+      <form method="post" action="/my/cancel" onsubmit="return confirm('만료일까지 이용 후 종료됩니다. 취소할까요?')">
+        {% csrf_token %}<button class="btn btn-danger" type="submit">구독 취소</button></form>
+    {% elif sub.status == 'CANCELED' %}
+      {# 취소 예약: 재개 #}
+      <form method="post" action="/my/resume">{% csrf_token %}
+        <button class="btn btn-primary" type="submit">구독 재개</button></form>
+    {% elif sub.status == 'SUSPENDED' %}
+      {# 정지: 수동 결제 + 카드 변경 #}
+      <form method="post" action="/my/pay">{% csrf_token %}
+        <button class="btn btn-primary" type="submit">지금 수동 결제</button></form>
+      <a class="btn btn-ghost" href="/card">카드 변경</a>
+    {% endif %}
+    {# 사용일 추가는 운영자(어드민) 전용 기능이라 사용자 화면에서는 제공하지 않는다. #}
+  </div>
+</div>
+
+{% else %}
+<div class="card" style="text-align:center;padding:42px 24px">
+  <div style="font-size:34px;margin-bottom:8px">📭</div>
+  <p class="muted" style="margin-bottom:16px">아직 구독이 없습니다. 요금제를 골라 시작해보세요.</p>
+  <a class="btn btn-primary" href="/plans">요금제 보러가기</a>
+</div>
+{% endif %}
+
+<details class="dev-note">
+  <summary>🔍 <b>개발자 노트</b> — 구독 상태 머신과 라이프사이클 API <span class="hint">5개 엔드포인트</span></summary>
+  <div class="body">
+    <div class="api">
+      <h4>호출하는 API (모두 payment_client.py 한 줄 호출)</h4>
+      <div class="ep"><span class="m">GET</span> <code>/api/v1/subscriptions/{external_user_id}</code> — 조회 <code>get_subscription()</code></div>
+      <div class="ep"><span class="m post">POST</span> <code>…/cancel</code> — 취소(만료일까지 유지) <code>cancel()</code></div>
+      <div class="ep"><span class="m post">POST</span> <code>…/resume</code> — 만료 전 재개 <code>resume()</code></div>
+      <div class="ep"><span class="m post">POST</span> <code>…/pay</code> — 수동 결제(연체·정지 복구) <code>manual_pay()</code></div>
+      <div class="ep"><span class="m post">POST</span> <code>/api/v1/cards</code> — 카드 변경(재등록=교체) <code>register_card()</code> · 별도 change-card 엔드포인트는 제거됨</div>
+    </div>
+    <div>
+      <h4>상태 머신 — 배지 색과 동일</h4>
+      <ul>
+        <li><code>TRIAL</code> 체험 → 만료 시 자동 첫 결제 → <code>ACTIVE</code></li>
+        <li><code>ACTIVE</code> 정상 → 갱신 실패 시 <code>PAST_DUE</code>(연체·접근 허용) → 재시도 소진 시 <code>SUSPENDED</code>(정지·접근 차단)</li>
+        <li><code>CANCELED</code> 취소 예약(만료일까지 이용) → 만료 시 <code>EXPIRED</code>(종단) / 만료 전 재개 가능</li>
+        <li>수동 결제 성공 시 <code>PAST_DUE</code>·<code>SUSPENDED</code> 모두 <code>ACTIVE</code>로 복귀(결제 기준일 리셋)</li>
+      </ul>
+    </div>
+    <div>
+      <h4>구현 위치</h4>
+      <ul>
+        <li>화면 로직: <code class="file">shop/views.py</code> → <code>my_view()</code>, 액션 공통 처리 <code>_action_view()</code></li>
+        <li>접근 제어는 응답의 <code>access_allowed</code>를 쓰면 된다 — 상태별 분기를 직접 구현할 필요 없음</li>
+      </ul>
+    </div>
+  </div>
+</details>
+{% endblock %}

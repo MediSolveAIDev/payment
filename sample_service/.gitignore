@@ -1,0 +1,18 @@
+# Python / 가상환경
+.venv/
+__pycache__/
+*.py[cod]
+
+# Django 로컬 DB·정적수집
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+
+# 시크릿(커밋 금지 — .env.example만 추적)
+.env
+
+# 생성물·로그
+*.log
+
+# 로컬 도구 설정
+.claude/

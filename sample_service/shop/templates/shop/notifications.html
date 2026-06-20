@@ -1,0 +1,79 @@
+{% extends "shop/base.html" %}
+{% block title %}받은 알림{% endblock %}
+{% block content %}
+{% comment %}
+   서비스 알림 수신 데모(요청 016) — 결제 서버가 POST /notify 로 보낸 알림 목록.
+   서명(HMAC) 검증 결과(verified)를 함께 표시한다.
+{% endcomment %}
+<div class="page-head">
+  <h1>받은 서비스 알림</h1>
+  <p>결제 서버가 보낸 구독·결제·카드·요금제 이벤트 알림입니다.</p>
+</div>
+
+{# 등록용 수신 URL 안내 — 결제 서버 어드민 '서비스 알림 URL'에 붙여넣는다.
+   샘플은 결제 서버와 '별도 docker'이므로 host.docker.internal:8001 을 등록해야 닿는다. #}
+<div class="card accent" style="margin-bottom:14px">
+  <h3 style="margin:0 0 8px">이 서비스의 알림 수신 URL</h3>
+  <p class="muted" style="font-size:13px;margin:0 0 8px">
+    결제 서버 어드민 → 서비스 상세 → <b>서비스 알림 URL</b>에 아래 주소를 등록하세요.
+    (결제 서버가 별도 docker라 <code>host.docker.internal</code>로 호스트의 8001 포트에 닿습니다.)
+  </p>
+  <div class="row" style="gap:8px;justify-content:flex-start">
+    <code id="notify-url" class="mono" style="background:var(--gray-100);padding:8px 12px;border-radius:8px">{{ notify_url_register }}</code>
+    <button class="btn btn-sub sm" type="button"
+            onclick="navigator.clipboard.writeText(document.getElementById('notify-url').textContent);this.textContent='복사됨'">복사</button>
+  </div>
+  <p class="muted" style="font-size:12px;margin:8px 0 0">
+    ⚠ <code>http://localhost:8001/notify</code>(결제 서버 컨테이너 자기 자신)·<code>http://sample:8000/notify</code>(다른 docker 네트워크)는 닿지 않습니다.
+    브라우저 접속 주소는 <code>{{ notify_url }}</code>.
+  </p>
+</div>
+
+{% if records %}
+<div class="table-card">
+  <table class="list">
+    <thead><tr>
+      <th>수신시각</th><th>EVENT</th><th>상태</th><th>사용자</th><th>주문/구독</th><th>설명</th><th>서명</th>
+    </tr></thead>
+    <tbody>
+      {% for r in records %}
+      <tr>
+        <td class="muted" style="font-size:12px">{{ r.received_at|date:"Y-m-d H:i:s" }}</td>
+        <td class="mono" style="font-size:12px"><b>{{ r.event }}</b></td>
+        <td>{% if r.status %}<span class="badge st-{{ r.status }}">{{ r.status }}</span>{% else %}-{% endif %}</td>
+        <td>{{ r.email|default:"-" }}</td>
+        <td class="mono" style="font-size:11px">{{ r.order_id|default:r.subscribe_id|default:"-" }}</td>
+        <td style="font-size:12px">{{ r.desc|default:"-" }}</td>
+        <td>{% if r.verified %}<span class="badge st-DONE">검증됨</span>{% else %}<span class="badge st-FAILED">미검증</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card"><p class="muted">받은 알림이 없습니다. 결제 서버 어드민에서 알림 URL을 등록하고
+  구독·결제·카드·요금제 동작을 하면 여기에 표시됩니다.</p></div>
+{% endif %}
+
+<details class="dev-note">
+  <summary>🔍 <b>개발자 노트</b> — 서비스 알림 수신 <span class="hint">POST /notify</span></summary>
+  <div class="body">
+    <div class="api">
+      <h4>수신 엔드포인트</h4>
+      <div class="ep"><span class="m post">POST</span> <code>/notify</code> — 결제 서버 → 이 서비스. JSON 본문 + <code>X-Signature/X-Timestamp/X-Nonce</code> 서명.</div>
+    </div>
+    <div>
+      <h4>핵심 규칙</h4>
+      <ul>
+        <li>서명 검증: <code>HMAC_SHA256(hmac_secret, "POST\n{path}\n{ts}\n{nonce}\n{sha256(body)}")</code> — API 호출 서명과 동일 방식</li>
+        <li>등록: 결제 서버 어드민 → 서비스 상세 → <b>서비스 알림 URL</b>에 <code>https://이서비스/notify</code> 입력</li>
+        <li>payload의 <code>EVENT</code>로 이벤트 종류를 구분하고, <code>DESC</code>에 금액 등 상세가 담긴다</li>
+      </ul>
+    </div>
+    <div>
+      <h4>구현 위치</h4>
+      <ul><li><code class="file">shop/views.py</code> → <code>notify_receive_view()</code> / <code>_verify_notify_signature()</code></li></ul>
+    </div>
+  </div>
+</details>
+{% endblock %}

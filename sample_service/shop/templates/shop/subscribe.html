@@ -1,0 +1,70 @@
+{% extends "shop/base.html" %}
+{% block title %}구독 확인{% endblock %}
+{% block content %}
+{# ── 온보딩 4단계: 구독 시작(카드 보관함의 카드로 즉시 구독) ── #}
+<div class="steps">
+  <span class="done"><i>✓</i>서비스 선택</span>
+  <span class="done"><i>✓</i>로그인</span>
+  <span class="done"><i>✓</i>카드 등록</span>
+  <span class="now"><i>4</i>구독 시작</span>
+</div>
+
+<div class="card accent" style="max-width:520px;margin:0 auto;text-align:center;padding:34px 28px">
+  <div style="font-size:34px;margin-bottom:10px">{% if trial %}🎁{% else %}🚀{% endif %}</div>
+  <h1 style="font-size:20px;font-weight:600">
+    {% if trial %}무료 체험 시작{% else %}구독 시작{% endif %}
+  </h1>
+
+  {% if card %}
+  {# 등록 카드가 있으면 그 카드로 즉시 구독 — 토스 인증 불필요 #}
+  <p class="muted" style="margin:10px 0 8px">
+    {% if trial %}<b>결제 없이 체험이 시작</b>되고, 체험 만료일에 아래 카드로 자동 결제됩니다.
+    {% else %}등록된 카드로 <b>첫 결제가 즉시 진행</b>됩니다. (토스 테스트 모드에서는 실제 청구되지 않습니다){% endif %}
+  </p>
+  <div class="muted" style="margin:0 0 22px">결제 카드 <b class="mono" style="color:var(--ink)">{{ card.card.number|default:"-" }}</b></div>
+  <div style="display:flex;gap:10px;justify-content:center">
+    {# 카드 보관함 모델: 토스 인증 없이 POST /api/v1/subscriptions 만 호출 #}
+    <form method="post" action="/subscribe/{{ plan_id }}">
+      {% csrf_token %}<input type="hidden" name="trial" value="{% if trial %}1{% else %}0{% endif %}">
+      <button class="btn btn-primary" type="submit" style="min-width:180px">
+        {% if trial %}체험 시작하기{% else %}구독하기{% endif %}</button></form>
+    <a class="btn btn-ghost" href="/plans">돌아가기</a>
+  </div>
+  {% else %}
+  {# 등록 카드가 없으면 카드 등록부터 — 등록 후 이 구독으로 복귀(next) #}
+  <p class="muted" style="margin:10px 0 22px">
+    구독하려면 <b>결제 카드를 먼저 등록</b>해야 합니다.
+    등록을 마치면 이 구독 화면으로 자동으로 돌아옵니다.
+  </p>
+  <div style="display:flex;gap:10px;justify-content:center">
+    <a class="btn btn-primary" style="min-width:180px"
+       href="/card?next=/subscribe/{{ plan_id }}?trial={% if trial %}1{% else %}0{% endif %}">카드 등록하러 가기</a>
+    <a class="btn btn-ghost" href="/plans">돌아가기</a>
+  </div>
+  {% endif %}
+</div>
+
+<details class="dev-note" open>
+  <summary>🔍 <b>개발자 노트</b> — 카드 보관함 기반 구독 생성 <span class="hint">POST /api/v1/subscriptions (authKey 불필요)</span></summary>
+  <div class="body">
+    <div>
+      <h4>카드 보관함 전환 핵심</h4>
+      <ul>
+        <li><b style="color:#fff">구독 생성에 토스 authKey가 더 이상 필요 없다</b> — 먼저 카드(POST /api/v1/cards)를 등록해 두면 서버가 그 카드로 첫 결제를 처리한다</li>
+        <li>카드 미등록 상태로 구독 요청 시 서버가 <code>404</code>를 반환 → 이 샘플은 카드 등록 화면(<code>/card?next=…</code>)으로 유도한다</li>
+      </ul>
+    </div>
+    <div class="api">
+      <h4>호출하는 API</h4>
+      <div class="ep"><span class="m post">POST</span> <code>/api/v1/subscriptions</code> — <code>payment_client.create_subscription(trial={{ trial|yesno:'True,False' }})</code> · 본문 <code>{external_user_id, plan_id, trial}</code></div>
+    </div>
+    <div>
+      <h4>구현 위치</h4>
+      <ul>
+        <li>화면/생성: <code class="file">shop/views.py</code> → <code>subscribe_view()</code></li>
+        <li>카드 선등록: <code class="file">shop/views.py</code> → <code>card_view()</code> / <code>billing_success_view()</code></li>
+      </ul>
+    </div>
+  </div>
+</details>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends "shop/base.html" %}
+{% block title %}서비스 선택{% endblock %}
+{% block content %}
+{# ── 온보딩 2단계: 어떤 서비스(테넌트)의 키로 API를 호출할지 선택 ── #}
+<div class="steps">
+  <span class="done"><i>✓</i>이메일 선택</span>
+  <span class="now"><i>2</i>서비스 선택</span>
+  <span><i>3</i>카드 등록</span>
+  <span><i>4</i>구독 / 결제</span>
+</div>
+
+<div class="page-head">
+  <h1>서비스 선택</h1>
+  <p>구독서버에 등록된 서비스 중 하나를 골라 시작합니다. 모든 API 호출은 선택한 서비스의 키로 서명됩니다.</p>
+</div>
+
+{% if error %}<div class="msg msg-error"><span>⚠️</span><span>{{ error }} — 구독서버(:8000)가 켜져 있는지 확인하세요.</span></div>{% endif %}
+
+{% if reauth_id %}
+<div class="msg msg-error"><span>🔑</span>
+  <span>이 서비스의 API key가 변경되었습니다(401). 아래 강조된 서비스에 <b>새 키를 다시 입력</b>해주세요.</span></div>
+{% endif %}
+
+{% if not servers and not error %}
+<div class="card"><p class="muted">등록된 서비스가 없습니다 — 구독서버 admin(<code>/admin/services</code>)에서 서비스를 먼저 등록하세요.</p></div>
+{% endif %}
+
+{% for s in servers %}
+<div class="card {% if s.id == reauth_id %}danger-edge{% elif s.id == active_id %}accent{% endif %}">
+  <div class="row">
+    <div>
+      <b style="font-size:16px">{{ s.name }}</b>
+      <span class="badge st-{{ s.status }}">{{ s.status }}</span>
+      {% if s.id == active_id %}<span class="badge st-ACTIVE">현재 사용 중</span>{% endif %}
+      {% if s.has_key %}<span class="badge">🔐 키 저장됨</span>{% endif %}
+      <div class="muted mono" style="font-size:11px;margin-top:4px">{{ s.id }}</div>
+    </div>
+    {% if s.has_key and s.id != reauth_id %}
+    <form method="post" action="/services/select">
+      {% csrf_token %}
+      <input type="hidden" name="service_id" value="{{ s.id }}">
+      <button type="submit" class="btn sm {% if s.id == active_id %}btn-ghost{% else %}btn-primary{% endif %}">
+        {% if s.id == active_id %}선택됨{% else %}선택{% endif %}
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if not s.has_key or s.id == reauth_id %}
+  {# 키 미저장 또는 재인증 대상 — 1회 발급 평문 키 입력(저장 후엔 다시 묻지 않음) #}
+  <details {% if s.id == reauth_id %}open{% endif %} style="margin-top:14px">
+    <summary style="cursor:pointer;font-size:13px;color:var(--primary);font-weight:600">
+      {% if s.id == reauth_id %}🔑 키 재입력 (필수){% else %}API 키 입력하고 시작하기{% endif %}
+    </summary>
+    <form method="post" action="/services/save-key" style="margin-top:14px;display:grid;gap:12px">
+      {% csrf_token %}
+      <input type="hidden" name="service_id" value="{{ s.id }}">
+      <input type="hidden" name="name" value="{{ s.name }}">
+      <div>
+        <label class="fld">API Key</label>
+        <input type="text" name="api_key" placeholder="구독서버 어드민 > 서비스 등록 시 1회 발급된 평문 키"
+               {% if s.id == reauth_id %}autofocus{% endif %}>
+      </div>
+      <div>
+        <label class="fld">HMAC Secret</label>
+        <input type="text" name="hmac_secret" placeholder="요청 본문 서명용 시크릿 (키와 함께 발급)">
+      </div>
+      <div><button type="submit" class="btn btn-primary">저장 후 시작</button></div>
+    </form>
+  </details>
+  {% endif %}
+</div>
+{% endfor %}
+
+{# ── 개발자 노트: 이 화면의 구현 ── #}
+<details class="dev-note">
+  <summary>🔍 <b>개발자 노트</b> — 이 화면의 API·코드 <span class="hint">GET /api/v1/services</span></summary>
+  <div class="body">
+    <div class="api">
+      <h4>호출하는 API</h4>
+      <div class="ep"><span class="m">GET</span> <code>/api/v1/services</code> — 서비스 목록(id·이름·상태). <b style="color:#fff">무인증</b> 엔드포인트.</div>
+    </div>
+    <div>
+      <h4>구현 위치</h4>
+      <ul>
+        <li>API 호출: <code class="file">shop/payment_client.py</code> → <code>list_services()</code></li>
+        <li>화면 로직: <code class="file">shop/views.py</code> → <code>services_view()</code> / 키 저장 <code>service_save_key_view()</code></li>
+        <li>키 보관: <code class="file">shop/models.py</code> → <code>ServiceCredential</code> (서비스별 api_key·hmac_secret를 로컬 DB에 저장)</li>
+      </ul>
+    </div>
+    <div>
+      <h4>핵심 규칙</h4>
+      <ul>
+        <li>API 키·HMAC Secret은 서비스 등록 시 <b style="color:#fff">1회만 평문 발급</b> — 분실 시 어드민에서 재발급(rotate)</li>
+        <li>키가 서버에서 재발급되면 다음 호출이 401 → 이 화면으로 자동 복귀해 재입력(<code>?reauth=</code>)</li>
+        <li>실서비스에서는 키를 화면 입력이 아니라 환경변수/시크릿 매니저로 주입하세요</li>
+        <li>새 흐름: 이메일 선택(/login) 후 이 화면 진입 → 서비스 선택 완료 시 카드 등록(/card)으로 이동</li>
+      </ul>
+    </div>
+  </div>
+</details>
+{% endblock %}

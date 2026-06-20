@@ -1,0 +1,76 @@
+{% extends "shop/base.html" %}
+{% load humanize %}
+{% block title %}결제 결과{% endblock %}
+{% block content %}
+<div class="card {% if ok %}accent{% else %}danger-edge{% endif %}" style="max-width:560px;margin:0 auto;text-align:center;padding:36px 28px">
+  {% if ok %}
+  <div style="font-size:40px;margin-bottom:8px">🎉</div>
+  <h1 style="font-size:20px;font-weight:600;color:var(--green)">{{ message }}</h1>
+
+  {% if payment %}
+  {# ── 단건 결제 성공 ── #}
+  <div class="divider"></div>
+  <div class="muted" style="display:grid;gap:4px;text-align:left;max-width:340px;margin:0 auto">
+    <span class="row"><span>주문번호</span><b class="mono" style="font-size:12px;color:var(--ink)">{{ payment.order_id }}</b></span>
+    <span class="row"><span>금액</span><b style="color:var(--ink)">{{ payment.amount|intcomma }}원</b></span>
+    <span class="row"><span>상태</span><span class="badge st-{{ payment.status }}">{{ payment.status }}</span></span>
+  </div>
+  {% if payment.status == 'DONE' and payment.cancelable %}
+  <p class="muted" style="margin-top:14px;font-size:13px">
+    지금 취소하면 수수료 <b style="color:var(--red)">{{ payment.cancel_fee|intcomma }}원</b>{% if payment.cancel_fee_percent %} ({{ payment.cancel_fee_percent }}%){% endif %} 차감 후
+    <b style="color:var(--ink)">{{ payment.cancel_refund_amount|intcomma }}원</b>이 환불됩니다.
+  </p>
+  {% endif %}
+  <div style="margin-top:20px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+    {% if payment.status == 'DONE' %}
+    <form method="post" action="/pay/cancel">
+      {% csrf_token %}
+      <input type="hidden" name="order_id" value="{{ payment.order_id }}">
+      <button class="btn btn-danger" type="submit"
+              onclick="return confirm('이 결제를 취소(환불)하시겠습니까?\n취소 수수료 {{ payment.cancel_fee }}원이 차감되고 {{ payment.cancel_refund_amount }}원이 환불됩니다.')">결제 취소</button>
+    </form>
+    {% endif %}
+    <a class="btn btn-primary" href="/history">결제 내역 보기</a>
+    <a class="btn btn-ghost" href="/pay">또 결제하기</a>
+  </div>
+
+  {% else %}
+  {# ── 구독 생성 성공 ── #}
+  <div class="divider"></div>
+  <div class="muted" style="display:grid;gap:4px;text-align:left;max-width:340px;margin:0 auto">
+    <span class="row"><span>요금제</span><b style="color:var(--ink)">{{ sub.plan_name }}</b></span>
+    <span class="row"><span>상태</span><span class="badge st-{{ sub.status }}">{{ sub.status }}</span></span>
+    <span class="row"><span>이용 기간</span><b style="color:var(--ink);font-size:12.5px">{{ sub.current_period_start }} ~ {{ sub.current_period_end }}</b></span>
+  </div>
+  <div style="margin-top:20px;display:flex;gap:8px;justify-content:center">
+    <a class="btn btn-primary" href="/my">내 구독 보기</a>
+    <a class="btn btn-ghost" href="/history">결제 내역</a>
+  </div>
+  {% endif %}
+
+  {% else %}
+  {# ── 실패 ── #}
+  <div style="font-size:40px;margin-bottom:8px">💥</div>
+  <h1 style="font-size:20px;font-weight:600;color:var(--red)">결제 실패</h1>
+  <p class="muted" style="margin-top:10px">{{ message }}</p>
+  <div style="margin-top:20px;display:flex;gap:8px;justify-content:center">
+    <a class="btn btn-primary" href="/plans">요금제로 돌아가기</a>
+    <a class="btn btn-ghost" href="/my">내 구독</a>
+  </div>
+  {% endif %}
+</div>
+
+<details class="dev-note">
+  <summary>🔍 <b>개발자 노트</b> — 결과 처리에서 주의할 것 <span class="hint">타임아웃 ≠ 실패</span></summary>
+  <div class="body">
+    <div>
+      <h4>핵심 규칙</h4>
+      <ul>
+        <li><b style="color:#fff">503 PAYMENT_UNRESOLVED(결과 불명)는 실패가 아니다</b> — 서버가 결제를 PENDING으로 유지하고 정산 스윕(10분 내)으로 확정한다. 사용자에게 "잠시 후 다시 확인" 안내만 하면 된다</li>
+        <li>구독 생성 응답의 <code>status</code>·기간 필드를 그대로 화면에 쓰면 된다 — 별도 조회 불필요</li>
+        <li>이 화면 렌더: <code class="file">shop/views.py</code> → <code>billing_success_view()</code></li>
+      </ul>
+    </div>
+  </div>
+</details>
+{% endblock %}

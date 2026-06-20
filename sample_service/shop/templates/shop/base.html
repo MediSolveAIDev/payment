@@ -1,0 +1,233 @@
+{% comment %}
+═══════════════════════════════════════════════════════════════════════════
+Sample Shop — 공통 레이아웃 (Centurion Suite 디자인 시스템 적용)
+
+이 샘플은 구독/결제 서버(payment_system)의 "외부 서비스" 참고 구현입니다.
+서비스 개발팀이 화면을 직접 눌러 보며 기능을 이해하고, 코드를 복사해
+자기 서비스에 적용할 수 있도록 만들었습니다.
+
+▸ 디자인 토큰: docs/design/centurion-suite-handoff (Pretendard / gray scale /
+  primary #476CFF / red #FF4E51). 이 파일 하나에 전 화면 스타일이 들어 있어
+  그대로 떼어 가도 동작합니다(외부 CSS 의존 없음).
+▸ 각 화면 하단의 「개발자 노트」(dev-note)에 해당 화면이 호출하는 API와
+  구현 파일·함수가 적혀 있습니다 — 화면이 곧 문서입니다.
+▸ API 호출 구현은 shop/payment_client.py 단일 파일 — 핵심 복사 대상.
+═══════════════════════════════════════════════════════════════════════════
+{% endcomment %}<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Sample Shop{% endblock %} · Sample Shop</title>
+  {# Pretendard — Centurion Suite 공통 서체 #}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <style>
+    /* ── Centurion 디자인 토큰 (docs/design/centurion-suite-handoff) ───────── */
+    :root {
+      --gray-100:#FBFBFB; --gray-200:#F3F3F3; --gray-300:#E3E3E3; --gray-400:#D6D6D6;
+      --gray-500:#CFCFCF; --gray-600:#9F9F9F; --gray-700:#6E6E6E; --gray-800:#3E3E3E;
+      --primary:#476CFF; --primary-100:#F0F4FF; --primary-300:#DDE6FF; --primary-500:#97B5FF;
+      --red:#FF4E51; --red-100:#FFEFEF; --red-300:#FFE1E1;
+      /* 샘플 확장 토큰 — 결제 상태 표현용(Centurion 미정의 보조색) */
+      --green:#0BA66A; --green-100:#EAF8F1; --amber:#B97A00; --amber-100:#FFF6E3;
+      --ink:#111;
+      /* 개발자 노트(다크 패널) */
+      --note-bg:#20242E; --note-line:#343A48; --note-text:#C7CEDC; --note-accent:#8FB0FF;
+    }
+    * { box-sizing:border-box; margin:0; }
+    html { -webkit-text-size-adjust:100%; }
+    body {
+      font-family:'Pretendard Variable',Pretendard,-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+      background:var(--gray-100); color:var(--ink); font-size:14px; line-height:1.6;
+      letter-spacing:0;
+    }
+    a { color:var(--primary); text-decoration:none; }
+    code, .mono { font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace; font-size:.92em; }
+
+    /* ── 헤더 ──────────────────────────────────────────────────────────── */
+    .site-head { position:sticky; top:0; z-index:10; background:rgba(255,255,255,.92);
+                 backdrop-filter:blur(8px); border-bottom:1px solid var(--gray-300); }
+    /* 전체 가로 폭 사용 — 화면을 가로로 꽉 차게 표시(좌우 24px 여백만 유지) */
+    .site-head-in { max-width:100%; margin:0 auto; padding:0 24px; height:60px;
+                    display:flex; align-items:center; gap:20px; }
+    .brand { display:flex; align-items:center; gap:9px; font-weight:600; font-size:16px; color:var(--ink); }
+    .brand-mark { width:26px; height:26px; border-radius:8px; background:var(--primary);
+                  color:#fff; display:grid; place-items:center; font-size:14px; font-weight:600;
+                  box-shadow:0 2px 6px rgba(71,108,255,.35); }
+    .brand small { font-weight:400; font-size:11px; color:var(--gray-600); margin-left:2px; }
+    nav.main { display:flex; gap:2px; margin-left:auto; }
+    nav.main a { padding:6px 12px; border-radius:8px; font-size:14px; color:var(--gray-700); }
+    nav.main a:hover { background:var(--gray-200); color:var(--ink); }
+    nav.main a.on { background:var(--primary-100); color:var(--primary); font-weight:600; }
+    .who { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--gray-600);
+           border-left:1px solid var(--gray-300); padding-left:16px; white-space:nowrap; }
+    .who .svc { display:inline-flex; align-items:center; gap:5px; background:var(--primary-100);
+                color:var(--primary); font-weight:600; padding:3px 10px; border-radius:999px; }
+    .who .svc::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--primary); }
+
+    /* ── 본문 골격 ─────────────────────────────────────────────────────── */
+    /* 본문(중간 내용)은 가운데 정렬 — 헤더/푸터 바는 전체 폭, 콘텐츠는 중앙 배치 */
+    .wrap { max-width:960px; margin:0 auto; padding:36px 24px 56px; }
+    .page-head { margin-bottom:22px; }
+    .page-head h1 { font-size:24px; line-height:1.4; font-weight:600; }
+    .page-head p { color:var(--gray-700); margin-top:4px; }
+    /* 카드 등장 애니메이션 — 순차 페이드업 */
+    .card, .table-card, .dev-note { animation:rise .35s ease both; }
+    .card:nth-child(2){animation-delay:.04s} .card:nth-child(3){animation-delay:.08s}
+    .card:nth-child(4){animation-delay:.12s} .card:nth-child(5){animation-delay:.16s}
+    @keyframes rise { from { opacity:0; transform:translateY(8px);} to { opacity:1; transform:none;} }
+    @media (prefers-reduced-motion:reduce){ .card,.table-card,.dev-note{animation:none} }
+
+    /* ── 카드 ──────────────────────────────────────────────────────────── */
+    .card { background:#fff; border:1px solid var(--gray-300); border-radius:14px;
+            padding:22px; margin-bottom:14px; }
+    .card.accent { border-color:var(--primary-300); box-shadow:0 6px 24px -12px rgba(71,108,255,.25); }
+    .card.danger-edge { border-color:var(--red); }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+    .muted { color:var(--gray-600); font-size:13px; }
+    .divider { height:1px; background:var(--gray-200); margin:16px 0; }
+
+    /* ── 버튼 (Centurion Button_L / Button_S) ─────────────────────────── */
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px;
+           border:1px solid transparent; border-radius:10px; padding:0 18px; height:44px;
+           font:inherit; font-size:14px; font-weight:600; cursor:pointer; transition:.15s; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-primary:hover { background:var(--primary-500); }
+    .btn-ghost { background:#fff; color:var(--ink); border-color:var(--gray-500); }
+    .btn-ghost:hover { background:var(--gray-100); }
+    .btn-danger { background:#fff; color:var(--red); border-color:var(--red); }
+    .btn-danger:hover { background:var(--red-100); }
+    .btn-sub { background:var(--primary-100); color:var(--primary); }
+    .btn-sub:hover { background:var(--primary-300); }
+    .btn.sm { height:34px; padding:0 13px; font-size:13px; border-radius:8px; }
+
+    /* ── 인풋 (Centurion Input: 50px, focus=primary) ──────────────────── */
+    label.fld { display:block; font-size:12px; font-weight:600; color:var(--gray-700); margin:0 0 6px 2px; }
+    input[type=text], input[type=email], input[type=number] {
+      width:100%; height:50px; padding:0 14px; font:inherit; font-size:14px;
+      border:1px solid var(--gray-300); border-radius:10px; background:#fff;
+      transition:border-color .15s; }
+    input::placeholder { color:var(--gray-600); }
+    input:focus { outline:none; border-color:var(--primary); }
+
+    /* ── 배지 / 상태 칩 ────────────────────────────────────────────────── */
+    .badge { display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:600;
+             padding:2.5px 9px; border-radius:999px; background:var(--gray-200);
+             color:var(--gray-700); vertical-align:1px; }
+    /* 구독·결제 상태별 색 — 서버 상태 머신과 1:1 (개발자 노트의 상태 설명 참고) */
+    .st-ACTIVE  { background:var(--primary-100); color:var(--primary); }
+    .st-TRIAL   { background:#F1ECFF; color:#6F21FF; }
+    .st-PAST_DUE{ background:var(--amber-100); color:var(--amber); }
+    .st-SUSPENDED{ background:var(--red-100); color:var(--red); }
+    .st-CANCELED{ background:var(--gray-200); color:var(--gray-700); }
+    .st-EXPIRED { background:var(--gray-200); color:var(--gray-600); text-decoration:line-through; }
+    .st-DONE    { background:var(--green-100); color:var(--green); }
+    .st-PENDING { background:var(--amber-100); color:var(--amber); }
+    .st-FAILED  { background:var(--red-100); color:var(--red); }
+
+    /* ── 메시지(토스트형) ─────────────────────────────────────────────── */
+    .msg { display:flex; gap:8px; align-items:flex-start; padding:13px 16px; border-radius:10px;
+           margin-bottom:14px; font-size:14px; border:1px solid transparent; }
+    .msg-error { background:var(--red-100); color:#C2272A; border-color:var(--red-300); }
+    .msg-success { background:var(--green-100); color:var(--green); }
+    .msg-warn { background:var(--amber-100); color:var(--amber); }
+
+    /* ── 진행 단계(온보딩 흐름) ────────────────────────────────────────── */
+    .steps { display:flex; gap:0; margin-bottom:26px; font-size:12px; color:var(--gray-600); }
+    .steps span { display:flex; align-items:center; gap:7px; }
+    .steps span + span::before { content:""; width:28px; height:1px; background:var(--gray-400); margin:0 10px; }
+    .steps i { font-style:normal; width:20px; height:20px; border-radius:50%; display:grid; place-items:center;
+               background:var(--gray-200); color:var(--gray-600); font-size:11px; font-weight:600; }
+    .steps .now { color:var(--primary); font-weight:600; }
+    .steps .now i { background:var(--primary); color:#fff; }
+    .steps .done i { background:var(--primary-100); color:var(--primary); }
+
+    /* ── 테이블 ────────────────────────────────────────────────────────── */
+    .table-card { background:#fff; border:1px solid var(--gray-300); border-radius:14px;
+                  overflow:auto; margin-bottom:14px; }
+    table.list { width:100%; border-collapse:collapse; font-size:13px; }
+    table.list th { text-align:left; padding:11px 14px; background:var(--gray-100);
+                    color:var(--gray-700); font-weight:600; font-size:12px;
+                    border-bottom:1px solid var(--gray-300); white-space:nowrap; }
+    table.list td { padding:11px 14px; border-bottom:1px solid var(--gray-200); vertical-align:middle; }
+    table.list tr:last-child td { border-bottom:0; }
+    table.list .num { text-align:right; font-variant-numeric:tabular-nums; }
+
+    /* ── 개발자 노트 — 화면이 곧 문서가 되게 하는 다크 패널 ─────────────── */
+    .dev-note { background:var(--note-bg); border:1px solid var(--note-line); border-radius:14px;
+                color:var(--note-text); margin-top:26px; overflow:hidden; }
+    .dev-note > summary { list-style:none; cursor:pointer; padding:13px 18px; display:flex;
+                          align-items:center; gap:10px; font-size:13px; user-select:none; }
+    .dev-note > summary::-webkit-details-marker { display:none; }
+    .dev-note > summary b { color:#fff; font-weight:600; }
+    .dev-note > summary .hint { margin-left:auto; font-size:11px; color:var(--gray-600); }
+    .dev-note[open] > summary { border-bottom:1px solid var(--note-line); }
+    .dev-note .body { padding:16px 18px 18px; font-size:13px; display:grid; gap:12px; }
+    .dev-note h4 { font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+                   color:var(--gray-600); margin-bottom:6px; font-weight:600; }
+    .dev-note code { color:var(--note-accent); }
+    .dev-note .api { display:flex; flex-direction:column; gap:5px; }
+    .dev-note .api .ep { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }
+    .dev-note .api .m { font-family:ui-monospace,Menlo,monospace; font-size:11px; font-weight:700;
+                        padding:1px 7px; border-radius:5px; background:#2C3344; color:#9FE8C3; }
+    .dev-note .api .m.post { color:#FFD28F; }
+    .dev-note ul { padding-left:18px; display:grid; gap:3px; }
+    .dev-note .file { color:#fff; }
+
+    /* ── 푸터 ──────────────────────────────────────────────────────────── */
+    .site-foot { max-width:100%; margin:0 auto; padding:0 24px 40px; color:var(--gray-600);
+                 font-size:12px; display:flex; gap:14px; flex-wrap:wrap; }
+    .site-foot b { color:var(--gray-700); }
+
+    @media (max-width:720px) {
+      .site-head-in { padding:0 16px; gap:10px; overflow-x:auto; }
+      .wrap { padding:24px 16px 48px; }
+      .who { display:none; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-head">
+  <div class="site-head-in">
+    <a href="/" class="brand"><span class="brand-mark">S</span>Sample Shop<small>구독/결제 연동 샘플</small></a>
+    {# 새 흐름 내비: 이메일(로그인) → 서비스 → 카드 → 요금제/결제/내구독/내역 #}
+    <nav class="main">
+      {# request.path 기준 활성 메뉴 표시 — context_processors.request 필요 #}
+      <a href="/login"   class="{% if request.path == '/login' %}on{% endif %}">이메일</a>
+      <a href="/services" class="{% if request.path == '/services' %}on{% endif %}">서비스</a>
+      <a href="/card"    class="{% if request.path == '/card' %}on{% endif %}">카드</a>
+      {% if user or nav_user_email %}
+      <a href="/plans"   class="{% if request.path == '/plans' %}on{% endif %}">요금제</a>
+      <a href="/pay"     class="{% if request.path == '/pay' %}on{% endif %}">일반 결제</a>
+      <a href="/my"      class="{% if request.path == '/my' %}on{% endif %}">내 구독</a>
+      <a href="/history" class="{% if request.path == '/history' %}on{% endif %}">결제 내역</a>
+      {% endif %}
+      <a href="/notifications" class="{% if request.path == '/notifications' %}on{% endif %}">받은 알림</a>
+    </nav>
+    <span class="who">
+      {# 현재 이메일 + 서비스 상태를 항상 표시 — 로그인 전엔 빈 칸 #}
+      {% if active_service_name %}<a href="/services" class="svc" title="서비스 변경">{{ active_service_name }}</a>{% endif %}
+      {% if nav_user_email %}{{ nav_user_email }} · <a href="/logout">로그아웃</a>{% elif user %}{{ user.email }} · <a href="/logout">로그아웃</a>{% endif %}
+    </span>
+  </div>
+</header>
+
+<div class="wrap">
+  {% if messages %}{% for m in messages %}
+    <div class="msg {% if m.tags == 'error' %}msg-error{% else %}msg-success{% endif %}">
+      <span>{% if m.tags == 'error' %}⚠️{% else %}✓{% endif %}</span><span>{{ m }}</span>
+    </div>
+  {% endfor %}{% endif %}
+
+  {% block content %}{% endblock %}
+</div>
+
+<footer class="site-foot">
+  <span><b>Sample Shop</b> — 구독/결제 서버 연동 참고 구현</span>
+  <span>API 호출: <code>shop/payment_client.py</code></span>
+  <span>화면 흐름: <code>shop/views.py</code></span>
+  <span>각 화면 하단 「개발자 노트」에서 해당 화면의 API·코드를 확인하세요</span>
+</footer>
+</body>
+</html>

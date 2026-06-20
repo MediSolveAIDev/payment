@@ -1,0 +1,65 @@
+{% extends "shop/base.html" %}
+{% block title %}이메일 선택{% endblock %}
+{% block content %}
+{# ── 온보딩 1단계: 이메일 선택 — 이 이메일이 external_user_id로 사용됨 ── #}
+<div class="steps">
+  <span class="now"><i>1</i>이메일 선택</span>
+  <span><i>2</i>서비스 선택</span>
+  <span><i>3</i>카드 등록</span>
+  <span><i>4</i>구독 / 결제</span>
+</div>
+
+<div class="card accent" style="max-width:480px;margin:0 auto">
+  <h1 style="font-size:20px;font-weight:600">이메일 선택</h1>
+  <p class="muted" style="margin:8px 0 18px">
+    이메일이 구독서버의 사용자 식별자 <code>external_user_id</code>로 사용됩니다.
+    실서비스에서는 자체 회원 ID를 넣으면 됩니다.
+  </p>
+
+  {# ── 기존 등록 이메일 빠른 선택 ── #}
+  {% if existing_users %}
+  <div style="margin-bottom:18px">
+    <p style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px">등록된 이메일 빠른 선택</p>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      {% for u in existing_users %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="email" value="{{ u.email }}">
+        <button type="submit" class="btn btn-sub" style="width:100%;justify-content:flex-start;font-weight:400;font-size:13px">
+          <span class="mono">{{ u.email }}</span>
+          <span class="muted" style="margin-left:auto;font-size:11px">{{ u.created_at|date:"Y-m-d" }}</span>
+        </button>
+      </form>
+      {% endfor %}
+    </div>
+    <div class="divider" style="margin:16px 0 14px"></div>
+  </div>
+  {% endif %}
+
+  {# ── 직접 이메일 입력 ── #}
+  <form method="post" style="display:grid;gap:14px">
+    {% csrf_token %}
+    <div>
+      <label class="fld" for="email">이메일 직접 입력</label>
+      <input type="email" id="email" name="email" placeholder="you@example.com"
+             {% if not existing_users %}autofocus{% endif %}>
+    </div>
+    <button class="btn btn-primary" type="submit" style="width:100%">이 이메일로 시작</button>
+  </form>
+</div>
+
+<details class="dev-note">
+  <summary>🔍 <b>개발자 노트</b> — 사용자 식별 방식 <span class="hint">external_user_id 매핑</span></summary>
+  <div class="body">
+    <div>
+      <h4>구독서버는 회원 시스템이 없다</h4>
+      <ul>
+        <li>구독서버는 <b style="color:#fff">외부 서비스의 사용자 ID 문자열</b>(<code>external_user_id</code>)만 받는다 — 이 샘플은 이메일을 그대로 사용</li>
+        <li>"서비스 + 사용자 당 열린 구독 1개" 규칙도 이 ID 기준으로 적용된다</li>
+        <li>로그인 구현: <code class="file">shop/views.py</code> → <code>login_view()</code> (세션에 user_id 저장 후 /services 로 이동)</li>
+        <li>새 흐름: 이메일 선택(1단계) → 서비스 선택(2단계) → 카드 등록(3단계) → 구독/결제(4단계)</li>
+      </ul>
+    </div>
+  </div>
+</details>
+{% endblock %}

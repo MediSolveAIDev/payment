@@ -1,0 +1,54 @@
+{% extends "shop/base.html" %}
+{% block title %}일반 결제{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>일반 결제 (단건)</h1>
+  <p>구독과 무관한 1회성 결제입니다. 카드 보관함에 <b>등록된 카드로 즉시 1회 결제</b>됩니다(추가 인증 없음).
+     카드가 없으면 카드 등록 화면으로 안내됩니다.</p>
+</div>
+
+<div class="card accent" style="max-width:520px">
+  <form method="post" action="/pay" style="display:grid;gap:14px">
+    {% csrf_token %}
+    <div>
+      <label class="fld" for="order_name">상품명</label>
+      <input type="text" id="order_name" name="order_name" maxlength="100" required
+             placeholder="예: 1회 이용권" autofocus>
+    </div>
+    <div>
+      <label class="fld" for="amount">금액(원)</label>
+      <input type="number" id="amount" name="amount" min="1" required placeholder="예: 5000">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" type="submit">결제 진행</button>
+      <a class="btn btn-ghost" href="/plans">취소</a>
+    </div>
+  </form>
+</div>
+
+<details class="dev-note">
+  <summary>🔍 <b>개발자 노트</b> — 단건 결제와 금액 변조 방지 <span class="hint">POST /api/v1/payments</span></summary>
+  <div class="body">
+    <div class="api">
+      <h4>호출하는 API</h4>
+      <div class="ep"><span class="m post">POST</span> <code>/api/v1/payments</code> — 단건 결제 <code>create_one_off_payment()</code></div>
+      <div class="ep"><span class="m post">POST</span> <code>/api/v1/payments/{order_id}/cancel</code> — 취소(환불) <code>cancel_one_off_payment()</code></div>
+    </div>
+    <div>
+      <h4>핵심 규칙 — 그대로 따라 하세요</h4>
+      <ul>
+        <li><b style="color:#fff">금액은 HMAC 서명된 본문으로 전달</b> — 중간자가 amount를 변조하면 서명 검증에서 거부된다 (<code class="file">shop/views.py</code> → <code>oneoff_view()</code>)</li>
+        <li><code>order_id</code>는 서비스가 생성(<code>oo-&lt;uuid&gt;</code>) — <b style="color:#fff">서비스 내에서만 고유</b>하면 되고, 같은 order_id 재요청은 서버가 멱등 처리(이중결제 방지)</li>
+        <li>카드 보관함 전환: <b style="color:#fff">토스 authKey 불필요</b> — 사전 등록된 카드(POST /api/v1/cards)의 빌링키를 서버가 자동 조회해 청구한다. 카드 미등록 시 서버 <code>404</code> → 카드 등록 화면으로 유도</li>
+      </ul>
+    </div>
+    <div>
+      <h4>구현 위치</h4>
+      <ul>
+        <li>폼·결제 실행: <code class="file">shop/views.py</code> → <code>oneoff_view()</code> (POST 시 즉시 <code>create_one_off_payment()</code> 호출)</li>
+        <li>로컬 기록: <code class="file">shop/models.py</code> → <code>OneOffRecord</code> (결제 내역 화면에서 취소 테스트용)</li>
+      </ul>
+    </div>
+  </div>
+</details>
+{% endblock %}

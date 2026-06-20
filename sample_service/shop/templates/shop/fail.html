@@ -1,0 +1,24 @@
+{% extends "shop/base.html" %}
+{% block title %}카드 등록 실패{% endblock %}
+{% block content %}
+<div class="card danger-edge" style="max-width:520px;margin:0 auto;text-align:center;padding:36px 28px">
+  <div style="font-size:40px;margin-bottom:8px">🚫</div>
+  <h1 style="font-size:20px;font-weight:600;color:var(--red)">카드 등록 실패</h1>
+  <p class="muted" style="margin-top:10px">{{ message }}{% if code %} <span class="mono">({{ code }})</span>{% endif %}</p>
+  <div style="margin-top:20px"><a class="btn btn-primary" href="/plans">요금제로 돌아가기</a></div>
+</div>
+
+<details class="dev-note">
+  <summary>🔍 <b>개발자 노트</b> — failUrl 처리 <span class="hint">결제 미발생</span></summary>
+  <div class="body">
+    <div>
+      <h4>핵심 규칙</h4>
+      <ul>
+        <li>토스 카드 등록창에서 취소/실패하면 <code>failUrl</code>(<code>/billing/fail</code>)로 돌아온다 — <b style="color:#fff">이 시점에는 어떤 결제도 발생하지 않았다</b></li>
+        <li>구독서버 API 호출 전 단계이므로 별도 정리(취소·환불)가 필요 없다 — 안내 후 재시도 유도만 하면 된다</li>
+        <li>구현: <code class="file">shop/views.py</code> → <code>billing_fail_view()</code></li>
+      </ul>
+    </div>
+  </div>
+</details>
+{% endblock %}

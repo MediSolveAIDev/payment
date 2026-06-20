@@ -1,0 +1,77 @@
+{% extends "shop/base.html" %}
+{% load humanize %}
+{% block title %}요금제{% endblock %}
+{% block content %}
+{# ── 온보딩 3단계: 요금제 선택 → 구독/체험 시작 ── #}
+<div class="steps">
+  <span class="done"><i>✓</i>서비스 선택</span>
+  <span class="done"><i>✓</i>로그인</span>
+  <span class="now"><i>3</i>요금제</span>
+  <span><i>4</i>카드 등록</span>
+</div>
+
+<div class="page-head">
+  <h1>요금제 선택</h1>
+  <p>구독서버에 등록된 요금제 목록입니다. 금액 계산(첫 결제 할인·상시 할인)은 모두 서버가 합니다.</p>
+</div>
+
+{% if error %}<div class="msg msg-error"><span>⚠️</span><span>{{ error }}</span></div>{% endif %}
+
+{% for p in plans %}
+<div class="card">
+  <div class="row">
+    <div style="min-width:0">
+      <div style="font-weight:600;font-size:16px">
+        {{ p.name }}
+        <span class="badge">{{ p.billing_cycle }}{% if p.cycle_days %} · {{ p.cycle_days }}일{% endif %}</span>
+        {% if p.trial_enabled %}<span class="badge st-TRIAL">체험 {{ p.trial_days }}일</span>{% endif %}
+        {% if p.auto_renew == False %}<span class="badge st-FAILED">자동결제 안함</span>{% endif %}
+      </div>
+      <div style="margin-top:8px;display:flex;gap:18px;flex-wrap:wrap;align-items:baseline">
+        {% if p.first_amount != p.amount %}
+        <span><span class="muted">첫 결제</span> <b style="font-size:19px;color:var(--primary)">{{ p.first_amount|intcomma }}원</b></span>
+        {% endif %}
+        <span><span class="muted">정기 결제</span> <b style="font-size:19px">{{ p.amount|intcomma }}원</b></span>
+        {% if p.price != p.amount %}<span class="muted" style="text-decoration:line-through">정가 {{ p.price|intcomma }}원</span>{% endif %}
+      </div>
+      {% if p.extra_info %}
+      <div class="muted" style="margin-top:6px;font-size:12px">
+        {% for k, v in p.extra_info.items %}<span class="badge" style="font-weight:400">{{ k }} · {{ v }}</span> {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div style="display:flex;gap:8px;flex:none">
+      <a class="btn btn-primary" href="/subscribe/{{ p.id }}">구독하기</a>
+      {% if p.trial_enabled %}<a class="btn btn-sub" href="/subscribe/{{ p.id }}?trial=1">무료 체험</a>{% endif %}
+    </div>
+  </div>
+</div>
+{% empty %}
+{% if not error %}<div class="card"><p class="muted">요금제가 없습니다 — 구독서버 admin에서 요금제를 먼저 생성하세요.</p></div>{% endif %}
+{% endfor %}
+
+<details class="dev-note">
+  <summary>🔍 <b>개발자 노트</b> — 이 화면의 API·코드 <span class="hint">GET /api/v1/plans</span></summary>
+  <div class="body">
+    <div class="api">
+      <h4>호출하는 API</h4>
+      <div class="ep"><span class="m">GET</span> <code>/api/v1/plans</code> — 활성 서비스의 요금제 목록 (HMAC 3중 인증)</div>
+    </div>
+    <div>
+      <h4>구현 위치</h4>
+      <ul>
+        <li>API 호출: <code class="file">shop/payment_client.py</code> → <code>get_plans()</code></li>
+        <li>화면 로직: <code class="file">shop/views.py</code> → <code>plans_view()</code></li>
+      </ul>
+    </div>
+    <div>
+      <h4>핵심 규칙</h4>
+      <ul>
+        <li>응답의 <code>amount</code>는 상시 할인 적용 후 <b style="color:#fff">실제 정기 결제액</b> — 서버가 계산해 내려준다</li>
+        <li>첫 결제액 표시는 이 샘플이 서버 정책(<code>first_payment_type/value</code>)을 미러해 계산 — 실제 청구액 산정은 항상 서버가 한다</li>
+        <li>"무료 체험" 버튼은 같은 카드 등록 흐름에 <code>?trial=1</code>만 추가 — 체험은 결제 없이 시작되고 만료 시 자동 결제된다</li>
+      </ul>
+    </div>
+  </div>
+</details>
+{% endblock %}
