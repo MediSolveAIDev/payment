@@ -1,6 +1,8 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# 운영용 오케스트레이션 — 클라우드 단일 인스턴스에 3개 컨테이너를 띄운다.
-#   nginx(HTTPS 입구) · app(payment_system/FastAPI) · redis(세션·캐시)
+# 운영용 오케스트레이션 — 클라우드 단일 인스턴스에 2개 컨테이너를 띄운다.
+#   app(payment_system/FastAPI) · redis(세션·캐시)
+# TLS 종단·리버스 프록시는 컨테이너가 아니라 **호스트(VM)에 설치된 nginx**가 담당한다.
+#   인터넷 ──443/80──▶ 호스트 nginx(TLS) ──127.0.0.1:8000──▶ app 컨테이너
 # PostgreSQL은 여기에 없음: 외부 관리형 DB를 .env.prod 의 DATABASE_URL 로 연결한다.
 #
 # 실행:  docker compose -f docker-compose.prod.yml up -d --build
@@ -8,10 +10,11 @@
 # 상태:  docker compose -f docker-compose.prod.yml ps
 # 종료:  docker compose -f docker-compose.prod.yml down        (redis 볼륨은 유지)
 #
-# 사전 준비: docker/README.md 참고 — .env.prod 값 채우기 + TLS 인증서 배치.
+# 사전 준비: .env.prod 값 채우기 + 호스트 nginx 사이트 설정(docker/nginx/host/payment-host.conf 참고)
+#            + certbot으로 TLS 발급(certbot --nginx). app은 127.0.0.1:8000 으로만 노출된다.
 # ─────────────────────────────────────────────────────────────────────────────
 
-# 프로젝트명 고정 — 운영 스택은 'payment_system'(nginx·redis·app 3개만).
+# 프로젝트명 고정 — 운영 스택은 'payment_system'(app·redis 2개. nginx는 호스트가 담당).
 # 개발 인프라(docker-compose.yml)는 'payment-dev'로 분리해 서로 섞이지 않게 한다.
 name: payment_system
 
@@ -31,9 +34,9 @@ services:
     environment:
       APP_ENV: prod                      # 실행 환경을 운영으로 강제(.env 로딩 분기·개발편의 차단)
       REDIS_URL: redis://redis:6379/0    # 같은 네트워크의 컨테이너 이름 'redis'로 결선(고정)
-      # nginx 뒤에 있으므로 X-Forwarded-For 를 신뢰해 진짜 클라이언트 IP를 식별한다.
+      # 호스트 nginx 뒤에 있으므로 X-Forwarded-For 를 신뢰해 진짜 클라이언트 IP를 식별한다.
       TRUST_PROXY: "true"                # 프록시 헤더 신뢰 켜기
-      TRUST_PROXY_HOPS: "1"              # XFF에서 오른쪽 1번째를 클라이언트 IP로(nginx 1단 기준)
+      TRUST_PROXY_HOPS: "1"              # XFF에서 오른쪽 1번째를 클라이언트 IP로(호스트 nginx 1단 기준)
       # DATABASE_URL / ENCRYPTION_KEY / TOSS_SECRET_KEY / BASE_URL 등 비밀값은 .env.prod 에서 주입.
     depends_on:
       redis:
@@ -42,8 +45,10 @@ services:
     # 실제 배포(외부 관리형 DB)에선 쓰이지 않으므로 남겨도 무해하다.
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    expose:
-      - "8000"          # 내부 네트워크에만 노출(호스트로 publish 아님) → nginx만 접근 가능
+    ports:
+      # 호스트의 루프백(127.0.0.1)에만 publish → 호스트 nginx가 proxy_pass http://127.0.0.1:8000 로 접근.
+      # 0.0.0.0 이 아니라 127.0.0.1 바인딩이라 인터넷/사설망에 직접 노출되지 않는다(앞단은 nginx만).
+      - "127.0.0.1:8000:8000"
     restart: unless-stopped              # 죽으면 자동 재시작(사람이 down 한 경우만 예외)
     # 8000 포트에 TCP로 붙어 보고 앱이 살아있는지 확인.
     healthcheck:
@@ -68,22 +73,11 @@ services:
       timeout: 3s
       retries: 5
 
-  # ── nginx: HTTPS 입구(TLS 종단) + 리버스 프록시 ─────────────────────────────
-  nginx:
-    image: nginx:1.27-alpine
-    depends_on:
-      - app                              # app 컨테이너가 만들어진 뒤 기동
-    ports:
-      - "80:80"                          # 유일하게 외부(호스트)로 공개되는 포트 — 80은 https로 리다이렉트
-      - "443:443"                        # 실제 서비스(HTTPS). 모든 인터넷 트래픽의 입구
-    volumes:
-      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro   # 프록시 설정(payment.conf), 읽기전용
-      - ./docker/nginx/certs:/etc/nginx/certs:ro     # TLS 인증서(fullchain/privkey), 읽기전용
-      - ./docker/nginx/certbot-www:/var/www/certbot  # Let's Encrypt webroot(인증서 갱신용)
-    restart: unless-stopped
+# nginx 컨테이너는 없다 — TLS 종단·리버스 프록시는 호스트(VM)에 설치된 nginx가 담당한다.
+# 호스트 nginx 사이트 설정 예시: docker/nginx/host/payment-host.conf (이 파일을 VM에 복사 후 certbot --nginx).
 
-# app(8000)·redis(6379)는 위에서 ports로 publish하지 않으므로 인터넷에 노출되지 않고
-# docker 내부 네트워크에서만 서로를 컨테이너 이름으로 호출한다.
+# app(127.0.0.1:8000)은 호스트 루프백에만, redis(6379)는 docker 내부 네트워크에만 노출되어
+# 인터넷에 직접 노출되지 않는다. 외부 입구는 호스트 nginx의 80/443 뿐이다.
 
 volumes:
   redis-data:        # redis 스냅샷용 명명 볼륨(컨테이너를 지워도 데이터 보존)
