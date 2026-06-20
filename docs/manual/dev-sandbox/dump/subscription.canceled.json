@@ -1,0 +1,13 @@
+{
+  "id": "cccc1111-2222-4333-8444-555566669999",
+  "external_user_id": "user-5005",
+  "plan_id": "22222222-2222-4222-8222-222222222222",
+  "plan_name": "프로",
+  "status": "CANCELED",
+  "access_allowed": true,
+  "current_period_start": "2026-06-01T10:00:00+09:00",
+  "current_period_end": "2026-07-01T10:00:00+09:00",
+  "next_billing_at": null,
+  "card": { "number": "4321-****-****-1234", "company": "신한", "type": "CREDIT" },
+  "retry_count": 0
+}

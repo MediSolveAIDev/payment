@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% import "_list.html" as L %}
+{% block title %}결제{% endblock %}
+{% block crumb %}결제{% endblock %}
+{% block content %}
+<div class="page-head"><h1>결제 이력</h1></div>
+{{ L.toolbar('/admin/payments', pp, '주문번호·사용자 검색',
+   [('service_id', service_options, service_filter),
+    ('plan_name', plan_options, plan_filter),
+    ('kind', [('','전체 종류'),('SUBSCRIPTION','구독'),('ONE_OFF','일반')], kind_filter),
+    ('status', [('','전체 상태'),('DONE','완료'),('FAILED','실패'),('PENDING','대기'),('CANCELED','취소')], status_filter)],
+   date_inputs=[('from', from_filter), ('to', to_filter)],
+   export_url='/admin/payments/export.xlsx') }}
+<div class="card">
+<table>
+  <thead><tr>
+    {{ L.sort_th(pp, '/admin/payments', 'order_id', '주문번호') }}
+    <th>서비스</th><th>종류</th>
+    <th>사용자</th><th>유형</th>
+    {{ L.sort_th(pp, '/admin/payments', 'amount', '금액') }}
+    {{ L.sort_th(pp, '/admin/payments', 'status', '상태') }}
+    <th>실패 코드</th>
+    {{ L.sort_th(pp, '/admin/payments', 'requested_at', '요청 시각') }}
+  </tr></thead>
+  <tbody>
+  {% for p, sub, svc in page.items %}
+    <tr>
+      <td style="font-family:ui-monospace,monospace;font-size:12px"><a href="/admin/payments/{{ p.id }}">{{ p.order_id }}</a></td>
+      <td class="muted">{{ svc.name }}</td>
+      <td><span class="badge badge-{{ p.kind }}">{{ '구독' if p.kind == 'SUBSCRIPTION' else '일반' }}</span></td>
+      <td>{{ p.external_user_id or '-' }}</td>
+      <td><span class="badge badge-{{ p.payment_type }}">{{ p.payment_type }}</span></td>
+      <td style="font-weight:600">{{ "{:,}".format(p.amount) }}원
+        {# 환불(전액·부분) 건은 환불액을 금액 아래에 작게 표기. 부분취소는 status=DONE이라 canceled_amount로 판정 #}
+        {% if p.canceled_amount %}
+        <div class="muted" style="font-size:11px;font-weight:400;color:var(--red)">환불 {{ "{:,}".format(p.canceled_amount) }}원{% if p.cancel_fee %} · 수수료 {{ "{:,}".format(p.cancel_fee) }}원{% endif %}</div>
+        {% endif %}
+      </td>
+      <td><span class="badge badge-{{ p.status }}">{{ payment_status_ko(p.status) }}</span>{% if p.status == 'DONE' and p.canceled_amount %} <span class="badge badge-CANCELED">부분취소</span>{% endif %}</td>
+      {# 실패 코드 — 마우스 올리면 의미 툴팁(코드 의미 맵 → 없으면 저장된 메시지) #}
+      <td class="muted">{% if p.failure_code %}<span class="code-tip" data-tip="{{ payment_error_meaning(p.failure_code) or p.failure_message or p.failure_code }}">{{ p.failure_code }}</span>{% else %}-{% endif %}</td>
+      <td class="muted">{{ p.requested_at|kst("%Y-%m-%d %H:%M") }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="9" class="muted">결제 이력이 없습니다</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ L.pager(page, '/admin/payments', pp) }}
+</div>
+{% endblock %}

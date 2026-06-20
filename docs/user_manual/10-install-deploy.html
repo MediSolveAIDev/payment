@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10. 설치·설정·배포 — 구독·결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>사용·개발 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>📘</span>사용자 매뉴얼</div>
+<a class="nav-link" href="00-overview.html"><span class="n">0</span><span class="tt">0. 구독·결제 서버 전체 개요</span></a>
+<a class="nav-link" href="01-admin-console.html"><span class="n">1</span><span class="tt">1. 관리자 콘솔 사용하기</span></a>
+<a class="nav-link" href="02-admin-card.html"><span class="n">2</span><span class="tt">2. 카드(결제수단) 관리</span></a>
+<a class="nav-link" href="03-admin-subscription.html"><span class="n">3</span><span class="tt">3. 구독 관리</span></a>
+<a class="nav-link" href="04-admin-plan.html"><span class="n">4</span><span class="tt">4. 요금제 관리</span></a>
+<a class="nav-link" href="05-admin-payment-refund.html"><span class="n">5</span><span class="tt">5. 일반결제와 환불(취소)</span></a>
+<a class="nav-link" href="06-admin-accounts.html"><span class="n">6</span><span class="tt">6. 계정 관리</span></a>
+<a class="nav-link" href="07-admin-settings.html"><span class="n">7</span><span class="tt">7. 전체 설정</span></a>
+<a class="nav-link" href="08-admin-audit.html"><span class="n">8</span><span class="tt">8. 감사 로그</span></a>
+<a class="nav-link" href="09-dashboard.html"><span class="n">9</span><span class="tt">9. 대시보드</span></a>
+<div class="nav-group"><span>🛠️</span>개발자 매뉴얼</div>
+<a class="nav-link active" href="10-install-deploy.html"><span class="n">10</span><span class="tt">10. 설치·설정·배포</span></a>
+<a class="nav-link" href="11-service-api.html"><span class="n">11</span><span class="tt">11. 서비스 연동 API</span></a>
+<a class="nav-link" href="12-feature-card.html"><span class="n">12</span><span class="tt">12. 카드 보관함(Card Vault) 기능</span></a>
+<a class="nav-link" href="13-feature-subscription.html"><span class="n">13</span><span class="tt">13. 구독 기능</span></a>
+<a class="nav-link" href="14-feature-payment.html"><span class="n">14</span><span class="tt">14. 일반결제·취소·정산 기능</span></a>
+<a class="nav-link" href="15-feature-notifications.html"><span class="n">15</span><span class="tt">15. 서비스 알림(아웃고잉 웹훅) 기능</span></a>
+<a class="nav-link" href="16-admin-screens.html"><span class="n">16</span><span class="tt">16. 어드민 화면별 설명</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">매뉴얼 홈</a> <span>/</span> <em>개발자 매뉴얼</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">🛠️ 개발자 매뉴얼</span></div>
+      <h1>10. 설치·설정·배포</h1>
+      
+    </header>
+    <div class="doc">
+
+<p>구독·결제 API 서버를 <strong>로컬 개발 환경에서 띄우는 절차</strong>부터 <strong>docker로 운영 배포하는 절차</strong>까지 정리한다. 핵심 원칙은 하나다 — <strong>PostgreSQL(DB)은 개발·배포 둘 다 별도 docker(외부)로 따로 구성</strong>하고, compose에는 포함하지 않는다. 운영 compose(<code>docker-compose.prod.yml</code>)는 <code>nginx</code>·<code>app</code>·<code>redis</code> 3개만 띄운다.</p>
+<blockquote class="cal ref"><span class="cal-i">🔗</span><div class="cal-b">
+<p>함께 보기: <a href="11-service-api.html">서비스 API</a></p>
+</div></blockquote>
+<hr />
+<h2 id="1">1. 요구사항·구성 요소</h2>
+<h3 id="11">1.1 요구사항</h3>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>버전·비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python</td>
+<td>3.13 이상 (<code class="loc">pyproject.toml:6</code> — <code>requires-python = "&gt;=3.13"</code>)</td>
+</tr>
+<tr>
+<td>uv</td>
+<td>패키지·가상환경 관리(로컬 개발에서 앱 직접 실행 시 사용)</td>
+</tr>
+<tr>
+<td>Docker / Docker Compose</td>
+<td>redis·운영 스택 기동, 별도 PostgreSQL 컨테이너 구성</td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>16 권장. asyncpg 드라이버로 접속(별도 docker 또는 외부 관리형 DB)</td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>7 (세션·nonce·레이트리밋·킬스위치 캐시)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="12">1.2 구성 요소</h3>
+<p>운영 스택은 클라우드 단일 인스턴스에 세 컨테이너를 띄우고, <strong>DB는 외부</strong>에 둔다.</p>
+<pre><code>인터넷 ──443/80──▶ nginx(TLS 종단) ──8000──▶ app(payment_system) ──▶ 외부 PostgreSQL
+                                                  └──▶ redis(세션·캐시)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>컨테이너</th>
+<th>이미지·역할</th>
+<th>외부 노출</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nginx</code></td>
+<td><code>nginx:1.27-alpine</code> — HTTPS 입구(TLS 종단)·리버스 프록시</td>
+<td>80 / 443 (유일하게 공개)</td>
+</tr>
+<tr>
+<td><code>app</code></td>
+<td><code>Dockerfile</code> 빌드(FastAPI/uvicorn). 상태 없음(stateless)</td>
+<td>없음(내부 8000, nginx만 접근)</td>
+</tr>
+<tr>
+<td><code>redis</code></td>
+<td><code>redis:7-alpine</code> — 세션·nonce·레이트리밋 캐시</td>
+<td>없음(내부 6379)</td>
+</tr>
+<tr>
+<td><strong>PostgreSQL</strong></td>
+<td><strong>컨테이너에 없음</strong> — 별도 docker 또는 외부 관리형 DB(예: Azure Database for PostgreSQL)를 <code>DATABASE_URL</code>로 연결</td>
+<td>외부</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 회사 클라우드는 MS Azure 기준이며, 운영 DB는 관리형(Azure Database for PostgreSQL)을 권장한다. 돈 기록(DB)을 앱과 분리해 백업·보안·확장을 단순화한다(<code>docker/README.md</code>).</p>
+</div></blockquote>
+<hr />
+<h2 id="2">2. 로컬 개발</h2>
+<p>호스트에서 앱을 <code>uv run uvicorn</code>으로(핫리로드) 직접 실행하고, <strong>Redis만 docker로</strong> 띄운다. <strong>DB는 별도 docker(외부)</strong> 로 따로 구성해 앱이 그 엔드포인트로 연결한다.</p>
+<h3 id="21">2.1 절차</h3>
+<ol class="steps">
+<li>저장소를 받고 의존성을 설치한다.</li>
+<li><b>외부 PostgreSQL</b>를 별도 docker로 띄운다(아래 예: <code>payment-postgres</code>, 호스트 5432).</li>
+<li>개발용 <b>Redis</b>를 <code>docker compose up -d</code>로 띄운다(<code>payment-dev</code> 프로젝트, 호스트 6380).</li>
+<li><code>.env</code>(또는 <code>.env.dev</code>)에 접속·비밀값을 채운다.</li>
+<li>마이그레이션을 적용한 뒤 앱을 실행한다.</li>
+</ol>
+
+<h3 id="22">2.2 명령</h3>
+<p>의존성 설치:</p>
+<pre><code class="language-bash">uv sync
+</code></pre>
+<p>외부 PostgreSQL을 별도 docker로 기동(예시 — DB는 compose에 없으므로 직접 띄운다):</p>
+<pre><code class="language-bash">docker run -d --name payment-postgres \
+  -e POSTGRES_USER=payment \
+  -e POSTGRES_PASSWORD='Payment!2002' \
+  -e POSTGRES_DB=payment \
+  -p 5432:5432 postgres:16
+</code></pre>
+<p>개발용 Redis 기동(<code>docker-compose.yml</code>, 프로젝트명 <code>payment-dev</code>, 호스트 <code class="loc">127.0.0.1:6380</code>만 노출):</p>
+<pre><code class="language-bash">docker compose up -d
+</code></pre>
+<p>마이그레이션 적용 후 앱 실행(핫리로드):</p>
+<pre><code class="language-bash">uv run alembic upgrade head
+uv run uvicorn app.main:app --reload --port 8000
+</code></pre>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: <code>docker-compose.yml</code>은 <strong>Redis만</strong> 띄운다. 포트는 루프백(<code>127.0.0.1:6380:6379</code>)에만 바인딩해 외부 노출을 막는다(<code>docker-compose.yml</code>).</p>
+</div></blockquote>
+<h3 id="23-env">2.3 <code>.env</code> 핵심 값</h3>
+<p><code>cp .env.example .env.dev</code> 후 값을 채운다. 로드 순서는 <code>.env</code> → <code>.env.&lt;APP_ENV&gt;</code>(뒤가 우선)이며, <code>APP_ENV</code> 미지정 시 <code>dev</code>로 동작한다(<code>.env.example</code>).</p>
+<pre><code class="language-env">ENVIRONMENT=dev
+BASE_URL=http://localhost:8000
+# 별도 docker로 띄운 외부 Postgres(asyncpg 드라이버) — 호스트 5432
+DATABASE_URL=postgresql+asyncpg://payment:Payment!2002@localhost:5432/payment
+# 개발용 redis(docker-compose.yml) — 호스트 6380
+REDIS_URL=redis://localhost:6380/0
+# AES-256-GCM 키(base64 32바이트)
+#   python -c &quot;import base64,os;print(base64.b64encode(os.urandom(32)).decode())&quot;
+ENCRYPTION_KEY=
+# 토스 시크릿 키: dev=test_sk_*
+TOSS_SECRET_KEY=test_sk_xxxx
+</code></pre>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>팁: <code>ENCRYPTION_KEY</code>는 위 한 줄로 새로 생성한다. 분실·변경 시 기존 암호화 데이터(카드 빌링키 등)를 복호화할 수 없다.</p>
+</div></blockquote>
+<hr />
+<h2 id="3">3. 환경변수</h2>
+<p><code>.env.example</code> 기준 주요 변수. <code>.env</code>(공통)에 두는 값과 환경별(<code>.env.dev</code>/<code>.env.prod</code>)로 덮어쓰는 값이 나뉜다.</p>
+<table>
+<thead>
+<tr>
+<th>변수</th>
+<th>설명</th>
+<th>예시·기본</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ENVIRONMENT</code> / <code>APP_ENV</code></td>
+<td>실행 환경. <code>prod</code>면 docs 비공개·세션 쿠키 secure 등 보안 강화</td>
+<td><code>dev</code> / <code>prod</code></td>
+</tr>
+<tr>
+<td><code>BASE_URL</code></td>
+<td>서버 공개 URL(이메일 링크 등)</td>
+<td><code>http://localhost:8000</code> / <code>https://도메인</code></td>
+</tr>
+<tr>
+<td><code>DATABASE_URL</code></td>
+<td><strong>외부 PostgreSQL</strong> 접속(반드시 <code>asyncpg</code> 드라이버)</td>
+<td><code>postgresql+asyncpg://payment:...@localhost:5432/payment</code></td>
+</tr>
+<tr>
+<td><code>REDIS_URL</code></td>
+<td>Redis 접속(운영은 compose가 <code>redis://redis:6379/0</code>으로 덮어씀)</td>
+<td><code>redis://localhost:6380/0</code></td>
+</tr>
+<tr>
+<td><code>ENCRYPTION_KEY</code></td>
+<td>AES-256-GCM 키(base64 32바이트). <strong>필수</strong></td>
+<td>(직접 생성)</td>
+</tr>
+<tr>
+<td><code>TOSS_SECRET_KEY</code></td>
+<td>토스 시크릿 키(dev=<code>test_sk_*</code>, prod=<code>live_sk_*</code>). <strong>필수</strong></td>
+<td><code>test_sk_xxxx</code></td>
+</tr>
+<tr>
+<td><code>TOSS_API_BASE_URL</code></td>
+<td>토스 API 베이스 URL</td>
+<td><code>https://api.tosspayments.com</code></td>
+</tr>
+<tr>
+<td><code>TRUST_PROXY</code> / <code>TRUST_PROXY_HOPS</code></td>
+<td>리버스 프록시 뒤면 <code>true</code> + XFF hop 수(nginx 1단=1, 앞에 LB 더 있으면 2)</td>
+<td><code>false</code> / <code>1</code></td>
+</tr>
+<tr>
+<td><code>WEBHOOK_IP_CHECK_ENABLED</code></td>
+<td>토스 발신 IP 외 웹훅 거부(운영 <code>true</code> 권장)</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>SWAGGER_ID</code> / <code>SWAGGER_PW</code></td>
+<td><code>/docs</code> HTTP Basic 계정. 비우면 docs 404</td>
+<td><code>admin</code> / (강력값)</td>
+</tr>
+<tr>
+<td><code>SCHEDULER_ENABLED</code> / <code>SCHEDULER_INTERVAL_MINUTES</code></td>
+<td>구독 자동 갱신 배치 사용·주기</td>
+<td><code>true</code> / <code>5</code></td>
+</tr>
+<tr>
+<td><code>DB_POOL_SIZE</code> / <code>DB_MAX_OVERFLOW</code></td>
+<td>DB 커넥션 풀(총 최대 = 합)</td>
+<td><code>10</code> / <code>20</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>중요: <code>ENCRYPTION_KEY</code>·<code>TOSS_SECRET_KEY</code>·DB 비밀번호 등 비밀값은 Git에 커밋하지 않는다. <code>.env.example</code>만 추적하고, 실제 값은 <code>.env</code> / <code>.env.dev</code> / <code>.env.prod</code>에 둔다.</p>
+<p>참고: 운영에서는 <code>REDIS_URL</code>·<code>TRUST_PROXY</code>·<code>APP_ENV</code>를 compose가 컨테이너 네트워크 기준으로 주입하므로 <code>.env.prod</code>에 적지 않아도 된다(적어도 compose 값이 우선, <code class="loc">docker-compose.prod.yml:24</code>).</p>
+</div></blockquote>
+<hr />
+<h2 id="4">4. 테스트</h2>
+<p>테스트도 <strong>외부 DB</strong>를 사용한다. 외부 <code>payment-postgres</code>에 <code>payment_test</code> 데이터베이스를 만들어 두면 된다(운영 DB와 별개). 기본 접속값은 <code class="loc">tests/conftest.py:18</code>에 정의되어 있고, 다르면 <code>TEST_DATABASE_URL</code>로 덮어쓴다.</p>
+<p>테스트용 DB 생성(외부 Postgres 컨테이너 안에서):</p>
+<pre><code class="language-bash">docker exec -it payment-postgres createdb -U payment payment_test
+</code></pre>
+<p>전체·부분 테스트 실행:</p>
+<pre><code class="language-bash">uv run pytest                       # 전체
+uv run pytest tests/integration/    # 통합
+uv run pytest tests/e2e/            # E2E(어드민 화면)
+</code></pre>
+<p>다른 DB로 실행할 때:</p>
+<pre><code class="language-bash">TEST_DATABASE_URL=postgresql+asyncpg://payment:Payment!2002@localhost:5432/payment_test uv run pytest
+</code></pre>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: 테스트 DB는 운영 DB와 별개(<code>payment_test</code>)다. 기본값은 외부 <code>payment-postgres</code>(host 5432, user <code>payment</code>)를 가리킨다(<code class="loc">tests/conftest.py:14-18</code>).</p>
+</div></blockquote>
+<hr />
+<h2 id="5-docker">5. 운영 배포(docker)</h2>
+<p>운영 스택은 <code>docker-compose.prod.yml</code>(프로젝트명 <code>payment_system</code>)로 <strong>nginx·app·redis 3개</strong>를 띄운다. DB는 외부다.</p>
+<h3 id="50">5.0 새 리눅스 서버에 처음 설치하기 (전체 절차)</h3>
+<p>아무것도 없는 <strong>새 리눅스 서버(예: Ubuntu 22.04)</strong>에 처음부터 올리는 순서다. 아래 1~9를 차례로 따라가면 된다. (1~3은 서버 준비, 4~6은 설정·실행, 7~9는 마무리)</p>
+<ol class="steps">
+<li><b>Docker 설치</b> — Docker Engine + Compose 플러그인을 설치하고 현재 사용자를 docker 그룹에 넣는다(이후 로그아웃·재로그인).
+<pre><code class="language-bash">curl -fsSL https://get.docker.com | sudo sh        # Docker Engine + compose 플러그인
+sudo usermod -aG docker $USER                       # sudo 없이 docker 사용(재로그인 필요)
+docker --version &amp;&amp; docker compose version          # 설치 확인</code></pre></li>
+
+<li><b>코드 가져오기</b> — 저장소를 서버에 클론(또는 복사)한다.
+<pre><code class="language-bash">git clone &lt;이-저장소-URL&gt; payment_system
+cd payment_system</code></pre>
+Git을 쓰지 않으면 <code>scp -r ./payment_system user@서버:/opt/</code> 처럼 통째로 복사해도 된다.</li>
+
+<li><b>외부 PostgreSQL 준비</b> — DB는 컴포즈에 없으므로 <b>따로</b> 마련한다. 관리형 DB(Azure Database for PostgreSQL 등)를 쓰거나, 같은 서버/별도 서버에 postgres 컨테이너를 띄운다. 빈 <code>payment</code> 데이터베이스와 접속 계정만 있으면 되고, <b>스키마(테이블)는 앱이 자동 생성</b>한다(아래 6단계의 마이그레이션). DB 방화벽에서 <b>앱 서버 → DB(5432)</b>만 허용한다.
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">참고: 리눅스에서 같은 호스트의 DB에 붙을 때는 <code>DATABASE_URL</code>의 호스트를 <code>host.docker.internal</code>로 둔다. compose에 <code>extra_hosts: "host.docker.internal:host-gateway"</code>가 이미 있어 컨테이너가 호스트에 닿는다.</div></blockquote></li>
+
+<li><b>환경설정 <code>.env.prod</code> 작성</b> — <code>.env.example</code>를 참고해 채운다. 필수: <code>DATABASE_URL</code>(외부 DB), <code>ENCRYPTION_KEY</code>(새로 생성), <code>TOSS_SECRET_KEY</code>(라이브), <code>BASE_URL</code>(도메인), <code>SWAGGER_ID/PW</code>. 상세는 아래 <b>5.1</b> 참고.
+<pre><code class="language-bash"># AES-256-GCM 키 생성(운영용으로 새로):
+python3 -c "import base64,os;print(base64.b64encode(os.urandom(32)).decode())"</code></pre></li>
+
+<li><b>TLS 인증서 배치</b> — <code>docker/nginx/certs/</code>에 <code>fullchain.pem</code>·<code>privkey.pem</code>을 둔다(Let's Encrypt 권장, 도메인 없으면 자체 서명). 명령은 아래 <b>5.1</b> 참고.</li>
+
+<li><b>실행 — 빌드·기동(+ 자동 마이그레이션)</b>:
+<pre><code class="language-bash">docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml logs -f app   # 마이그레이션·기동 로그 확인</code></pre>
+컨테이너가 켜지면 엔트리포인트가 <code>alembic upgrade head</code>로 외부 DB에 테이블을 자동 생성한 뒤 앱을 띄운다.</li>
+
+<li><b>최초 관리자(SYSTEM_ADMIN) 생성</b> — 로그인하려면 첫 관리자 계정을 만들어야 한다. 앱 컨테이너 안에서 CLI로 생성한다.
+<pre><code class="language-bash">docker compose -f docker-compose.prod.yml exec app \
+  python -m app.cli create-admin --email admin@yourco.com --password '강력한비밀번호!'</code></pre></li>
+
+<li><b>방화벽 개방</b> — 외부에서 들어오는 포트는 <b>80·443</b>만 연다(앱 8000·redis는 비공개). 예(ufw):
+<pre><code class="language-bash">sudo ufw allow 80,443/tcp &amp;&amp; sudo ufw enable</code></pre></li>
+
+<li><b>동작 확인</b> — <code>https://도메인/</code> 접속 → 로그인 화면. <code>docker compose -f docker-compose.prod.yml ps</code>로 3개 컨테이너가 healthy인지, <code>/docs</code>(Swagger, SWAGGER_ID/PW)와 관리자 로그인이 되는지 확인한다.</li>
+</ol>
+
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: <code>.env.prod</code>와 TLS 키 같은 <strong>비밀값은 Git에 커밋하지 말 것</strong>. <code>ENCRYPTION_KEY</code>는 분실·변경 시 기존 암호화 데이터(빌링키 등)를 복호화할 수 없으니 안전하게 보관한다.</p>
+<p>팁: 코드 업데이트 후 재배포는 <code>git pull</code> → <code>docker compose -f docker-compose.prod.yml up -d --build</code>. 새 마이그레이션이 있으면 기동 시 자동 적용된다.</p>
+</div></blockquote>
+<h3 id="51">5.1 사전 준비</h3>
+<ol class="steps">
+<li><code>.env.example</code>를 참고해 <b><code>.env.prod</code></b>를 채운다(Git 미추적).</li>
+<li>TLS 인증서를 <code>docker/nginx/certs/</code>에 배치한다.</li>
+<li><code>DATABASE_URL</code>이 <b>외부 관리형 DB</b> 엔드포인트를 가리키는지 확인한다.</li>
+</ol>
+
+<p><code>.env.prod</code> 최소 필수값(<code>docker/README.md</code>):</p>
+<pre><code class="language-env">ENVIRONMENT=prod
+BASE_URL=https://your-domain.example.com
+# 외부 관리형 Postgres — 반드시 asyncpg 드라이버(필요 시 ?ssl=require)
+DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@your-db-host:5432/payment
+ENCRYPTION_KEY=
+TOSS_SECRET_KEY=live_sk_xxxx
+SWAGGER_ID=admin
+SWAGGER_PW=강력한값
+WEBHOOK_IP_CHECK_ENABLED=true
+</code></pre>
+<p>TLS 인증서 — <code>docker/nginx/certs/</code>에 <code>fullchain.pem</code>·<code>privkey.pem</code> 두 파일을 둔다.</p>
+<p>Let's Encrypt(운영 권장):</p>
+<pre><code class="language-bash">sudo certbot certonly --webroot -w docker/nginx/certbot-www -d your-domain.example.com
+sudo cp /etc/letsencrypt/live/your-domain.example.com/fullchain.pem docker/nginx/certs/
+sudo cp /etc/letsencrypt/live/your-domain.example.com/privkey.pem  docker/nginx/certs/
+</code></pre>
+<p>자체 서명(도메인 없이 우선 띄워볼 때):</p>
+<pre><code class="language-bash">openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
+  -keyout docker/nginx/certs/privkey.pem \
+  -out   docker/nginx/certs/fullchain.pem \
+  -subj &quot;/CN=localhost&quot;
+</code></pre>
+<h3 id="52">5.2 실행</h3>
+<pre><code class="language-bash">docker compose -f docker-compose.prod.yml up -d --build
+</code></pre>
+<p>마이그레이션은 <strong>자동</strong>이다. 컨테이너 시작 시 엔트리포인트(<code>docker/entrypoint.sh</code>)가 <code>alembic upgrade head</code>로 외부 DB 스키마를 최신(head)까지 적용한 뒤 uvicorn을 실행한다.</p>
+<h3 id="53">5.3 로그·상태·종료</h3>
+<pre><code class="language-bash">docker compose -f docker-compose.prod.yml logs -f app   # 마이그레이션·기동 로그
+docker compose -f docker-compose.prod.yml ps            # 컨테이너 상태
+docker compose -f docker-compose.prod.yml down          # 중지(redis 볼륨은 유지)
+</code></pre>
+<p>재배포(업데이트):</p>
+<pre><code class="language-bash">git pull &amp;&amp; docker compose -f docker-compose.prod.yml up -d --build
+</code></pre>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 외부에 열리는 포트는 nginx의 80/443뿐이다. <code>app</code>(8000)·<code>redis</code>(6379)는 publish하지 않아 docker 내부 네트워크에서만 컨테이너 이름으로 서로를 호출한다(<code>docker-compose.prod.yml</code>).</p>
+</div></blockquote>
+<hr />
+<h2 id="6">6. 운영 주의사항</h2>
+<ul>
+<li><strong>컴포즈 프로젝트명 분리</strong>: 운영 스택은 <code>name: payment_system</code>(nginx·redis·app 3개), 개발 인프라는 <code>name: payment-dev</code>(redis만)로 격리되어 있다. 같은 프로젝트명으로 섞으면 운영 컨테이너에 개발용 컨테이너가 끼어드는 사고가 난다(<code class="loc">docker-compose.prod.yml:18</code>, <code>docker-compose.yml</code>).</li>
+<li><strong>DB는 개발·배포 둘 다 별도 docker(외부)</strong>: compose에 postgres가 없다. 앱·테스트 모두 외부 DB 엔드포인트로 연결한다. <code>DATABASE_URL</code>을 <code>localhost</code>/<code>127.0.0.1</code>로 두면 컨테이너 자신을 가리켜 접속에 실패한다 — 실제 배포는 외부 DB 호스트로, 로컬에서 호스트의 DB docker에 붙일 때는 <code class="loc">host.docker.internal:5432</code>를 사용한다(<code>docker/README.md</code>).</li>
+<li><strong>비밀값 관리</strong>: <code>ENCRYPTION_KEY</code>(운영 전용 새 값)·<code>TOSS_SECRET_KEY</code>(<code>live_sk_*</code>)·<code>SWAGGER_PW</code> 등은 <code>.env.prod</code>에 두고 Git에 커밋하지 않는다.</li>
+<li><strong>마이그레이션 head 적용</strong>: 엔트리포인트가 매 기동 시 <code>alembic upgrade head</code>를 실행한다. 앱을 여러 대로 확장하면 마이그레이션 중복을 피하기 위해 한 대만 기본값으로 두고 나머지는 <code>RUN_MIGRATIONS=0</code>으로 띄운다(<code>docker/entrypoint.sh</code>).</li>
+<li><strong>클라이언트 IP</strong>: nginx가 <code>X-Forwarded-For</code>를 세팅하고 앱은 <code>TRUST_PROXY=true</code>·<code>TRUST_PROXY_HOPS=1</code>로 읽는다. 앞단에 LB가 하나 더 있으면 <code>TRUST_PROXY_HOPS=2</code>로 올린다(웹훅·어드민 IP 화이트리스트 정합에 중요).</li>
+<li><strong>인증서 갱신</strong>: <code>certbot renew</code> 후 <code>docker compose -f docker-compose.prod.yml exec nginx nginx -s reload</code>.</li>
+<li><strong>세션 보안(추가 키 없음)</strong>: 어드민 세션은 별도 쿠키 서명키 없이 <strong>Redis에 저장된 무작위 세션 토큰</strong>(<code>secrets.token_urlsafe(32)</code>)으로 동작한다(<code>app/services/auth.py</code>). 따라서 <code>SECRET_KEY</code> 류의 환경변수는 없으며, redis를 내부 네트워크 전용으로 두는 것(포트 미공개)이 곧 세션 보호다.</li>
+</ul>
+<hr />
+<h2 id="7">7. 백업·복구·롤백</h2>
+<p>돈 기록(DB)은 외부 관리형 PostgreSQL에 있으므로 백업·복구는 1차적으로 <strong>관리형 DB 기능</strong>(Azure Database for PostgreSQL의 자동 백업·특정 시점 복구 PITR)에 위임한다. 그 위에, <strong>배포·마이그레이션 직전 수동 스냅샷</strong>을 안전망으로 권장한다.</p>
+<h3 id="71-db-pg_dump">7.1 DB 백업 (pg_dump)</h3>
+<pre><code class="language-bash"># DB에 접근 가능한 호스트(또는 앱 컨테이너)에서 — 배포/마이그레이션 직전 권장
+pg_dump &quot;postgresql://USER:PASSWORD@DB_HOST:5432/payment&quot; -Fc -f payment_$(date +%Y%m%d_%H%M).dump
+</code></pre>
+<ul>
+<li><code>-Fc</code>(커스텀 포맷)은 <code>pg_restore</code>로 부분/선택 복구가 가능하다.</li>
+<li>관리형 DB의 자동 백업·PITR과 <strong>함께</strong> 쓰는 것을 권장한다(자동 백업은 일상 보호, 수동 덤프는 배포 직전 롤백 안전망).</li>
+</ul>
+<h3 id="72-db-pg_restore">7.2 DB 복구 (pg_restore)</h3>
+<pre><code class="language-bash"># 주의: 운영 DB에 덮어쓰기 전, 반드시 현재 상태를 먼저 백업한다.
+pg_restore --clean --if-exists -d &quot;postgresql://USER:PASSWORD@DB_HOST:5432/payment&quot; payment_YYYYMMDD_HHMM.dump
+</code></pre>
+<h3 id="73-alembic-downgrade">7.3 마이그레이션 롤백 (alembic downgrade)</h3>
+<p>엔트리포인트는 기동 시 <code>alembic upgrade head</code>만 수행한다(<code>docker/entrypoint.sh</code>). 직전 배포의 스키마 변경을 되돌리려면 앱 컨테이너에서 downgrade를 <strong>직접</strong> 실행한다.</p>
+<pre><code class="language-bash">docker compose -f docker-compose.prod.yml exec app alembic current      # 현재 리비전 확인
+docker compose -f docker-compose.prod.yml exec app alembic downgrade -1  # 한 단계 되돌리기
+# 특정 리비전으로: docker compose -f docker-compose.prod.yml exec app alembic downgrade &lt;revision&gt;
+</code></pre>
+<ul>
+<li><strong>데이터 손실 주의</strong>: 컬럼/테이블을 제거하는 downgrade는 그 데이터를 함께 지운다. 반드시 7.1 백업을 먼저 떠 두고, 코드 롤백(이전 이미지 재배포)으로 해결 가능한지 먼저 검토한다.</li>
+<li><strong>스키마-이미지 정합</strong>: 새 이미지 배포는 자동으로 <code>upgrade head</code>까지 올린다. 이전 이미지로 되돌릴 때는, 그 이미지가 기대하는 리비전까지 <strong>먼저 downgrade</strong>해야 앱과 스키마가 맞는다.</li>
+</ul>
+<h3 id="74-redis">7.4 Redis 데이터</h3>
+<p>redis는 세션·nonce·레이트리밋·킬스위치 <strong>캐시</strong>다. 명명 볼륨(<code>redis-data</code>)에 스냅샷이 남지만, 유실되어도 <strong>재로그인</strong> 수준의 영향이며 결제·구독 데이터(DB)와는 무관하다. 별도 백업 대상이 아니다.</p>
+<blockquote class="cal ref"><span class="cal-i">🔗</span><div class="cal-b">
+<p>함께 보기: <a href="11-service-api.html">서비스 API</a></p>
+</div></blockquote>
+    </div>
+    <div class="pager"><a class="pg prev" href="09-dashboard.html"><small>← 이전</small><b>9. 대시보드</b></a><a class="pg next" href="11-service-api.html"><small>다음 →</small><b>11. 서비스 연동 API</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#1">1. 요구사항·구성 요소</a>
+<a class="toc-h3" href="#11">1.1 요구사항</a>
+<a class="toc-h3" href="#12">1.2 구성 요소</a>
+<a class="toc-h2" href="#2">2. 로컬 개발</a>
+<a class="toc-h3" href="#21">2.1 절차</a>
+<a class="toc-h3" href="#22">2.2 명령</a>
+<a class="toc-h3" href="#23-env">2.3 .env 핵심 값</a>
+<a class="toc-h2" href="#3">3. 환경변수</a>
+<a class="toc-h2" href="#4">4. 테스트</a>
+<a class="toc-h2" href="#5-docker">5. 운영 배포(docker)</a>
+<a class="toc-h3" href="#50">5.0 새 리눅스 서버에 처음 설치하기 (전체 절차)</a>
+<a class="toc-h3" href="#51">5.1 사전 준비</a>
+<a class="toc-h3" href="#52">5.2 실행</a>
+<a class="toc-h3" href="#53">5.3 로그·상태·종료</a>
+<a class="toc-h2" href="#6">6. 운영 주의사항</a>
+<a class="toc-h2" href="#7">7. 백업·복구·롤백</a>
+<a class="toc-h3" href="#71-db-pg_dump">7.1 DB 백업 (pg_dump)</a>
+<a class="toc-h3" href="#72-db-pg_restore">7.2 DB 복구 (pg_restore)</a>
+<a class="toc-h3" href="#73-alembic-downgrade">7.3 마이그레이션 롤백 (alembic downgrade)</a>
+<a class="toc-h3" href="#74-redis">7.4 Redis 데이터</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3. 결제·환불 — 구독/결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <a class="brand" href="index.html">
+      <span class="logo">결제</span>
+      <span class="t">구독/결제 서버<small>서비스 담당자 매뉴얼</small></span>
+    </a>
+    <div class="nav-cat">시작</div>
+    <nav class="nav">
+      <a href="index.html"><span class="num">★</span> 매뉴얼 홈</a>
+      <a href="09-overview-diagram.html"><span class="num">◆</span> 한눈에 보기(그림)</a>
+      <a href="01-getting-started.html"><span class="num">0</span> 시작하기</a>
+    </nav>
+    <div class="nav-cat">관리자 콘솔</div>
+    <nav class="nav">
+      <a href="02-plans.html"><span class="num">1</span> 요금제 관리</a>
+      <a href="03-subscriptions.html"><span class="num">2</span> 구독 관리</a>
+      <a href="04-payments.html" class="active"><span class="num">3</span> 결제·환불</a>
+      <a href="05-settlement.html"><span class="num">4</span> 정산</a>
+      <a href="08-admin-console.html"><span class="num">5</span> 화면별 가이드(캡처)</a>
+    </nav>
+    <div class="nav-cat">개발 연동</div>
+    <nav class="nav">
+      <a href="00-setup.html"><span class="num">6</span> 설치·설정·배포</a>
+      <a href="06-api-integration.html"><span class="num">7</span> API 연동</a>
+      <a href="10-qa-testcases.html"><span class="num">8</span> QA 테스트케이스</a>
+      <a href="11-dev-sandbox.html"><span class="num">9</span> 사전 개발(덤프)</a>
+      <a href="dev_manual/index.html" target="_blank" rel="noopener"><span class="num">10</span> 개발자 매뉴얼 ↗</a>
+    </nav>
+    <div class="nav-cat">참고</div>
+    <nav class="nav">
+      <a href="07-faq.html"><span class="num">11</span> FAQ</a>
+      <a href="13-status-reference.html"><span class="num">12</span> 상태·코드 레퍼런스</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+  <div class="content">
+
+    <div class="page-head">
+      <div class="page-eyebrow">CHAPTER 3</div>
+      <h1>결제·환불</h1>
+      <p class="lead">정기 구독 갱신과 단건 결제를 포함한 모든 거래를 확인하고, 환불(취소)을 처리합니다.</p>
+    </div>
+
+    <div class="easybox">
+      <p>이 화면은 <strong>'영수증 보관함'</strong>입니다. 구독으로 자동 빠져나간 돈이든, 손님이 1회성으로 산 것이든
+      모든 결제가 한 줄씩 쌓입니다. 환불해 줘야 할 일이 생기면 여기서 해당 영수증을 찾아 처리합니다.</p>
+      <p><strong>총매출은 받은 돈 전체, 순매출은 환불을 빼고 실제로 손에 남은 돈</strong>입니다.</p>
+    </div>
+
+    <h2><span class="h-no">3.1</span>결제 내역 목록</h2>
+    <p>개별 결제 건의 성공 여부와 금액을 확인합니다. 표의 주요 열은 다음과 같습니다.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>열</th><th>의미</th></tr></thead>
+        <tbody>
+          <tr><td>승인 시각</td><td>결제가 최종 완료된 시각</td></tr>
+          <tr><td>사용자</td><td>결제한 사용자 ID</td></tr>
+          <tr><td>주문번호</td><td>고유 주문 번호. PG(토스) 문의 시 가장 중요한 기준</td></tr>
+          <tr><td>유형</td><td><span class="badge b-blue">정기(Renewal)</span> / <span class="badge b-purple">단건(One-off)</span></td></tr>
+          <tr><td>상태</td><td>결제 결과(아래 참고)</td></tr>
+          <tr><td>총매출 / 환불 / 순매출</td><td>결제 금액, 환불액(빨강), 그리고 둘의 차액인 최종 금액</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>결제 상태</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>상태</th><th>의미</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge b-green">DONE</span> 완료</td><td>정상 승인됨</td></tr>
+          <tr><td><span class="badge b-orange">PENDING</span> 대기</td><td>처리 중(보통 잠시 후 확정)</td></tr>
+          <tr><td><span class="badge b-red">FAILED</span> 실패</td><td>결제 중 오류 발생</td></tr>
+          <tr><td><span class="badge b-gray">CANCELED</span> 취소</td><td>환불(취소) 처리됨</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2><span class="h-no">3.2</span>결제 상세 정보</h2>
+    <p>특정 결제를 클릭하면 더 자세한 데이터를 볼 수 있습니다.</p>
+    <ul>
+      <li><strong>상품명</strong> — 결제 시 표시된 상품명. 일반(단건) 결제는 요청 시 전달한 주문명, 구독 결제는 요금제명이 표시됩니다(과거 데이터는 <code>-</code>)</li>
+      <li><strong>실패 코드·메시지</strong> — 실패 시 카드사가 보낸 정확한 사유(잔액부족, 카드정지 등)</li>
+      <li><strong>토스 결제키(Payment Key)</strong> — 토스 관리자 페이지에서 해당 거래를 찾을 때 쓰는 키</li>
+      <li><strong>승인 시각</strong> — 카드사 승인이 완료된 초 단위 시각</li>
+      <li><strong>원본 응답(Raw Response)</strong> — PG가 보낸 데이터 전체. 평상시엔 무시해도 되며 장애 분석 시 참고</li>
+    </ul>
+
+    <h2><span class="h-no">3.3</span>환불(취소) 처리</h2>
+    <div class="callout warn">
+      <span class="ico">⚠️</span>
+      <div><p>환불은 <strong>단건(One-off) 결제</strong>에 대해 처리합니다. 환불 가능 여부와 수수료는 서비스의
+      <strong>취소 정책</strong>(취소 허용 여부·수수료율)에 따릅니다. 취소 정책은 시스템 관리자가 서비스 설정에서 지정합니다.</p></div>
+    </div>
+    <ol class="steps">
+      <li>
+        <h4>예상 환불액 확인</h4>
+        <p>결제 상세 화면에 서비스 취소 정책에 따른 <strong>예상 수수료·환불 금액</strong>이 미리 표시됩니다.</p>
+      </li>
+      <li>
+        <h4>결제 취소 실행</h4>
+        <p><strong>결제 취소</strong> 버튼을 누르면 실시간으로 PG(토스)에 취소 요청이 전달됩니다.</p>
+      </li>
+      <li>
+        <h4>결과 확인</h4>
+        <p>완료되면 상태가 <span class="badge b-gray">CANCELED</span>로 바뀌고, 실제 <strong>환불액</strong>과 <strong>취소 수수료</strong>가 기록됩니다.</p>
+      </li>
+    </ol>
+    <div class="callout danger">
+      <span class="ico">⛔</span>
+      <div><p><strong>이미 취소된 결제는 되돌릴 수 없습니다.</strong> 환불 전 금액과 대상 사용자를 반드시 확인하세요.</p></div>
+    </div>
+    <div class="easybox">
+      <p><strong>취소 수수료</strong>는 환불할 때 떼는 '위약금' 같은 것입니다. 정책에 10%로 정해 두면, 1만 원을 환불할 때
+      1천 원은 우리가 갖고 9천 원만 손님에게 돌려줍니다. 화면에는 버튼을 누르기 <strong>전에</strong> "이만큼 돌려주게 됩니다"가 미리 표시되니
+      금액을 확인하고 진행하면 됩니다.</p>
+    </div>
+    <div class="callout note">
+      <span class="ico">ℹ️</span>
+      <div><p>예: 취소 수수료율이 10%라면, 10,000원 결제를 취소할 때 1,000원이 수수료로 차감되고 9,000원이 환불됩니다.</p></div>
+    </div>
+
+    <h2><span class="h-no">3.4</span>영수증(매출전표)</h2>
+    <p>결제 상세 화면에서 고객에게 전달할 수 있는 <strong>매출전표(영수증) 링크</strong>를 제공합니다.
+    고객이 영수증 발행을 요청하면 이 링크를 복사해 전달하면 됩니다(카드사 공식 영수증).</p>
+
+    <div class="callout tip">
+      <span class="ico">💡</span>
+      <div><p><strong>구독 결제와 환불</strong> — 정기 구독 결제 자체의 취소가 필요하면 먼저 <a href="03-subscriptions.html">구독 관리</a>에서
+      구독을 정리하고, 개별 결제 건 환불은 이 화면에서 정책에 따라 처리합니다.</p></div>
+    </div>
+
+    <div class="pager">
+      <a href="03-subscriptions.html"><small>이전</small><span>← 2. 구독 관리</span></a>
+      <a class="next" href="05-settlement.html"><small>다음</small><span>4. 정산 →</span></a>
+    </div>
+
+  </div>
+  </main>
+</div>
+<script src="assets/glossary.js"></script>
+</body>
+</html>

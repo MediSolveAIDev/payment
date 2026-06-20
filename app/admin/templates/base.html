@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}결제 관리{% endblock %} — Payment Admin</title>
+  {# Pretendard 웹폰트 — Centurion Suite 디자인 적용 #}
+  <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  {# ?v=mtime 캐시버스팅: CSS/JS 변경 시 브라우저가 새 파일을 받도록 함 #}
+  <link rel="stylesheet" href="/static/admin.css?v={{ asset_v() }}">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script defer src="/static/admin.js?v={{ asset_v() }}"></script>
+</head>
+{% set path = request.url.path %}
+{%- macro nav(href, icon, label) -%}
+  <a href="{{ href }}" class="{{ 'active' if (path == href if href == '/admin' else path.startswith(href)) }}">
+    <span data-lucide="{{ icon }}"></span>{{ label }}</a>
+{%- endmacro -%}
+{# data-flash: 토스트 표시 / data-saved: 완료 모달(✓) 표시 #}
+<body class="{{ '' if ctx else 'auth' }}" hx-indicator="#global-progress" {% if flash %} data-flash="{{ flash }}" data-flash-type="{{ flash_type | default('complete', true) }}"{% endif %}{% if saved %} data-saved="{{ saved }}"{% endif %}>
+<div id="global-progress"></div>
+{% if ctx %}
+<aside class="sidebar">
+  <div class="brand">
+    <span class="brand-logo">PA</span><span class="brand-name">Payment Admin</span>
+  </div>
+  {# 현재 시각 — 왼쪽 메뉴 위, 매초 갱신(admin.js tickClock) #}
+  <div class="sidebar-clock" id="sidebar-clock">
+    <span data-lucide="clock"></span>
+    <span class="clock-main">
+      <b class="clock-time" id="clock-time">--:--:--</b>
+      <small class="clock-date" id="clock-date"></small>
+    </span>
+  </div>
+  <nav class="lnb">
+    <div class="lnb-cat">현황</div>
+    {{ nav('/admin', 'layout-dashboard', '대시보드') }}
+    {{ nav('/admin/subscriptions', 'repeat', '구독') }}
+    {{ nav('/admin/payments', 'credit-card', '결제') }}
+    {{ nav('/admin/settlement', 'calculator', '정산') }}
+    {{ nav('/admin/plans', 'tag', '요금제') }}
+    <!-- {{ nav('/admin/guide', 'book-open', '매뉴얼') }} -->
+    {% if ctx.user.role == 'SYSTEM_ADMIN' %}
+    <div class="lnb-cat">관리</div>
+    {{ nav('/admin/services', 'boxes', '서비스') }}
+    {{ nav('/admin/users', 'users', '계정') }}
+    {{ nav('/admin/settings', 'settings-2', '전체 설정') }}
+    {{ nav('/admin/audit', 'scroll-text', '감사 로그') }}
+    {% endif %}
+  </nav>
+  <div class="sidebar-foot">
+    <div class="sidebar-user">
+      <span class="avatar" style="background:var(--accent-indigo)">{{ ctx.user.email[0] | upper }}</span>
+      <span class="who">
+        <b>{{ ctx.user.role | replace('SYSTEM_ADMIN','시스템 관리자') | replace('SERVICE_MANAGER','서비스 담당자') }}</b>
+        <small>{{ ctx.user.email }}</small>
+      </span>
+    </div>
+    <form method="post" action="/admin/logout">
+      <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+      <button type="submit" class="btn-text"><span data-lucide="log-out"></span>로그아웃</button>
+    </form>
+  </div>
+</aside>
+{% endif %}
+<div class="app-col">
+  {% if ctx %}
+  <header class="topbar">
+    <button class="iconbtn" type="button" aria-label="메뉴"><span data-lucide="panel-left"></span></button>
+    <nav class="crumbs">
+      <span class="c-dim">Admin</span><span class="c-sep">/</span>
+      <span>{% block crumb %}{{ self.title() }}{% endblock %}</span>
+    </nav>
+    <span class="spacer"></span>
+    {% set guide_map = {
+      '/admin': 'dashboard',
+      '/admin/subscriptions': 'subscriptions',
+      '/admin/payments': 'payments',
+      '/admin/settlement': 'settlement',
+      '/admin/plans': 'plans',
+      '/admin/services': 'services',
+      '/admin/users': 'audit',
+      '/admin/audit': 'audit'
+    } %}
+    {% set current_guide = 'dashboard' %}
+    {% for p_prefix, g_id in guide_map.items() %}
+      {% if path.startswith(p_prefix) %}{% set current_guide = g_id %}{% endif %}
+    {% endfor %}
+    <a href="/admin/guide/{{ current_guide }}" class="iconbtn" title="이 페이지 도움말" style="color:inherit">
+      <span data-lucide="help-circle"></span>
+    </a>
+    <label class="compact-toggle" style="margin-right: 8px;">
+      <input type="checkbox" id="compact-view-checkbox"> 컴팩트 뷰
+    </label>
+    <button class="iconbtn" type="button" aria-label="알림"><span data-lucide="bell"></span></button>
+  </header>
+  {% endif %}
+  <div style="flex:1;display:flex;min-height:0">
+    <main class="content">{% block content %}{% endblock %}</main>
+    {% if ctx %}{% block rail %}{% endblock %}{% endif %}
+  </div>
+</div>
+</body>
+</html>

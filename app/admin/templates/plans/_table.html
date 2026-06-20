@@ -1,0 +1,88 @@
+{% import "_list.html" as L %}
+<div id="list-plans">
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+{{ L.toolbar('/admin/plans', pp, '요금제명 검색',
+   [('service_id', service_options, service_filter),
+    ('plan_name', plan_options, plan_filter),
+    ('billing_cycle', [('','전체 주기'),('YEAR','연'),('MONTH','월'),('WEEK','주'),('DAY','일')], cycle_filter),
+    ('status', [('','전체 상태'),('ACTIVE','활성'),('ARCHIVED','보관')], status_filter)],
+   target='list-plans', export_url='/admin/plans/export.xlsx') }}
+<div class="card">
+<table>
+  <thead><tr>
+    <th>서비스</th>
+    {{ L.sort_th(pp, '/admin/plans', 'name', '이름', target='list-plans') }}
+    {{ L.sort_th(pp, '/admin/plans', 'price', '정가', target='list-plans') }}
+    <th>체험</th>
+    <th>첫구독 할인</th>
+    <th>첫 결제액</th>
+    <th>상시할인</th>
+    <th>정기 결제액</th>
+    <th>주기</th>
+    {{ L.sort_th(pp, '/admin/plans', 'status', '상태', target='list-plans') }}
+    <th></th>
+  </tr></thead>
+  <tbody>
+  {% for plan, svc in page.items %}
+    <tr>
+      <td class="muted">{{ svc.name }}</td>
+      <td style="font-weight:500">{{ plan.name }}</td>
+      <td {% if plan.recurring_amount != plan.price %}style="text-decoration:line-through;color:var(--black-40)"{% else %}style="font-weight:600"{% endif %}>{{ "{:,}".format(plan.price) }}원</td>
+      <td class="muted">{% if plan.trial_enabled %}{{ plan.trial_days }}일{% else %}-{% endif %}</td>
+      <td class="muted">
+        {%- if plan.first_payment_type == 'NONE' -%}없음
+        {%- elif plan.first_payment_type == 'FREE' -%}무료
+        {%- elif plan.first_payment_type == 'DISCOUNT_AMOUNT' -%}{{ "{:,}".format(plan.first_payment_value) }}원 할인
+        {%- elif plan.first_payment_type == 'DISCOUNT_PERCENT' -%}{{ plan.first_payment_value }}% 할인{%- endif -%}
+      </td>
+      <td title="{{ plan.first_tooltip }}" {% if plan.first_amount == plan.recurring_amount %}class="muted"{% else %}style="font-weight:600"{% endif %}>{{ "{:,}".format(plan.first_amount) }}원</td>
+      <td class="muted">
+        {%- if plan.recurring_discount_type == 'DISCOUNT_PERCENT' -%}{{ plan.recurring_discount_value }}%
+        {%- elif plan.recurring_discount_type == 'DISCOUNT_AMOUNT' -%}{{ "{:,}".format(plan.recurring_discount_value) }}원
+        {%- else -%}−{%- endif -%}
+      </td>
+      <td title="{{ plan.recurring_tooltip }}" style="font-weight:600">{{ "{:,}".format(plan.recurring_amount) }}원</td>
+      <td>{{ plan.billing_cycle }}{% if plan.cycle_days %}({{ plan.cycle_days }}일){% endif %}</td>
+      <td><span class="badge badge-{{ plan.status }}">{{ plan.status }}</span></td>
+      <td style="white-space:nowrap">
+        {% if ctx.user.role == 'SERVICE_MANAGER' %}
+        <a class="btn btn-sm btn-ghost" href="/admin/plans/{{ plan.id }}/edit">수정</a>
+        {% if plan.status == 'ACTIVE' %}
+        <form method="post" action="/admin/plans/{{ plan.id }}/archive" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+          <button class="btn btn-sm btn-ghost" type="submit">비활성화</button>
+        </form>
+        {% elif plan.status == 'ARCHIVED' %}
+        {# 보관된 요금제 재활성화(ARCHIVED → ACTIVE) #}
+        <form method="post" action="/admin/plans/{{ plan.id }}/activate" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+          <button class="btn btn-sm btn-primary" type="submit">활성화</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/admin/plans/{{ plan.id }}/delete" style="display:inline"
+              data-confirm="구독이 있는 요금제는 삭제할 수 없습니다. 정말 삭제할까요?"
+              data-confirm-title="요금제를 삭제할까요?" data-confirm-ok="삭제">
+          <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+          <button class="btn btn-sm btn-danger" type="submit">삭제</button>
+        </form>
+        {% endif %}
+        {# 사용일 추가(보너스) — SYSTEM_ADMIN·SERVICE_MANAGER 모두 노출. 클릭 시 모달에서 일수 입력 #}
+        <form method="post" action="/admin/plans/{{ plan.id }}/bonus-days" style="display:inline"
+              data-confirm="이 요금제를 쓰는 이용 중인 구독(활성·연장처리·미수)의 만료일·다음 결제일을 입력한 일수만큼 미룹니다."
+              data-confirm-title="사용일을 추가할까요?" data-confirm-ok="추가"
+              data-confirm-input="days" data-confirm-input-placeholder="추가할 일수 (예: 30)"
+              data-confirm-input-min="1" data-confirm-input-max="3650">
+          <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+          <input type="hidden" name="days">
+          <button class="btn btn-sm btn-ghost" type="submit">사용일추가</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="11" class="muted">요금제가 없습니다</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ L.pager(page, '/admin/plans', pp, target='list-plans') }}
+</div>
+</div>

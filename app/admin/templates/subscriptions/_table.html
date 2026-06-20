@@ -1,0 +1,39 @@
+{% import "_list.html" as L %}
+<div id="list-subs">
+{{ L.toolbar('/admin/subscriptions', pp, '사용자 ID 검색', [
+   ('service_id', service_options, service_filter),
+   ('plan_name', plan_options, plan_filter),
+   ('status', [('','전체 상태'),('TRIAL','체험'),('ACTIVE','활성'),('PAST_DUE','미수'),('SUSPENDED','정지'),('CANCELED','취소'),('EXTENDED','연장처리'),('EXPIRED','만료')], status_filter)],
+   target='list-subs',
+   date_inputs=[('from', from_filter), ('to', to_filter)],
+   export_url='/admin/subscriptions/export.xlsx') }}
+<div class="card">
+<table>
+  <thead><tr>
+    <th>서비스</th>
+    {{ L.sort_th(pp, '/admin/subscriptions', 'external_user_id', '사용자', target='list-subs') }}
+    <th>요금제</th>
+    {{ L.sort_th(pp, '/admin/subscriptions', 'status', '상태', target='list-subs') }}
+    {{ L.sort_th(pp, '/admin/subscriptions', 'current_period_end', '만료일', target='list-subs') }}
+    {{ L.sort_th(pp, '/admin/subscriptions', 'next_billing_at', '다음 결제', target='list-subs') }}
+    <th></th>
+  </tr></thead>
+  <tbody>
+  {% for sub, plan, svc in page.items %}
+    <tr onclick="location.href='/admin/subscriptions/{{ sub.id }}'" style="cursor:pointer">
+      <td>{{ svc.name }}</td>
+      <td>{{ sub.external_user_id }}</td>
+      <td>{{ plan.name }}</td>
+      <td><span class="badge badge-{{ sub.status }}">{{ sub_status_ko(sub.status) }}</span></td>
+      <td>{{ sub.current_period_end|kst("%Y-%m-%d") }}</td>
+      <td>{{ sub.next_billing_at|kst("%Y-%m-%d %H:%M") }}</td>
+      <td><span class="muted" style="font-size:12px">상세 ›</span></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7" class="muted">구독이 없습니다</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ L.pager(page, '/admin/subscriptions', pp, target='list-subs') }}
+</div>
+</div>

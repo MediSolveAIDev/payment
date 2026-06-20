@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}결제 상세{% endblock %}
+{% block crumb %}<a href="/admin/payments">결제</a> · 상세{% endblock %}
+{% block content %}
+<div class="page-head"><h1>결제 상세</h1>
+  <span class="muted" style="font-size:12px;font-family:ui-monospace,monospace">{{ payment.order_id }}</span></div>
+<div class="card">
+  <table>
+    <tbody>
+      <tr><th style="text-align:left;width:160px">주문번호</th>
+          <td style="font-family:ui-monospace,monospace">{{ payment.order_id }}</td></tr>
+      {# 상품명(토스 orderName) — 단건결제는 클라이언트 전달값, 구독결제는 요금제명 #}
+      <tr><th style="text-align:left">상품명</th><td>{{ payment.order_name or '-' }}</td></tr>
+      <tr><th style="text-align:left">종류</th>
+          <td><span class="badge badge-{{ payment.kind }}">{{ '구독' if payment.kind == 'SUBSCRIPTION' else '일반' }}</span></td></tr>
+      <tr><th style="text-align:left">결제유형</th>
+          <td><span class="badge badge-{{ payment.payment_type }}">{{ payment.payment_type }}</span></td></tr>
+      <tr><th style="text-align:left">서비스</th><td>{{ service.name }}</td></tr>
+      <tr><th style="text-align:left">사용자</th><td>{{ payment.external_user_id or '-' }}</td></tr>
+      {# 결제 카드 — 실제 충전된 카드(raw_response.card.number)를 우선 표시하고,
+         없으면 현재 보관함 카드(card.card_info.number)로 폴백. 카드 링크는 카드 상세로 이동. #}
+      <tr><th style="text-align:left">결제 카드</th>
+          <td>
+            {%- set charged = payment.raw_response.card.number if payment.raw_response and payment.raw_response.card else None -%}
+            {%- if charged -%}<span style="font-family:ui-monospace,monospace">{{ charged }}</span>
+            {%- elif card and card.card_info and card.card_info.number -%}<span style="font-family:ui-monospace,monospace">{{ card.card_info.number }}</span>
+            {%- else -%}-{%- endif -%}
+            {%- if card %} <a class="btn-text" href="/admin/cards/{{ card.id }}">카드 상세 ›</a>{%- endif -%}
+          </td></tr>
+      <tr><th style="text-align:left">금액</th><td style="font-weight:600">{{ "{:,}".format(payment.amount) }}원</td></tr>
+      <tr><th style="text-align:left">상태</th>
+          <td><span class="badge badge-{{ payment.status }}">{{ payment_status_ko(payment.status) }}</span>
+          {# 부분취소: status는 DONE이지만 일부 환불됨 → 별도 표시 #}
+          {%- if payment.status == 'DONE' and refunded %} <span class="badge badge-CANCELED">부분취소</span>{%- endif -%}
+          </td></tr>
+      {# 실패 코드 — 마우스 올리면 의미 툴팁(코드 의미 맵 → 없으면 저장된 메시지) #}
+      <tr><th style="text-align:left">실패 코드</th><td class="muted">{% if payment.failure_code %}<span class="code-tip" data-tip="{{ payment_error_meaning(payment.failure_code) or payment.failure_message or payment.failure_code }}">{{ payment.failure_code }}</span>{% else %}-{% endif %}</td></tr>
+      <tr><th style="text-align:left">실패 메시지</th><td class="muted">{{ payment.failure_message or '-' }}</td></tr>
+      <tr><th style="text-align:left">요청 시각</th><td>{{ payment.requested_at|kst("%Y-%m-%d %H:%M:%S") }}</td></tr>
+      <tr><th style="text-align:left">승인 시각</th><td>{{ payment.approved_at|kst("%Y-%m-%d %H:%M:%S") }}</td></tr>
+      <tr><th style="text-align:left">토스 결제키</th>
+          <td style="font-family:ui-monospace,monospace;font-size:12px">{{ payment.toss_payment_key or '-' }}</td></tr>
+      <tr><th style="text-align:left">연결 구독</th>
+          <td>{% if sub %}<a href="/admin/subscriptions/{{ sub.id }}">{{ sub.external_user_id }} ›</a>{% else %}-{% endif %}</td></tr>
+    </tbody>
+  </table>
+</div>
+{% if payment.raw_response %}
+<div class="card">
+  <div class="block-head"><h2>원본 응답</h2></div>
+  <pre style="overflow:auto;font-size:12px;background:var(--black-4);padding:12px;border-radius:8px">{{ payment.raw_response|tojson(indent=2) }}</pre>
+</div>
+{% endif %}
+{# 어드민 취소 — 수수료 없이 전액/부분(누적) 취소. 잔여 환불가능액이 남아 있으면 노출.
+   부분취소 후에도 status=DONE이라 잔여>0이면 카드가 계속 보인다(추가 취소 가능). #}
+{% if payment.kind == 'ONE_OFF' and cancel_remaining > 0 %}
+<div class="card">
+  <div class="block-head"><h2>결제 취소</h2></div>
+  <p class="muted" style="font-size:13px;margin-bottom:12px">
+    결제금액 <strong>{{ "{:,}".format(payment.amount) }}원</strong>
+    {% if refunded %}· 이미 환불 <strong style="color:var(--red)">{{ "{:,}".format(refunded) }}원</strong>{% endif %}
+    · 잔여 환불가능 <strong>{{ "{:,}".format(cancel_remaining) }}원</strong>
+    <br>관리자 취소는 <b>수수료 없이</b> 전액 또는 입력한 금액/비율만큼 환불합니다(여러 번 부분취소 가능).
+  </p>
+  {# 부분취소: 금액 또는 %를 입력하면 취소금액이 계산되어 표시됨(잔여 기준). 미리보기 후 제출 #}
+  <form method="post" action="/admin/payments/{{ payment.id }}/cancel"
+        onsubmit="return cancelSubmit(this)" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+    <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+    <input type="hidden" name="cancel_amount" id="ca-amount-field">
+    <div>
+      <label class="fld" style="font-size:12px;color:var(--gray-700)">취소 금액(원)</label>
+      <input type="number" id="ca-amount" min="1" max="{{ cancel_remaining }}" placeholder="비우면 전액"
+             style="width:160px" oninput="caFromAmount()">
+    </div>
+    <div>
+      <label class="fld" style="font-size:12px;color:var(--gray-700)">또는 비율(%)</label>
+      <input type="number" id="ca-pct" min="0" max="100" placeholder="0~100"
+             style="width:120px" oninput="caFromPct()">
+    </div>
+    <span class="muted" id="ca-preview" style="font-size:13px">전액 {{ "{:,}".format(cancel_remaining) }}원 환불</span>
+    <span style="flex:1"></span>
+    <button class="btn btn-danger" type="submit">취소 실행</button>
+  </form>
+  <script>
+    // 잔여 환불가능액(원) — % 입력 시 취소금액 계산 기준
+    var caRemain = {{ cancel_remaining }};
+    function caFmt(n){ return n.toLocaleString() + '원'; }
+    function caPreview(){
+      var a = document.getElementById('ca-amount').value;
+      var p = document.getElementById('ca-preview');
+      if(!a){ p.textContent = '전액 ' + caFmt(caRemain) + ' 환불'; return; }
+      p.textContent = caFmt(parseInt(a,10)||0) + ' 환불';
+    }
+    function caFromAmount(){ document.getElementById('ca-pct').value=''; caPreview(); }
+    function caFromPct(){
+      var pct = parseFloat(document.getElementById('ca-pct').value);
+      var amt = document.getElementById('ca-amount');
+      if(isNaN(pct)){ amt.value=''; caPreview(); return; }
+      // 비율은 잔여 환불가능액 기준 — floor로 계산(서버가 잔여 한도 재검증)
+      amt.value = Math.min(caRemain, Math.floor(caRemain * pct / 100));
+      caPreview();
+    }
+    function cancelSubmit(form){
+      var a = document.getElementById('ca-amount').value;
+      // hidden 필드에 최종 취소금액 전달(비우면 전액)
+      document.getElementById('ca-amount-field').value = a || '';
+      var msg = a ? (parseInt(a,10).toLocaleString()+'원을 환불(부분취소)합니다.')
+                  : ('잔여 ' + caFmt(caRemain) + '을 전액 환불합니다.');
+      return confirm(msg);
+    }
+  </script>
+</div>
+{% endif %}
+{# 환불 내역 — 부분취소(status=DONE)·전액취소(CANCELED) 모두 환불액이 있으면 표시 #}
+{% if payment.kind == 'ONE_OFF' and refunded > 0 %}
+<div class="card">
+  <div class="block-head"><h2>취소·환불 내역</h2></div>
+  <table>
+    <tbody>
+      <tr><th style="text-align:left;width:160px">총 결제금액</th>
+          <td style="font-weight:600">{{ "{:,}".format(payment.amount) }}원</td></tr>
+      <tr><th style="text-align:left">누적 환불액</th>
+          <td style="color:var(--red);font-weight:600">{{ "{:,}".format(refunded) }}원</td></tr>
+      <tr><th style="text-align:left">잔여 환불가능액</th>
+          <td>{{ "{:,}".format(cancel_remaining) }}원{% if cancel_remaining == 0 %} <span class="badge badge-CANCELED">전액취소</span>{% else %} <span class="badge badge-CANCELED">부분취소</span>{% endif %}</td></tr>
+      {# 외부 사용자 취소 시 차감된 취소 수수료(어드민 무수수료 취소는 0) #}
+      {% if payment.cancel_fee %}
+      <tr><th style="text-align:left">취소 수수료(서비스 보유)</th>
+          <td>{{ "{:,}".format(payment.cancel_fee) }}원</td></tr>
+      {% endif %}
+      <tr><th style="text-align:left">최근 취소 시각</th>
+          <td class="muted">{{ payment.canceled_at|kst("%Y-%m-%d %H:%M:%S") if payment.canceled_at else '-' }}</td></tr>
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

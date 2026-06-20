@@ -1,0 +1,7 @@
+{
+  "services": [
+    { "id": "a1b2c3d4-0001-4000-8000-000000000001", "name": "DEMO-쇼핑몰", "status": "ACTIVE" },
+    { "id": "a1b2c3d4-0002-4000-8000-000000000002", "name": "DEMO-구독앱", "status": "ACTIVE" },
+    { "id": "a1b2c3d4-0003-4000-8000-000000000003", "name": "DEMO-비활성", "status": "INACTIVE" }
+  ]
+}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}발급 키{% endblock %}
+{% block crumb %}서비스 키{% endblock %}
+{% block content %}
+<div class="page-head"><h1 style="margin:0">{{ service.name }} — 발급된 키</h1></div>
+<div class="notice"><span data-lucide="shield-alert" style="vertical-align:-3px;margin-right:6px"></span>아래 키는 <strong>지금 한 번만</strong> 표시됩니다. 안전한 곳에 보관 후 서비스 담당자에게 전달하세요.</div>
+<div class="card" style="max-width:640px">
+  <div class="block-head" style="margin-bottom:8px"><h2 style="margin:0">서비스 API 키</h2>
+    <button type="button" class="btn btn-sm btn-ghost" data-copy="{{ api_key }}"><span data-lucide="copy"></span>복사</button></div>
+  <div class="key-box" data-key="{{ api_key }}">{{ api_key }}</div>
+  <div class="block-head" style="margin:16px 0 8px"><h2 style="margin:0">HMAC Secret</h2>
+    <button type="button" class="btn btn-sm btn-ghost" data-copy="{{ hmac_secret }}"><span data-lucide="copy"></span>복사</button></div>
+  <div class="key-box" data-secret="{{ hmac_secret }}">{{ hmac_secret }}</div>
+  <div class="actions"><a class="btn btn-primary" href="/admin/services/{{ service.id }}">서비스 상세로</a></div>
+</div>
+{% endblock %}

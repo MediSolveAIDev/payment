@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>0. 시작하기 — 구독/결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <a class="brand" href="index.html">
+      <span class="logo">결제</span>
+      <span class="t">구독/결제 서버<small>서비스 담당자 매뉴얼</small></span>
+    </a>
+    <div class="nav-cat">시작</div>
+    <nav class="nav">
+      <a href="index.html"><span class="num">★</span> 매뉴얼 홈</a>
+      <a href="09-overview-diagram.html"><span class="num">◆</span> 한눈에 보기(그림)</a>
+      <a href="01-getting-started.html" class="active"><span class="num">0</span> 시작하기</a>
+    </nav>
+    <div class="nav-cat">관리자 콘솔</div>
+    <nav class="nav">
+      <a href="02-plans.html"><span class="num">1</span> 요금제 관리</a>
+      <a href="03-subscriptions.html"><span class="num">2</span> 구독 관리</a>
+      <a href="04-payments.html"><span class="num">3</span> 결제·환불</a>
+      <a href="05-settlement.html"><span class="num">4</span> 정산</a>
+      <a href="08-admin-console.html"><span class="num">5</span> 화면별 가이드(캡처)</a>
+    </nav>
+    <div class="nav-cat">개발 연동</div>
+    <nav class="nav">
+      <a href="00-setup.html"><span class="num">6</span> 설치·설정·배포</a>
+      <a href="06-api-integration.html"><span class="num">7</span> API 연동</a>
+      <a href="10-qa-testcases.html"><span class="num">8</span> QA 테스트케이스</a>
+      <a href="11-dev-sandbox.html"><span class="num">9</span> 사전 개발(덤프)</a>
+      <a href="dev_manual/index.html" target="_blank" rel="noopener"><span class="num">10</span> 개발자 매뉴얼 ↗</a>
+    </nav>
+    <div class="nav-cat">참고</div>
+    <nav class="nav">
+      <a href="07-faq.html"><span class="num">11</span> FAQ</a>
+      <a href="13-status-reference.html"><span class="num">12</span> 상태·코드 레퍼런스</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+  <div class="content">
+
+    <div class="page-head">
+      <div class="page-eyebrow">CHAPTER 0</div>
+      <h1>시작하기</h1>
+      <p class="lead">콘솔에 로그인하기 전에 알아두면 좋은 핵심 개념과 권한, 그리고 첫 로그인 방법을 안내합니다.</p>
+    </div>
+
+    <h2><span class="h-no">0.1</span>구독·결제가 동작하는 방식</h2>
+    <p>이 서버는 결제 모듈로 <strong>토스페이먼츠</strong>를 사용합니다. 사용자가 카드를 등록하면 토스가 자동결제용 키(빌링키)를
+    발급하고, 이후에는 서버가 만료일마다 <strong>자동으로 정기 결제를 청구</strong>합니다. 담당자나 사용자가 매번 결제할 필요가 없습니다.</p>
+
+    <div class="easybox">
+      <p>'빌링키'는 <strong>단골 가게에 맡겨 둔 카드 정보</strong> 같은 것입니다. 손님이 처음 한 번만 카드를 등록하면, 다음부터는
+      카드 번호를 다시 입력하지 않아도 가게(서버)가 알아서 결제합니다. 실제 카드 번호는 우리 서버에 저장되지 않고 토스가 안전하게 보관하므로
+      유출 걱정이 적습니다.</p>
+    </div>
+
+    <h3>두 가지 결제 방식</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>설명</th><th>예시</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge b-blue">구독 결제</span></td><td>요금제를 기준으로 만료일마다 반복 청구되는 정기 결제. 첫 결제 후 자동 갱신됩니다.</td><td>월 9,900원 멤버십</td></tr>
+          <tr><td><span class="badge b-purple">단건 결제</span></td><td>구독과 무관하게 1회만 발생하는 결제. 자동 갱신이 없습니다.</td><td>이용권 1회 구매</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>구독의 생애 주기</h3>
+    <p>구독은 다음과 같은 상태를 오갑니다. 상태에 따라 사용자의 <strong>서비스 접근 허용 여부</strong>가 달라집니다.</p>
+    <div class="easybox">
+      <p>상태를 <strong>신호등</strong>으로 생각하면 쉽습니다.</p>
+      <ul>
+        <li>🟢 <strong>초록불(이용 가능)</strong> — 체험·활성·미수·연장·해지예약. 결제가 잠깐 밀렸어도(미수) 바로 막지 않고 며칠 봐줍니다.</li>
+        <li>🔴 <strong>빨간불(이용 차단)</strong> — 정지·종료. 반복해서 결제가 안 되면 그제서야 막습니다.</li>
+      </ul>
+      <p>즉, '결제 한 번 실패 = 즉시 차단'이 아니라, <strong>여러 번 시도하고 유예 기간을 준 뒤</strong> 막는 구조입니다.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>상태</th><th>의미</th><th>접근 허용</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge b-blue">TRIAL</span> 체험</td><td>무료 체험 중. 만료 시 첫 정기 결제가 발생합니다.</td><td><span class="badge b-green">허용</span></td></tr>
+          <tr><td><span class="badge b-green">ACTIVE</span> 활성</td><td>정상 결제 완료, 정상 이용 중.</td><td><span class="badge b-green">허용</span></td></tr>
+          <tr><td><span class="badge b-orange">PAST_DUE</span> 미수</td><td>결제 실패, 서버가 자동 재시도 중(유예 기간).</td><td><span class="badge b-green">허용</span></td></tr>
+          <tr><td><span class="badge b-purple">EXTENDED</span> 연장처리</td><td>관리자가 만료일을 수동 연장한 상태.</td><td><span class="badge b-green">허용</span></td></tr>
+          <tr><td><span class="badge b-gray">CANCELED</span> 해지예약</td><td>해지 예약됨. 만료일까지는 계속 이용 가능.</td><td><span class="badge b-green">허용</span></td></tr>
+          <tr><td><span class="badge b-red">SUSPENDED</span> 정지</td><td>반복 결제 실패로 차단됨. 수동 결제로 복구 가능.</td><td><span class="badge b-red">차단</span></td></tr>
+          <tr><td><span class="badge b-gray">EXPIRED</span> 종료</td><td>완전히 종료된 최종 상태.</td><td><span class="badge b-red">차단</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <span class="ico">💡</span>
+      <div><p>자사 서비스는 사용자의 접근을 직접 판단할 필요 없이, API가 돌려주는 <code>access_allowed</code> 값(true/false) 하나로
+      <strong>이용 허용 여부를 결정</strong>하면 됩니다. 상태 해석은 서버가 대신 해 줍니다.</p></div>
+    </div>
+
+    <h2><span class="h-no">0.2</span>권한: 시스템 관리자 vs 서비스 담당자</h2>
+    <p>콘솔 계정에는 두 가지 역할이 있습니다. 본인이 어떤 역할인지에 따라 보이는 메뉴와 가능한 작업이 다릅니다.</p>
+    <div class="easybox">
+      <p><strong>시스템 관리자</strong>는 건물 전체를 여는 <strong>마스터키</strong>, <strong>서비스 담당자</strong>는
+      <strong>내 가게만 여는 열쇠</strong>라고 보면 됩니다. 담당자는 옆 가게(다른 서비스)의 매출이나 구독을 볼 수 없고, 볼 필요도 없습니다.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>역할</th><th>할 수 있는 일</th><th>볼 수 있는 범위</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge b-blue">시스템 관리자</span><br><span class="muted">SYSTEM_ADMIN</span></td>
+            <td>서비스 등록·키 발급, 계정 생성, 전체 설정(킬스위치·재시도 정책 등), 모든 서비스 데이터 관리</td>
+            <td>전체 서비스</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-green">서비스 담당자</span><br><span class="muted">SERVICE_MANAGER</span></td>
+            <td>담당 서비스의 요금제·구독·결제·정산 조회 및 관리</td>
+            <td><strong>본인 담당 서비스만</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout note">
+      <span class="ico">ℹ️</span>
+      <div><p>이 매뉴얼은 주로 <strong>서비스 담당자</strong> 관점으로 쓰였습니다. 서비스 등록·키 발급·계정 생성 같은
+      시스템 관리자 전용 작업은 별도 안내(또는 관리자에게 요청)가 필요합니다.</p></div>
+    </div>
+
+    <h2><span class="h-no">0.3</span>첫 로그인 — 비밀번호 설정</h2>
+    <p>시스템 관리자가 담당자 계정을 만들면, 입력한 이메일로 <strong>비밀번호 설정 링크</strong>가 발송됩니다.
+    이 링크로 비밀번호를 직접 설정해야 로그인할 수 있습니다.</p>
+    <ol class="steps">
+      <li>
+        <h4>비밀번호 설정 메일 확인</h4>
+        <p>계정에 등록된 이메일로 받은 <strong>비밀번호 설정 링크</strong>를 엽니다.
+        링크는 <strong>48시간 후 만료</strong>되고 <strong>1회용</strong>입니다.</p>
+      </li>
+      <li>
+        <h4>비밀번호 설정</h4>
+        <p>안내에 따라 비밀번호를 설정합니다. 이때 계정 상태가 <code>PENDING</code>에서 <code>ACTIVE</code>로 바뀝니다.</p>
+      </li>
+      <li>
+        <h4>로그인</h4>
+        <p>콘솔 로그인 화면에서 <strong>이메일 + 설정한 비밀번호</strong>로 로그인합니다.</p>
+      </li>
+    </ol>
+    <div class="callout warn">
+      <span class="ico">⚠️</span>
+      <div>
+        <p><strong>링크가 만료되었나요?</strong> 시스템 관리자가 계정 화면에서 <strong>비밀번호 재설정</strong>으로 새 링크를 보낼 수 있습니다.</p>
+        <p><strong>비밀번호를 5회 이상 틀리면</strong> 계정이 자동으로 <code>LOCKED</code> 잠금됩니다. 잠긴 계정은 시스템 관리자가 풀어줘야 합니다.</p>
+      </div>
+    </div>
+
+    <h2><span class="h-no">0.4</span>로그인 후 첫 화면 — 대시보드</h2>
+    <p>로그인하면 <strong>대시보드</strong>가 가장 먼저 보입니다. 이번 달 운영 현황을 한눈에 파악하는 관제 화면입니다.</p>
+    <h3>상단 핵심 지표 (이번 달)</h3>
+    <ul>
+      <li><strong>이번 달 총 매출</strong> — 이번 달 발생한 모든 결제 성공 금액(정기+단건)의 합계</li>
+      <li><strong>신규 구독</strong> — 이번 달 새로 시작된 구독 건수(무료 체험 포함). <strong>첫 결제가 실패한 가입은 집계되지 않습니다</strong>(실제 성사된 구독만 — <a href="03-subscriptions.html">2.7</a> 참고)</li>
+      <li><strong>결제 실패</strong> — 이번 달 결제가 시도되었으나 실패한 건수</li>
+      <li><strong>환불/취소</strong> — 이번 달 환불 처리된 금액의 합계</li>
+    </ul>
+    <h3>우측 실시간 모니터링 레일</h3>
+    <p>최근 구독·최근 결제(성공은 초록, 실패는 빨강 배지)·미수 구독·만료 임박(향후 7일 이내) 등 개별 이벤트를 실시간으로 보여줍니다.
+    항목을 클릭하면 상세 화면으로 이동합니다.</p>
+    <h3>심층 분석 차트</h3>
+    <p>최근 12개월 구독/일반매출 추이, 구독 상태 비율(도넛), 최근 30일 가입·해지 추이 등 중장기 추세를 시각화합니다.</p>
+    <div class="callout tip">
+      <span class="ico">💡</span>
+      <div><p>여러 서비스를 보는 시스템 관리자에게는 대시보드 하단에 <strong>서비스별 현황 테이블</strong>이 추가로 표시됩니다.
+      서비스 담당자는 본인 담당 서비스 기준으로 지표가 집계됩니다.</p></div>
+    </div>
+
+    <div class="pager">
+      <a href="index.html"><small>이전</small><span>← 매뉴얼 홈</span></a>
+      <a class="next" href="02-plans.html"><small>다음</small><span>1. 요금제 관리 →</span></a>
+    </div>
+
+  </div>
+  </main>
+</div>
+<script src="assets/glossary.js"></script>
+</body>
+</html>

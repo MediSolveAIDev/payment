@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ account.email }}{% endblock %}
+{% block crumb %}계정 상세{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="btn-text" href="/admin/users"><span data-lucide="arrow-left"></span>계정</a>
+  <h1 style="margin:0">{{ account.email }}</h1>
+  <span class="badge badge-{{ account.status }}">{{ account.status }}</span>
+  <span class="spacer"></span>
+  <a class="btn btn-ghost" href="/admin/users/{{ account.id }}/edit"><span data-lucide="pencil"></span>정보 수정</a>
+</div>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="block-head"><h2 style="margin:0">계정 정보</h2></div>
+    <div class="kv"><span class="muted">이메일</span><span>{{ account.email }}</span></div>
+    <div class="kv"><span class="muted">전화번호</span><span>{{ account.phone or '-' }}</span></div>
+    <div class="kv"><span class="muted">역할</span>
+      <span>{{ account.role | replace('SYSTEM_ADMIN','시스템 관리자') | replace('SERVICE_MANAGER','서비스 담당자') }}</span></div>
+    <div class="kv"><span class="muted">상태</span><span class="badge badge-{{ account.status }}">{{ account.status }}</span></div>
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+      <form method="post" action="/admin/users/{{ account.id }}/reset-password" style="margin:0">
+        <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+        <button class="btn btn-ghost" type="submit"><span data-lucide="mail"></span>비밀번호 재설정 메일</button>
+      </form>
+      {% if account.status == 'DISABLED' %}
+      <form method="post" action="/admin/users/{{ account.id }}/disable" style="margin:0">
+        <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+        <input type="hidden" name="disabled" value="false">
+        <button class="btn btn-ghost" type="submit"><span data-lucide="circle-check"></span>활성화</button>
+      </form>
+      {% else %}
+      <form method="post" action="/admin/users/{{ account.id }}/disable" style="margin:0"
+            data-confirm="이 계정을 비활성화하면 로그인이 차단되고 기존 세션이 모두 종료됩니다."
+            data-confirm-title="계정을 비활성화할까요?" data-confirm-ok="비활성화">
+        <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+        <input type="hidden" name="disabled" value="true">
+        <button class="btn btn-ghost" type="submit"><span data-lucide="ban"></span>비활성화</button>
+      </form>
+      {% endif %}
+      <form method="post" action="/admin/users/{{ account.id }}/delete" style="margin:0"
+            data-confirm="이 계정을 삭제하면 로그인이 영구 차단되고 담당 서비스 연결이 모두 해제됩니다. 이 작업은 되돌릴 수 없습니다."
+            data-confirm-title="계정을 삭제할까요?" data-confirm-ok="삭제">
+        <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+        <button class="btn btn-danger" type="submit"><span data-lucide="trash-2"></span>삭제</button>
+      </form>
+    </div>
+  </div>
+  {% if account.role == 'SERVICE_MANAGER' %}
+  <div class="card">
+    <div class="block-head"><h2 style="margin:0">담당 서비스</h2></div>
+    {% for s in managed %}
+    <div class="kv">
+      <span>{{ s.name }}</span>
+      <form method="post" action="/admin/users/{{ account.id }}/services/{{ s.id }}/remove" style="margin:0">
+        <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+        <button class="btn-text" type="submit" style="color:#E5396E">해제</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="muted" style="font-size:13px">담당 서비스가 없습니다.</p>
+    {% endfor %}
+    {% if assignable %}
+    <form method="post" action="/admin/users/{{ account.id }}/services" class="toolbar" style="margin-top:14px">
+      <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+      <select name="service_id">
+        {% for s in assignable %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-sub" type="submit"><span data-lucide="plus"></span>서비스 추가</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

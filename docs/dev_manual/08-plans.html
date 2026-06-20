@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>08. 요금제 관리 (생성·수정·금액 계산·자동결제안함·추가정보) — 개발자 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>개발자 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>🧱</span>기반 (먼저 읽기)</div>
+<a class="nav-link" href="README.html"><span class="n">·</span><span class="tt">개발자 인수인계 매뉴얼 (dev_manual)</span></a>
+<a class="nav-link" href="01-getting-started.html"><span class="n">01</span><span class="tt">01. 시작하기 — 구조·실행·테스트·요청 처리 공통 흐름</span></a>
+<a class="nav-link" href="02-database.html"><span class="n">02</span><span class="tt">02. 데이터베이스 — 테이블·모델·관계·마이그레이션</span></a>
+<a class="nav-link" href="03-auth-and-security.html"><span class="n">03</span><span class="tt">03. 인증과 보안 공통</span></a>
+<div class="nav-group"><span>⚙️</span>기능별 상세</div>
+<a class="nav-link" href="04-subscription-create.html"><span class="n">04</span><span class="tt">04. 구독 생성</span></a>
+<a class="nav-link" href="05-subscription-renewal.html"><span class="n">05</span><span class="tt">05. 구독 갱신·만료·재시도·정합성(스케줄러 배치)</span></a>
+<a class="nav-link" href="06-subscription-manage.html"><span class="n">06</span><span class="tt">06. 구독 취소·재개·수동결제·카드변경</span></a>
+<a class="nav-link" href="07-one-off-payment.html"><span class="n">07</span><span class="tt">07. 단건(일반) 결제 + 취소</span></a>
+<a class="nav-link active" href="08-plans.html"><span class="n">08</span><span class="tt">08. 요금제 관리 (생성·수정·금액 계산·자동결제안함·추가정보)</span></a>
+<a class="nav-link" href="09-services-registry.html"><span class="n">09</span><span class="tt">09. 서비스 등록·키 발급/회전·취소정책·담당자</span></a>
+<a class="nav-link" href="10-settlement.html"><span class="n">10</span><span class="tt">10. 정산(어드민 화면)</span></a>
+<a class="nav-link" href="11-dashboard.html"><span class="n">11</span><span class="tt">11. 대시보드 — 어드민 메인 화면</span></a>
+<a class="nav-link" href="12-webhooks.html"><span class="n">12</span><span class="tt">12. 웹훅 처리 (토스페이먼츠 → 서버)</span></a>
+<a class="nav-link" href="13-admin-accounts.html"><span class="n">13</span><span class="tt">13. 어드민 계정·역할·로그인/비밀번호</span></a>
+<a class="nav-link" href="14-global-settings.html"><span class="n">14</span><span class="tt">14. 전체 설정(재시도·어드민 IP·킬스위치)</span></a>
+<a class="nav-link" href="15-external-api-and-sample.html"><span class="n">15</span><span class="tt">15. 외부 API 레퍼런스 + 샘플 서비스 연동</span></a>
+<a class="nav-link" href="16-card-vault.html"><span class="n">16</span><span class="tt">16. 카드 보관함(Card Vault) — 카드 등록·교체·조회·삭제</span></a>
+<a class="nav-link" href="17-service-notifications.html"><span class="n">17</span><span class="tt">17. 서비스 알림(아웃고잉 웹훅) — 요청 016</span></a>
+<div class="nav-group"><span>🖥️</span>어드민 화면별 매뉴얼</div>
+<a class="nav-link" href="admin--README.html"><span class="n">·</span><span class="tt">어드민 콘솔 페이지 매뉴얼</span></a>
+<a class="nav-link" href="admin--01-login-and-access.html"><span class="n">01</span><span class="tt">01. 로그인·접근 (로그인 / 비밀번호 설정 / 로그아웃 / IP 제한)</span></a>
+<a class="nav-link" href="admin--02-dashboard.html"><span class="n">02</span><span class="tt">02. 대시보드</span></a>
+<a class="nav-link" href="admin--03-services.html"><span class="n">03</span><span class="tt">03. 서비스 관리</span></a>
+<a class="nav-link" href="admin--04-plans.html"><span class="n">04</span><span class="tt">04. 요금제 관리 (목록·생성·수정·활성/비활성·삭제)</span></a>
+<a class="nav-link" href="admin--05-subscriptions.html"><span class="n">05</span><span class="tt">05. 구독 관리 — 목록·상세·강제 취소</span></a>
+<a class="nav-link" href="admin--06-payments.html"><span class="n">06</span><span class="tt">06. 결제 — 목록·상세·단건 취소</span></a>
+<a class="nav-link" href="admin--07-settlement.html"><span class="n">07</span><span class="tt">07. 정산 화면</span></a>
+<a class="nav-link" href="admin--08-users.html"><span class="n">08</span><span class="tt">08. 계정 관리</span></a>
+<a class="nav-link" href="admin--09-audit.html"><span class="n">09</span><span class="tt">09. 감사 로그 (조회·검색·정리·엑셀)</span></a>
+<a class="nav-link" href="admin--10-settings.html"><span class="n">10</span><span class="tt">10. 전체 설정 (재시도 정책 · 어드민 IP · 킬스위치)</span></a>
+<div class="nav-group"><span>📋</span>운영 워크플로우</div>
+<a class="nav-link" href="admin--11-onboarding-checklist.html"><span class="n">·</span><span class="tt">신규 서비스 온보딩 체크리스트 (운영자용)</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">개발자 매뉴얼</a> <span>/</span> <em>기능별 상세</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">⚙️ 기능별 상세</span>
+        <span class="dh-src">docs/dev_manual/08-plans.md</span></div>
+      <h1>08. 요금제 관리 (생성·수정·금액 계산·자동결제안함·추가정보)</h1>
+      <div class="summary"><span class="summary-k">⭐ 한 줄 요약</span><p>관리자(SYSTEM_ADMIN 또는 SERVICE_MANAGER)가 어드민 화면에서 요금제를 생성·수정·보관·활성화·삭제하며, 금액 계산(첫 결제 / 정기 결제 / 상시 할인)은 서버의 <code>billing_math.py</code>가 전담한다.</p></div>
+    </header>
+    <div class="doc">
+
+<blockquote class="cal ref"><span class="cal-i">🔗</span><div class="cal-b">
+<p>상호참조: 구독 생성 → 04, 서비스 등록·담당자 → 09, DB 테이블 → 02, 인증·CSRF → 03</p>
+</div></blockquote>
+<hr />
+
+<hr />
+<h2 id="2">2. 언제 실행되나 (트리거)</h2>
+<p>어드민 콘솔(<code>/admin/...</code>) 화면 조작으로 실행된다. 외부 서비스 API가 직접 호출하는 엔드포인트가 아니다.</p>
+<ul>
+<li><strong>SERVICE_MANAGER</strong>: 자신이 담당하는 서비스의 요금제만 관리할 수 있다.</li>
+<li><strong>SYSTEM_ADMIN</strong>: 전체 서비스의 요금제에 접근 가능하다.</li>
+</ul>
+<hr />
+<h2 id="3">3. 요청 진입점</h2>
+<p>모든 라우트는 <code>app/admin/routes/plans.py</code>에 정의되어 있다.</p>
+<h3 id="31">3.1 진입 화면 두 가지</h3>
+<p>요금제를 관리하는 화면이 두 곳 있다. 혼동하기 쉬우므로 차이를 명확히 파악한다.</p>
+<table>
+<thead>
+<tr>
+<th>화면</th>
+<th>URL 패턴</th>
+<th>특징</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>전역 요금제 목록</strong></td>
+<td><code>/admin/plans</code></td>
+<td>전체(또는 담당) 서비스의 요금제를 한 번에 조회·관리. SERVICE_MANAGER는 본인 주 서비스에 요금제를 추가할 수 있다.</td>
+</tr>
+<tr>
+<td><strong>서비스 상세 내 탭</strong></td>
+<td><code>/admin/services/{service_id}</code></td>
+<td>특정 서비스의 요금제 테이블(<code>_plans_table.html</code>)이 서비스 상세 하단에 포함됨. SYSTEM_ADMIN과 담당 SERVICE_MANAGER 모두 접근 가능.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32">3.2 라우트 목록</h3>
+<table>
+<thead>
+<tr>
+<th>HTTP 메서드·경로</th>
+<th>핸들러 함수</th>
+<th>권한</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /plans</code></td>
+<td><code>plans_list</code></td>
+<td><code>require_any</code></td>
+<td>전역 목록 페이지 (htmx partial 공용)</td>
+</tr>
+<tr>
+<td><code>GET /plans/export.xlsx</code></td>
+<td><code>plans_export</code></td>
+<td><code>require_any</code></td>
+<td>전역 목록 엑셀 다운로드</td>
+</tr>
+<tr>
+<td><code>GET /plans/new</code></td>
+<td><code>plans_new</code></td>
+<td><code>require_manager</code></td>
+<td>SERVICE_MANAGER 전용 생성 폼</td>
+</tr>
+<tr>
+<td><code>POST /plans</code></td>
+<td><code>plans_create</code></td>
+<td><code>require_manager</code></td>
+<td>SERVICE_MANAGER 주 서비스에 요금제 생성</td>
+</tr>
+<tr>
+<td><code>GET /services/{service_id}/plans/new</code></td>
+<td><code>service_plan_new</code></td>
+<td><code>require_any</code> + <code>_can_manage</code></td>
+<td>서비스 상세에서 생성 폼</td>
+</tr>
+<tr>
+<td><code>POST /services/{service_id}/plans</code></td>
+<td><code>service_plan_create</code></td>
+<td><code>require_any</code> + <code>_can_manage</code></td>
+<td>서비스 상세에서 요금제 생성</td>
+</tr>
+<tr>
+<td><code>GET /plans/{plan_id}/edit</code></td>
+<td><code>plans_edit</code></td>
+<td><code>require_any</code></td>
+<td>수정 폼 (<code>next</code> 파라미터로 저장 후 이동 URL 전달)</td>
+</tr>
+<tr>
+<td><code>POST /plans/{plan_id}</code></td>
+<td><code>plans_update</code></td>
+<td><code>require_any</code></td>
+<td>수정 처리</td>
+</tr>
+<tr>
+<td><code>POST /plans/{plan_id}/archive</code></td>
+<td><code>plans_archive</code></td>
+<td><code>require_any</code></td>
+<td>보관(비활성화): ACTIVE → ARCHIVED</td>
+</tr>
+<tr>
+<td><code>POST /plans/{plan_id}/activate</code></td>
+<td><code>plans_activate</code></td>
+<td><code>require_any</code></td>
+<td>활성화: ARCHIVED → ACTIVE</td>
+</tr>
+<tr>
+<td><code>POST /plans/{plan_id}/delete</code></td>
+<td><code>plans_delete</code></td>
+<td><code>require_any</code></td>
+<td>하드 삭제 (구독 없을 때만 가능)</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code class="loc">app/admin/routes/plans.py:28-31</code> — <code>require_manager = require_role(UserRole.SERVICE_MANAGER)</code>, <code>require_any = require_role(SYSTEM_ADMIN, SERVICE_MANAGER)</code></p>
+</div></blockquote>
+<h3 id="33-_can_manage">3.3 권한 스코프 확인 (<code>_can_manage</code>)</h3>
+<p><code class="loc">app/admin/routes/plans.py:37-39</code></p>
+<pre><code class="language-python">def _can_manage(ctx: AdminContext, service_id) -&gt; bool:
+    return ctx.service_ids is None or service_id in ctx.service_ids
+</code></pre>
+<ul>
+<li><code>ctx.service_ids is None</code> → SYSTEM_ADMIN(전체 접근)</li>
+<li>목록이 있으면 → SERVICE_MANAGER(담당 서비스만)</li>
+</ul>
+<p><code>_authorize_plan</code> (<code class="loc">app/admin/routes/plans.py:50-59</code>)은 단일 요금제 조회 시 위 스코프를 검사하고, 스코프 외이거나 존재하지 않으면 <strong>403 대신 404</strong>를 반환한다(요금제 존재 여부를 외부에 노출하지 않기 위함).</p>
+<h3 id="34-csrf">3.4 CSRF 검증</h3>
+<p>모든 POST 핸들러에서 <code>await validate_csrf(request, ctx)</code>를 호출한다 (<code class="loc">app/admin/deps.py:105-110</code>). 폼의 <code>&lt;input type="hidden" name="csrf_token"&gt;</code> 값 또는 <code>X-CSRF-Token</code> 헤더가 Redis 세션 토큰과 일치해야 한다.</p>
+<hr />
+<h2 id="4">4. 단계별 처리 흐름</h2>
+<h3 id="41">4.1 요금제 생성 (예: 서비스 상세에서 생성)</h3>
+<pre><code>브라우저 → POST /admin/services/{service_id}/plans
+  │  app/admin/routes/plans.py:280 service_plan_create
+  │
+  ├─ _can_manage 스코프 검사 (plans.py:285-286)
+  ├─ validate_csrf (plans.py:287)
+  ├─ _form_plan_fields(form) (plans.py:86-129) ─── 폼 파싱
+  │     └─ _collect_extra_info(form) (plans.py:62-83) ─── extra_info 수집
+  │
+  └─ plan_service.create_plan(db, ...) (app/services/plans.py:106-155)
+        ├─ 이름 공백 검증 (plans.py:132-133)
+        ├─ _validate_plan_fields (plans.py:34-66) ─── 가격·주기·할인 규칙
+        ├─ _validate_recurring_discount (plans.py:82-103) ─── 상시 할인 규칙
+        ├─ _validate_trial (plans.py:69-79) ─── 체험 규칙
+        ├─ Plan 객체 생성 + db.add (plans.py:139-148)
+        ├─ record_audit (audit.py) ─── plan.create 감사 로그
+        └─ await db.commit()
+
+성공 → saved_redirect(f&quot;/admin/services/{service_id}&quot;, &quot;저장되었습니다&quot;)
+       (303 리다이렉트 + ?saved=저장되었습니다 파라미터)
+실패(DomainError) → 폼 재렌더 (200, error 메시지 표시)
+</code></pre>
+<h3 id="42-_form_plan_fields-appadminroutesplanspy86-129">4.2 폼 파싱: <code>_form_plan_fields</code> (<code class="loc">app/admin/routes/plans.py:86-129</code>)</h3>
+<p>HTML 폼 값을 서비스 레이어 인자 dict로 변환한다. 주요 변환 규칙:</p>
+<table>
+<thead>
+<tr>
+<th>폼 필드</th>
+<th>변환 규칙</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auto_renew_disabled</code> 체크박스</td>
+<td>체크 시(<code>"on"/"true"/"1"</code>) → <code>auto_renew=False</code>; 미체크 → <code>auto_renew=True</code></td>
+</tr>
+<tr>
+<td><code>recurring_discount_type == "NONE"</code></td>
+<td><code>recurring_discount_value</code>를 <code>None</code>으로 강제(값 필드가 숨겨져도 오염 방지)</td>
+</tr>
+<tr>
+<td><code>trial_enabled</code> 미체크</td>
+<td><code>trial_days</code>를 <code>None</code>으로 강제</td>
+</tr>
+<tr>
+<td><code>extra_key</code> / <code>extra_value</code></td>
+<td><code>_collect_extra_info</code>로 dict 수집</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: <code>_form_plan_fields</code> 전체가 <code>try … except DomainError</code> 블록 <strong>안</strong>에 있어야 한다. <code>_collect_extra_info</code>가 <code>InputValidationError</code>(DomainError 하위)를 던질 수 있기 때문이다. 이를 <code>try</code> 밖에 두면 500이 된다(<code class="loc">app/admin/routes/plans.py:244-255</code> 참고).</p>
+</div></blockquote>
+<h3 id="43-_collect_extra_info-appadminroutesplanspy62-83">4.3 추가정보 수집: <code>_collect_extra_info</code> (<code class="loc">app/admin/routes/plans.py:62-83</code>)</h3>
+<p>폼이 <code>extra_key</code>와 <code>extra_value</code>를 병렬 목록으로 전송하면 행 단위로 zip해 dict로 수집한다.</p>
+<ul>
+<li>키·값 모두 빈 행 → 무시(빈 행 추가 허용 UI)</li>
+<li>값은 있는데 키가 비면 → <code>InputValidationError("추가정보 키를 입력하세요(값: ...)")</code></li>
+<li>키 중복 → 마지막 값이 우선</li>
+</ul>
+<h3 id="44-plans_update-appadminroutesplanspy322-356">4.4 요금제 수정 (<code>plans_update</code>, <code class="loc">app/admin/routes/plans.py:322-356</code>)</h3>
+<p>생성과 거의 같되, <code>_UNSET</code> 센티널(<code class="loc">app/services/plans.py:170</code>)로 "미전달"과 "명시적 None"을 구분한다.</p>
+<pre><code class="language-python">_UNSET = object()  # 인자가 전달되지 않았음을 표현하는 센티널
+</code></pre>
+<p>결제 주기(<code>billing_cycle</code>/<code>cycle_days</code>)는 <strong>수정 불가</strong>(요청): <code>update_plan()</code>은 해당 인자를 받지 않고 항상 기존 값을 유지한다. 수정 폼은 결제 주기를 읽기 전용으로만 표시하며 전송하지 않는다. 주기를 바꾸려면 새 요금제를 생성한다.</p>
+<pre><code class="language-python">if new_billing_cycle != BillingCycle.DAY:
+    new_cycle_days = None  # DAY가 아니면 cycle_days 무의미 — 정규화
+</code></pre>
+<h3 id="45-archive-activate">4.5 보관(archive)과 활성화(activate)</h3>
+<table>
+<thead>
+<tr>
+<th>작업</th>
+<th>함수</th>
+<th>상태 전이</th>
+<th>구독 필요 조건</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>보관</td>
+<td><code>archive_plan</code> (<code class="loc">plans.py:293-305</code>)</td>
+<td><code>ACTIVE</code> → <code>ARCHIVED</code></td>
+<td>구독이 있어도 가능</td>
+</tr>
+<tr>
+<td>활성화</td>
+<td><code>activate_plan</code> (<code class="loc">plans.py:308-320</code>)</td>
+<td><code>ARCHIVED</code> → <code>ACTIVE</code></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>보관된 요금제는 신규 구독을 받지 않지만 기존 구독은 유지된다. 구독이 있는 요금제를 삭제하고 싶을 때 먼저 이 방법을 사용한다.</p>
+<h3 id="46-delete_plan-appservicesplanspy323-339">4.6 삭제 (<code>delete_plan</code>, <code class="loc">app/services/plans.py:323-339</code>)</h3>
+<pre><code class="language-python">count = await db.scalar(select(func.count()).select_from(Subscription)
+                        .where(Subscription.plan_id == plan_id))
+if count:
+    raise ConflictError(&quot;구독이 있는 요금제는 삭제할 수 없습니다. 보관(아카이브)을 사용하세요.&quot;)
+</code></pre>
+<ul>
+<li>ACTIVE·EXPIRED 등 상태에 관계없이 구독 레코드가 1건이라도 있으면 삭제 거부</li>
+<li>라우트에서 DomainError를 잡아 <code>?error=메시지</code>를 붙여 리다이렉트 (<code class="loc">plans.py:404-412</code>)</li>
+</ul>
+<hr />
+<h2 id="5-db">5. 사용하는 DB 테이블·컬럼</h2>
+<h3 id="51-plans">5.1 <code>plans</code> (주 쓰기 대상)</h3>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code class="loc">app/models/plan.py:16-48</code>, DB 컬럼 상세: <code>docs/dev_manual/02-database.md</code> 3.5절</p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>역할</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID PK</td>
+<td>요금제 식별자</td>
+</tr>
+<tr>
+<td><code>service_id</code></td>
+<td>UUID FK(RESTRICT)</td>
+<td>소속 서비스. 구독 있으면 삭제 불가</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>String(100)</td>
+<td>표시명</td>
+</tr>
+<tr>
+<td><code>price</code></td>
+<td>BigInteger</td>
+<td>정가(KRW 정수, 원 단위)</td>
+</tr>
+<tr>
+<td><code>billing_cycle</code></td>
+<td>String(10)</td>
+<td><code>YEAR</code>/<code>MONTH</code>/<code>WEEK</code>/<code>DAY</code></td>
+</tr>
+<tr>
+<td><code>cycle_days</code></td>
+<td>Integer(nullable)</td>
+<td>DAY 주기일 때 실제 일수; 나머지는 NULL</td>
+</tr>
+<tr>
+<td><code>first_payment_type</code></td>
+<td>String(20)</td>
+<td>첫구독 할인 유형 (<code>FirstPaymentType</code>)</td>
+</tr>
+<tr>
+<td><code>first_payment_value</code></td>
+<td>BigInteger(nullable)</td>
+<td>첫구독 할인 값 (원 또는 %)</td>
+</tr>
+<tr>
+<td><code>recurring_discount_type</code></td>
+<td>String(20)</td>
+<td>상시 할인 유형 (<code>DiscountType</code>)</td>
+</tr>
+<tr>
+<td><code>recurring_discount_value</code></td>
+<td>BigInteger(nullable)</td>
+<td>상시 할인 값 (원 또는 %)</td>
+</tr>
+<tr>
+<td><code>trial_enabled</code></td>
+<td>Boolean</td>
+<td>체험 기능 활성 여부</td>
+</tr>
+<tr>
+<td><code>trial_days</code></td>
+<td>Integer(nullable)</td>
+<td>체험 기간(일수)</td>
+</tr>
+<tr>
+<td><code>auto_renew</code></td>
+<td>Boolean</td>
+<td>False이면 첫 주기 후 자동연장 없음</td>
+</tr>
+<tr>
+<td><code>extra_info</code></td>
+<td>JSONB</td>
+<td>서비스 측 설명용 key/value</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>String(20)</td>
+<td><code>ACTIVE</code> / <code>ARCHIVED</code></td>
+</tr>
+<tr>
+<td><code>created_at</code> / <code>updated_at</code></td>
+<td>DateTime(tz)</td>
+<td>TimestampMixin</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-subscriptions">5.2 <code>subscriptions</code> (삭제 제약 확인용, 읽기만)</h3>
+<p><code>delete_plan</code>에서 <code>WHERE plan_id = ?</code> COUNT 조회로 구독 존재 여부를 확인한다. 0건이어야 삭제 허용.</p>
+<p>또한 <code>plans.service_id</code>에는 <code>ondelete="RESTRICT"</code> FK가 걸려 있어 서비스 삭제 시에도 요금제가 있으면 거부된다(<code class="loc">app/models/plan.py:28</code>).</p>
+<h3 id="53-audit_logs">5.3 <code>audit_logs</code> (쓰기)</h3>
+<p>생성·수정·보관·활성화·삭제마다 <code>record_audit</code>으로 기록한다.</p>
+<table>
+<thead>
+<tr>
+<th>작업</th>
+<th><code>action</code> 값</th>
+<th><code>detail</code> 주요 필드</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>생성</td>
+<td><code>plan.create</code></td>
+<td><code>name</code>, <code>price</code>, <code>trial_days</code>, <code>auto_renew</code></td>
+</tr>
+<tr>
+<td>수정</td>
+<td><code>plan.update</code></td>
+<td><strong>모든 수정 항목을 변경 전/후로 상세 기록(요청)</strong>: <code>old/new_name</code>, <code>old/new_price</code>, <code>old/new_first_payment</code>(첫결제 할인), <code>old/new_recurring_discount</code>(상시 할인), <code>old/new_trial_enabled·trial_days</code>(체험), <code>old/new_auto_renew</code>(자동갱신), <code>old/new_extra_info</code>(추가정보). <strong>할인은 유형+값을 결합해 "정률 N%" / "정액 N,NNN원" / "무료(0원)" / "없음"으로 기록</strong> — 비율인지 값인지 한눈에 구분(요청). 결제 주기는 수정 불가라 제외. detail_summary가 실제 바뀐 항목만 "라벨 전 → 후"로 표시</td>
+</tr>
+<tr>
+<td>보관</td>
+<td><code>plan.archive</code></td>
+<td>(target_id만)</td>
+</tr>
+<tr>
+<td>활성화</td>
+<td><code>plan.activate</code></td>
+<td>(target_id만)</td>
+</tr>
+<tr>
+<td>삭제</td>
+<td><code>plan.delete</code></td>
+<td>(target_id만)</td>
+</tr>
+<tr>
+<td>사용일추가</td>
+<td><code>plan.bonus_days</code></td>
+<td><code>plan_name</code>, <code>days</code>(추가 일수), <code>affected_count</code>(적용 구독 수)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6">6. 상태 전이</h2>
+<p><code>PlanStatus</code> 열거형: <code class="loc">app/models/enums.py:62-64</code></p>
+<pre><code>생성(create_plan) → ACTIVE
+                        │
+                        ▼ archive_plan
+                    ARCHIVED ──────────────────────┐
+                        │                          │
+                        ▼ activate_plan            │
+                    ACTIVE (복귀)                   │
+                                                   │
+                  구독 0건 확인 후 delete_plan → (삭제)
+</code></pre>
+<ul>
+<li><code>ACTIVE</code>: 신규 구독 가능 상태</li>
+<li><code>ARCHIVED</code>: 신규 구독 불가(기존 구독 유지); <code>list_plans(only_active=True)</code>에서 제외</li>
+<li>삭제는 구독 레코드가 0건일 때만 가능(하드 삭제)</li>
+</ul>
+<hr />
+<h2 id="7">7. 금액 계산 규칙</h2>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code>app/services/billing_math.py</code></p>
+</div></blockquote>
+<p>금액 계산은 <strong>반드시 서버가 수행</strong>한다. 외부에서 넘어온 금액 값은 사용하지 않는다.</p>
+<h3 id="71">7.1 두 할인은 독립 적용 (중첩 없음)</h3>
+<table>
+<thead>
+<tr>
+<th>구분</th>
+<th>함수</th>
+<th>적용 할인</th>
+<th>기준</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>첫 결제(1회차)</td>
+<td><code>plan_first_amount</code> (<code class="loc">billing_math.py:106-109</code>)</td>
+<td><code>first_payment_type</code> / <code>first_payment_value</code></td>
+<td>정가(<code>plan.price</code>)</td>
+</tr>
+<tr>
+<td>정기 결제(2회차~)</td>
+<td><code>plan_recurring_amount</code> (<code class="loc">billing_math.py:100-103</code>)</td>
+<td><code>recurring_discount_type</code> / <code>recurring_discount_value</code></td>
+<td>정가(<code>plan.price</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>첫 결제에 상시 할인은 적용되지 않는다.</strong> 정가를 기준으로 첫구독 할인만 적용한다(요청 005).</p>
+<pre><code>예) price=10,000원, 첫구독 할인 30%, 상시 할인 20%
+  첫 결제: 10,000 − (10,000 × 30%) = 7,000원  ← 상시 할인 무관
+  정기 결제: 10,000 − (10,000 × 20%) = 8,000원 ← 첫구독 할인 무관
+</code></pre>
+<h3 id="72-firstpaymenttype-appmodelsenumspy40-52">7.2 <code>FirstPaymentType</code> 열거값 (<code class="loc">app/models/enums.py:40-52</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>첫 결제액</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NONE</code></td>
+<td>정가 그대로</td>
+</tr>
+<tr>
+<td><code>FREE</code></td>
+<td>0원(완전 무료)</td>
+</tr>
+<tr>
+<td><code>DISCOUNT_AMOUNT</code></td>
+<td>정가 − first_payment_value(원); 음수는 0으로 클램프</td>
+</tr>
+<tr>
+<td><code>DISCOUNT_PERCENT</code></td>
+<td>정가 − floor(정가 × value / 100); 범위 1~100</td>
+</tr>
+</tbody>
+</table>
+<h3 id="73-discounttype-appmodelsenumspy55-59">7.3 <code>DiscountType</code> 열거값 (<code class="loc">app/models/enums.py:55-59</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>정기 결제액</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NONE</code></td>
+<td>정가 그대로</td>
+</tr>
+<tr>
+<td><code>DISCOUNT_AMOUNT</code></td>
+<td>정가 − recurring_discount_value(원); 음수는 0으로 클램프</td>
+</tr>
+<tr>
+<td><code>DISCOUNT_PERCENT</code></td>
+<td>정가 − floor(정가 × value / 100); 범위 1~100</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><code>FREE</code>가 없는 이유: 매 회차 0원 정기 결제는 의미 없으므로 설계상 제외. 상시 할인에 FREE를 넣으면 <code>_validate_recurring_discount</code>에서 거부된다(<code class="loc">app/services/plans.py:82-103</code>).</p>
+</div></blockquote>
+<h3 id="74-compute_period_end-billing_mathpy39-51">7.4 결제 주기별 기간 계산 (<code>compute_period_end</code>, <code class="loc">billing_math.py:39-51</code>)</h3>
+<table>
+<thead>
+<tr>
+<th><code>billing_cycle</code></th>
+<th>계산 방식</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>YEAR</code></td>
+<td><code>start + relativedelta(years=1)</code></td>
+<td>윤년 말일 클램프(2024-02-29 + 1년 = 2025-02-28)</td>
+</tr>
+<tr>
+<td><code>MONTH</code></td>
+<td><code>start + relativedelta(months=1)</code></td>
+<td>월말 클램프(1/31 + 1개월 = 2/28 또는 2/29)</td>
+</tr>
+<tr>
+<td><code>WEEK</code></td>
+<td><code>start + timedelta(weeks=1)</code></td>
+<td>7일 고정</td>
+</tr>
+<tr>
+<td><code>DAY</code></td>
+<td><code>start + timedelta(days=cycle_days)</code></td>
+<td><code>cycle_days</code> 필수</td>
+</tr>
+</tbody>
+</table>
+<h3 id="75-formhtml">7.5 화면 미리보기 (form.html)</h3>
+<p>폼 화면에서 JS가 금액을 실시간 미리 보여주지만 <strong>표시 전용</strong>이다. 실제 결제는 서버가 항상 재계산한다. <code>billing_math.py</code>를 변경하면 <code class="loc">form.html:138-182</code>의 JS 미러 코드도 함께 수정해야 한다.</p>
+<hr />
+<h2 id="8-auto_renewfalse">8. 자동결제안함 (auto_renew=False)</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><code class="loc">app/models/plan.py:45</code>, 요청 013</p>
+</div></blockquote>
+<p>체크박스: 폼 필드명 <code>auto_renew_disabled</code> (체크 = 자동결제 안함 = <code>auto_renew=False</code>).</p>
+<ul>
+<li>DB 기본값: <code>auto_renew=True</code> (자동 갱신)</li>
+<li><code>auto_renew=False</code>이면 구독 생성 시 <code>next_billing_at=None</code>으로 저장되고, 기간 종료 시 자동으로 <code>EXPIRED</code> 처리된다</li>
+<li><strong>체험과 공존 가능</strong>: <code>auto_renew=False</code> + <code>trial_enabled=True</code> 모두 설정하면, 체험 기간 종료 → 첫 결제 발생 → 그 주기 종료 시 만료(갱신 없음)</li>
+<li><strong>비소급</strong>: <code>auto_renew</code> 변경은 이미 생성된 구독의 <code>next_billing_at</code>에 소급 적용되지 않는다. 신규 구독부터 반영된다(<code class="loc">app/services/plans.py:228-231</code>)</li>
+</ul>
+<hr />
+<h2 id="9-trial">9. 체험(Trial) 설정</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><code class="loc">app/services/plans.py:69-79</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>조건</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>trial_enabled=True</code>, <code>trial_days</code> 미입력</td>
+<td><code>InputValidationError("체험을 사용하려면 체험 일수(1 이상)가 필요합니다")</code></td>
+</tr>
+<tr>
+<td><code>trial_enabled=False</code>, <code>trial_days</code> 전달</td>
+<td><code>InputValidationError("체험 일수는 체험 활성화 시에만 사용합니다")</code></td>
+</tr>
+<tr>
+<td><code>trial_enabled=False</code>로 저장</td>
+<td><code>trial_days</code>는 <code>None</code>으로 강제 저장(값이 남으면 혼란) (<code class="loc">plans.py:145</code>)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="10-extra_info-jsonb">10. 추가정보 (extra_info JSONB)</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><code class="loc">app/models/plan.py:47</code>, 요청 013</p>
+</div></blockquote>
+<ul>
+<li>DB 컬럼: <code>JSONB</code>, 기본값 <code>{}</code></li>
+<li>서비스 측이 요금제 설명을 자유롭게 key/value로 추가한다(예: <code>{"용량": "10GB", "사용자수": "5명"}</code>)</li>
+<li>외부 API 응답(<code>PlanResponse</code>)에 그대로 노출되므로 고객사 앱이 UI에 활용할 수 있다</li>
+<li>폼 입력: <code>extra_key[]</code> / <code>extra_value[]</code> 병렬 목록 → <code>_collect_extra_info</code>로 dict 변환</li>
+<li>수정 시: <code>update_plan</code>에 <code>extra_info=dict</code>를 넘기면 <strong>교체</strong>(merge가 아님), <code>None</code>을 넘기면 <code>{}</code>로 초기화(<code class="loc">plans.py:254-257</code>)</li>
+</ul>
+<hr />
+<h2 id="11">11. 예외·엣지 케이스</h2>
+<table>
+<thead>
+<tr>
+<th>상황</th>
+<th>발생 위치</th>
+<th>예외 종류</th>
+<th>사용자에게 표시되는 내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>이름 공백</td>
+<td><code class="loc">plans.py:132</code></td>
+<td><code>InputValidationError</code></td>
+<td>"요금제 이름은 필수입니다"</td>
+</tr>
+<tr>
+<td>가격 0 이하</td>
+<td><code class="loc">plans.py:48</code></td>
+<td><code>InputValidationError</code></td>
+<td>"가격은 1원 이상이어야 합니다"</td>
+</tr>
+<tr>
+<td>DAY 주기에 cycle_days 없음</td>
+<td><code class="loc">plans.py:53</code></td>
+<td><code>InputValidationError</code></td>
+<td>"DAY 주기는 cycle_days(1 이상)가 필요합니다"</td>
+</tr>
+<tr>
+<td>MONTH/WEEK/YEAR에 cycle_days 전달</td>
+<td><code class="loc">plans.py:56</code></td>
+<td><code>InputValidationError</code></td>
+<td>"cycle_days는 DAY 주기에서만 사용합니다"</td>
+</tr>
+<tr>
+<td>첫구독 할인율 &gt; 100</td>
+<td><code class="loc">plans.py:65</code></td>
+<td><code>InputValidationError</code></td>
+<td>"할인율은 1~100 사이여야 합니다"</td>
+</tr>
+<tr>
+<td>상시 할인에 FREE 시도</td>
+<td><code class="loc">plans.py:93-99</code></td>
+<td><code>InputValidationError</code></td>
+<td>"지원하지 않는 상시 할인 유형입니다"</td>
+</tr>
+<tr>
+<td>체험 활성화+일수 없음</td>
+<td><code class="loc">plans.py:76</code></td>
+<td><code>InputValidationError</code></td>
+<td>"체험을 사용하려면 체험 일수(1 이상)가 필요합니다"</td>
+</tr>
+<tr>
+<td>값만 있고 추가정보 키 없음</td>
+<td><code class="loc">plans.py:81</code></td>
+<td><code>InputValidationError</code></td>
+<td>"추가정보 키를 입력하세요(값: ...)"</td>
+</tr>
+<tr>
+<td>구독이 있는 요금제 삭제 시도</td>
+<td><code class="loc">plans.py:335</code></td>
+<td><code>ConflictError</code></td>
+<td>"구독이 있는 요금제는 삭제할 수 없습니다. 보관(아카이브)을 사용하세요."</td>
+</tr>
+<tr>
+<td>타 서비스 요금제 접근</td>
+<td><code class="loc">plans.py:57-58</code></td>
+<td><code>NotFoundError(404)</code></td>
+<td>404 페이지(403 대신 404로 존재 여부 숨김)</td>
+</tr>
+<tr>
+<td>CSRF 토큰 불일치</td>
+<td><code class="loc">deps.py:108-110</code></td>
+<td><code>PermissionDeniedError</code></td>
+<td>403</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cycle_days">cycle_days 정규화 엣지 케이스</h3>
+<p>수정 시 <code>billing_cycle</code>을 <code>MONTH</code>로 바꾸면서 <code>cycle_days=10</code>을 함께 보내면, 서버가 <code>cycle_days</code>를 <code>None</code>으로 자동 정규화한다(<code class="loc">plans.py:262-263</code>). 폼이 숨겨진 필드를 그대로 전송해도 안전하다.</p>
+<pre><code class="language-python"># update_plan 내부 (app/services/plans.py:262-263)
+if new_billing_cycle != BillingCycle.DAY:
+    new_cycle_days = None
+</code></pre>
+<hr />
+<h2 id="12">12. 관련 테스트</h2>
+<table>
+<thead>
+<tr>
+<th>테스트 파일</th>
+<th>테스트 항목</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tests/unit/test_billing_math.py</code></td>
+<td>금액 계산 단위 테스트: <code>compute_first_amount</code>, <code>compute_recurring_amount</code>, <code>compute_period_end</code>, <code>plan_first_amount</code>가 상시 할인을 무시하는지, 툴팁 문자열</td>
+</tr>
+<tr>
+<td><code>tests/integration/test_plans_service.py</code></td>
+<td>서비스 레이어 통합 테스트: 생성·수정·보관·활성화·삭제, 주기 변경, 구독 존재 시 삭제 거부, auto_renew+체험 공존, extra_info 저장, <code>_collect_extra_info</code> 단위</td>
+</tr>
+<tr>
+<td><code>tests/e2e/test_admin_services_plans.py</code></td>
+<td>라우트 E2E: 관리자·담당자 권한, 서비스 상세에서 생성·수정, 타 서비스 요금제 접근 404, 추가정보 폼 오류 처리</td>
+</tr>
+<tr>
+<td><code>tests/e2e/test_service_plans.py</code></td>
+<td>서비스 상세 탭 E2E: 관리자가 서비스 상세에서 생성·수정, 다중 담당 서비스에서 수정, 삭제 충돌 오류</td>
+</tr>
+</tbody>
+</table>
+<p>테스트 실행 예:</p>
+<pre><code class="language-bash"># 특정 파일만
+pytest tests/integration/test_plans_service.py -v
+# billing_math 단위만
+pytest tests/unit/test_billing_math.py -v
+</code></pre>
+<hr />
+<h2 id="13">13. 유지보수 팁</h2>
+<h3 id="_1">"금액 계산 규칙을 바꾸고 싶다"</h3>
+<p>→ <code>app/services/billing_math.py</code>만 수정한다. 변경 시 <strong>폼 JS 미러도 함께</strong> 수정해야 한다: <code class="loc">app/admin/templates/plans/form.html:138-182</code>의 <code>applyDiscount</code> 함수가 Python 코드를 JS로 구현하고 있다.</p>
+<h3 id="_2">"새 결제 주기를 추가하고 싶다"</h3>
+<ol>
+<li><code class="loc">app/models/enums.py:31-37</code> — <code>BillingCycle</code>에 새 값 추가</li>
+<li><code class="loc">app/services/billing_math.py:39-51</code> — <code>compute_period_end</code>에 새 주기 분기 추가</li>
+<li><code class="loc">app/admin/templates/plans/form.html:20-26</code> — <code>&lt;select&gt;</code> 옵션 추가</li>
+<li>마이그레이션은 불필요(String 컬럼에 저장)</li>
+</ol>
+<h3 id="_3">"폼에 새 필드를 추가하고 싶다"</h3>
+<ol>
+<li><code>app/admin/templates/plans/form.html</code> — 폼 HTML 추가</li>
+<li><code class="loc">app/admin/routes/plans.py:86-129</code> <code>_form_plan_fields</code> — 폼 파싱에 새 필드 추가</li>
+<li><code>app/services/plans.py</code> <code>create_plan</code> / <code>update_plan</code> — 서비스 함수에 파라미터 추가</li>
+<li><code>app/models/plan.py</code> — 모델 컬럼 추가 후 Alembic 마이그레이션 생성</li>
+</ol>
+<h3 id="_4">"요금제를 삭제하려는데 구독 때문에 안 된다"</h3>
+<p>→ 먼저 <code>POST /admin/plans/{plan_id}/archive</code>로 보관 처리한다. 보관 상태에서는 신규 구독이 막히고 기존 구독은 유지된다. 나중에 모든 구독이 만료된 후 삭제할 수 있다.</p>
+<h3 id="url-open-redirect">"수정 후 이동 URL이 이상하다 (<code>open redirect</code> 방어)"</h3>
+<p><code>_safe_next</code> (<code class="loc">plans.py:42-47</code>)가 <code>next</code> URL을 검사해 <code>/admin/</code>로 시작하지 않으면 fallback(<code>/admin/plans</code>)으로 대체한다. 외부 URL로의 리다이렉트는 허용하지 않는다.</p>
+<h3 id="_5">"감사 로그에서 가격 변경 이력을 찾고 싶다"</h3>
+<p><code>audit_logs</code> 테이블에서 <code>action = 'plan.update'</code>인 레코드를 조회한다. <code>detail</code> JSONB에 <code>old_price</code>/<code>new_price</code>를 포함해 <strong>모든 수정 항목의 변경 전/후</strong>(이름·첫결제할인·상시할인·체험·자동갱신·추가정보)가 <code>old_*</code>/<code>new_*</code>로 함께 기록된다.</p>
+<h3 id="htmx-partial-vs">"htmx partial vs 전체 페이지 구분"</h3>
+<p><code>plans_list</code>에서 <code>render_list</code>가 <code>HX-Request</code> 헤더를 감지해 htmx 요청이면 <code>plans/_table.html</code>만, 일반 요청이면 <code>plans/list.html</code> 전체를 렌더한다(<code class="loc">plans.py:193-223</code>). 서비스 상세 탭의 요금제 테이블은 <code>services/_plans_table.html</code>이 별도로 존재하며 htmx <code>hx-target="#list-svc-plans"</code>로 부분 갱신된다.</p>
+    </div>
+    <div class="pager"><a class="pg prev" href="07-one-off-payment.html"><small>← 이전</small><b>07. 단건(일반) 결제 + 취소</b></a><a class="pg next" href="09-services-registry.html"><small>다음 →</small><b>09. 서비스 등록·키 발급/회전·취소정책·담당자</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#2">2. 언제 실행되나 (트리거)</a>
+<a class="toc-h2" href="#3">3. 요청 진입점</a>
+<a class="toc-h3" href="#31">3.1 진입 화면 두 가지</a>
+<a class="toc-h3" href="#32">3.2 라우트 목록</a>
+<a class="toc-h3" href="#33-_can_manage">3.3 권한 스코프 확인 (_can_manage)</a>
+<a class="toc-h3" href="#34-csrf">3.4 CSRF 검증</a>
+<a class="toc-h2" href="#4">4. 단계별 처리 흐름</a>
+<a class="toc-h3" href="#41">4.1 요금제 생성 (예: 서비스 상세에서 생성)</a>
+<a class="toc-h3" href="#42-_form_plan_fields-appadminroutesplanspy86-129">4.2 폼 파싱: _form_plan_fields (app/admin/routes/plans.py:86-129)</a>
+<a class="toc-h3" href="#43-_collect_extra_info-appadminroutesplanspy62-83">4.3 추가정보 수집: _collect_extra_info (app/admin/routes/plans.py:62-83)</a>
+<a class="toc-h3" href="#44-plans_update-appadminroutesplanspy322-356">4.4 요금제 수정 (plans_update, app/admin/routes/plans.py:322-356)</a>
+<a class="toc-h3" href="#45-archive-activate">4.5 보관(archive)과 활성화(activate)</a>
+<a class="toc-h3" href="#46-delete_plan-appservicesplanspy323-339">4.6 삭제 (delete_plan, app/services/plans.py:323-339)</a>
+<a class="toc-h2" href="#5-db">5. 사용하는 DB 테이블·컬럼</a>
+<a class="toc-h3" href="#51-plans">5.1 plans (주 쓰기 대상)</a>
+<a class="toc-h3" href="#52-subscriptions">5.2 subscriptions (삭제 제약 확인용, 읽기만)</a>
+<a class="toc-h3" href="#53-audit_logs">5.3 audit_logs (쓰기)</a>
+<a class="toc-h2" href="#6">6. 상태 전이</a>
+<a class="toc-h2" href="#7">7. 금액 계산 규칙</a>
+<a class="toc-h3" href="#71">7.1 두 할인은 독립 적용 (중첩 없음)</a>
+<a class="toc-h3" href="#72-firstpaymenttype-appmodelsenumspy40-52">7.2 FirstPaymentType 열거값 (app/models/enums.py:40-52)</a>
+<a class="toc-h3" href="#73-discounttype-appmodelsenumspy55-59">7.3 DiscountType 열거값 (app/models/enums.py:55-59)</a>
+<a class="toc-h3" href="#74-compute_period_end-billing_mathpy39-51">7.4 결제 주기별 기간 계산 (compute_period_end, billing_math.py:39-51)</a>
+<a class="toc-h3" href="#75-formhtml">7.5 화면 미리보기 (form.html)</a>
+<a class="toc-h2" href="#8-auto_renewfalse">8. 자동결제안함 (auto_renew=False)</a>
+<a class="toc-h2" href="#9-trial">9. 체험(Trial) 설정</a>
+<a class="toc-h2" href="#10-extra_info-jsonb">10. 추가정보 (extra_info JSONB)</a>
+<a class="toc-h2" href="#11">11. 예외·엣지 케이스</a>
+<a class="toc-h3" href="#cycle_days">cycle_days 정규화 엣지 케이스</a>
+<a class="toc-h2" href="#12">12. 관련 테스트</a>
+<a class="toc-h2" href="#13">13. 유지보수 팁</a>
+<a class="toc-h3" href="#_1">&quot;금액 계산 규칙을 바꾸고 싶다&quot;</a>
+<a class="toc-h3" href="#_2">&quot;새 결제 주기를 추가하고 싶다&quot;</a>
+<a class="toc-h3" href="#_3">&quot;폼에 새 필드를 추가하고 싶다&quot;</a>
+<a class="toc-h3" href="#_4">&quot;요금제를 삭제하려는데 구독 때문에 안 된다&quot;</a>
+<a class="toc-h3" href="#url-open-redirect">&quot;수정 후 이동 URL이 이상하다 (open redirect 방어)&quot;</a>
+<a class="toc-h3" href="#_5">&quot;감사 로그에서 가격 변경 이력을 찾고 싶다&quot;</a>
+<a class="toc-h3" href="#htmx-partial-vs">&quot;htmx partial vs 전체 페이지 구분&quot;</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

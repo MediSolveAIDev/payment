@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}로그인{% endblock %}
+{% block content %}
+<div class="login-wrap card">
+  <h1>결제 관리 로그인</h1>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  {% if prefill_email %}<div class="notice" style="font-size:13px"><span data-lucide="info" style="vertical-align:-3px;margin-right:6px"></span>개발 모드 — 로그인 정보가 자동 입력되었습니다.</div>{% endif %}
+  <form method="post" action="/admin/login">
+    <label for="email">이메일</label>
+    <input type="email" id="email" name="email" required {{ '' if prefill_email else 'autofocus' }}
+           value="{{ prefill_email | default('', true) }}">
+    <label for="password">비밀번호</label>
+    <div class="input-eye">
+      <input type="password" id="password" name="password" required
+             value="{{ prefill_password | default('', true) }}">
+      <button type="button" class="eye-btn" aria-label="비밀번호 표시">&#x1F441;</button>
+    </div>
+    <div class="actions"><button class="btn btn-primary" type="submit" style="width:100%">로그인</button></div>
+  </form>
+  <div style="margin-top: 24px; text-align: center; border-top: 1px solid var(--border); padding-top: 16px;">
+    {# 새 사용·개발 매뉴얼(docs/user_manual)을 새 탭으로 — 관리자 콘솔/대시보드 + 설치·배포·API #}
+    <a href="/user-manual/" target="_blank" rel="noopener"
+       style="display:block; margin-top:10px; font-size: 14px; color: var(--accent-blue); text-decoration: none; font-weight: 600;">
+      📚 전체 매뉴얼 보기 (사용자·개발자)
+    </a>
+  </div>
+</div>
+{% endblock %}

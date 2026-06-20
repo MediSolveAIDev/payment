@@ -1,0 +1,79 @@
+{
+  "payments": [
+    {
+      "order_id": "sub-7f3a9c10",
+      "amount": 9900,
+      "status": "DONE",
+      "kind": "SUBSCRIPTION",
+      "payment_type": "RENEWAL",
+      "failure_code": null,
+      "failure_message": null,
+      "requested_at": "2026-06-16T10:00:01+09:00",
+      "approved_at": "2026-06-16T10:00:02+09:00",
+      "cancelable": false,
+      "cancel_fee_percent": 10,
+      "cancel_fee": 0,
+      "cancel_refund_amount": 0
+    },
+    {
+      "order_id": "order-20260613-0007",
+      "amount": 15000,
+      "status": "DONE",
+      "kind": "ONE_OFF",
+      "payment_type": "ONE_OFF",
+      "failure_code": null,
+      "failure_message": null,
+      "requested_at": "2026-06-13T14:20:00+09:00",
+      "approved_at": "2026-06-13T14:20:01+09:00",
+      "cancelable": true,
+      "cancel_fee_percent": 10,
+      "cancel_fee": 1500,
+      "cancel_refund_amount": 13500
+    },
+    {
+      "order_id": "order-20260610-0003",
+      "amount": 50000,
+      "status": "CANCELED",
+      "kind": "ONE_OFF",
+      "payment_type": "ONE_OFF",
+      "failure_code": null,
+      "failure_message": null,
+      "requested_at": "2026-06-10T22:23:42+09:00",
+      "approved_at": "2026-06-10T22:23:43+09:00",
+      "cancelable": false,
+      "cancel_fee_percent": 10,
+      "cancel_fee": 5000,
+      "cancel_refund_amount": 45000
+    },
+    {
+      "order_id": "sub-1b2c3d4e",
+      "amount": 9900,
+      "status": "FAILED",
+      "kind": "SUBSCRIPTION",
+      "payment_type": "RETRY",
+      "failure_code": "INVALID_CARD",
+      "failure_message": "카드 한도 초과",
+      "requested_at": "2026-06-09T23:38:00+09:00",
+      "approved_at": null,
+      "cancelable": false,
+      "cancel_fee_percent": 10,
+      "cancel_fee": 0,
+      "cancel_refund_amount": 0
+    },
+    {
+      "order_id": "sub-9a8b7c6d",
+      "amount": 9900,
+      "status": "DONE",
+      "kind": "SUBSCRIPTION",
+      "payment_type": "FIRST",
+      "failure_code": null,
+      "failure_message": null,
+      "requested_at": "2026-05-16T10:00:00+09:00",
+      "approved_at": "2026-05-16T10:00:01+09:00",
+      "cancelable": false,
+      "cancel_fee_percent": 10,
+      "cancel_fee": 0,
+      "cancel_refund_amount": 0
+    }
+  ]
+}

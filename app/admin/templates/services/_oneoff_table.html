@@ -1,0 +1,34 @@
+{# 서비스 상세 — 일반(단건) 결제 partial #}
+{% import "_list.html" as L %}
+<div id="list-svc-oneoff">
+<div class="card">
+  <div class="block-head"><h2 style="margin:0">일반결제</h2>
+    <span class="muted" style="font-size:12px">구독과 무관한 단건 결제</span>
+    <a class="btn btn-sm btn-ghost" href="/admin/services/{{ service.id }}/oneoff.xlsx"><span data-lucide="download"></span>엑셀</a>
+  </div>
+  <table>
+    <thead><tr>
+      <th>승인시각</th><th>사용자</th><th>주문번호</th><th>금액</th>
+      <th>환불</th><th>수수료</th><th>상태</th>
+    </tr></thead>
+    <tbody>
+    {% for p in oneoff_page.items %}
+      {# 행 클릭 → 결제 상세(주문번호 셀은 링크처럼 강조) #}
+      <tr onclick="location.href='/admin/payments/{{ p.id }}'" style="cursor:pointer">
+        <td class="muted">{{ p.approved_at|kst("%Y-%m-%d %H:%M") if p.approved_at else '-' }}</td>
+        <td>{{ p.external_user_id or '-' }}</td>
+        <td style="font-family:ui-monospace,monospace;font-size:12px;color:var(--color-primary)">{{ p.order_id }}</td>
+        <td style="font-weight:600">{{ "{:,}".format(p.amount) }}원</td>
+        {# 환불(전액·부분) 건은 환불액·취소 수수료 표시. 부분취소는 status=DONE이라 canceled_amount로 판정 #}
+        <td class="muted" style="color:var(--red)">{% if p.canceled_amount %}{{ "{:,}".format(p.canceled_amount) }}원{% else %}-{% endif %}</td>
+        <td class="muted">{% if p.cancel_fee %}{{ "{:,}".format(p.cancel_fee) }}원{% else %}-{% endif %}</td>
+        <td><span class="badge badge-{{ p.status }}">{{ payment_status_ko(p.status) }}</span>{% if p.status == 'DONE' and p.canceled_amount %} <span class="badge badge-CANCELED">부분취소</span>{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="muted">일반결제 내역이 없습니다</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {{ L.pager(oneoff_page, '/admin/services/' ~ service.id, opp, target='list-svc-oneoff') }}
+</div>
+</div>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2. 구독 관리 — 구독/결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <a class="brand" href="index.html">
+      <span class="logo">결제</span>
+      <span class="t">구독/결제 서버<small>서비스 담당자 매뉴얼</small></span>
+    </a>
+    <div class="nav-cat">시작</div>
+    <nav class="nav">
+      <a href="index.html"><span class="num">★</span> 매뉴얼 홈</a>
+      <a href="09-overview-diagram.html"><span class="num">◆</span> 한눈에 보기(그림)</a>
+      <a href="01-getting-started.html"><span class="num">0</span> 시작하기</a>
+    </nav>
+    <div class="nav-cat">관리자 콘솔</div>
+    <nav class="nav">
+      <a href="02-plans.html"><span class="num">1</span> 요금제 관리</a>
+      <a href="03-subscriptions.html" class="active"><span class="num">2</span> 구독 관리</a>
+      <a href="04-payments.html"><span class="num">3</span> 결제·환불</a>
+      <a href="05-settlement.html"><span class="num">4</span> 정산</a>
+      <a href="08-admin-console.html"><span class="num">5</span> 화면별 가이드(캡처)</a>
+    </nav>
+    <div class="nav-cat">개발 연동</div>
+    <nav class="nav">
+      <a href="00-setup.html"><span class="num">6</span> 설치·설정·배포</a>
+      <a href="06-api-integration.html"><span class="num">7</span> API 연동</a>
+      <a href="10-qa-testcases.html"><span class="num">8</span> QA 테스트케이스</a>
+      <a href="11-dev-sandbox.html"><span class="num">9</span> 사전 개발(덤프)</a>
+      <a href="dev_manual/index.html" target="_blank" rel="noopener"><span class="num">10</span> 개발자 매뉴얼 ↗</a>
+    </nav>
+    <div class="nav-cat">참고</div>
+    <nav class="nav">
+      <a href="07-faq.html"><span class="num">11</span> FAQ</a>
+      <a href="13-status-reference.html"><span class="num">12</span> 상태·코드 레퍼런스</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+  <div class="content">
+
+    <div class="page-head">
+      <div class="page-eyebrow">CHAPTER 2</div>
+      <h1>구독 관리</h1>
+      <p class="lead">사용자의 구독 상태를 추적하고, 결제 실패 대응·만료일 조정 등 운영상 필요한 개입을 수행합니다.</p>
+    </div>
+
+    <div class="easybox">
+      <p>구독 관리 화면은 <strong>'우리 서비스 단골 손님 명부'</strong>입니다. 누가 어떤 상품을 쓰고 있고, 언제까지 유효하며,
+      다음 결제는 언제인지 한눈에 봅니다. 결제가 밀린 손님에게는 여기서 직접 <strong>다시 결제를 시도</strong>하거나
+      <strong>이용 기간을 늘려주는</strong> 등의 조치를 할 수 있습니다.</p>
+    </div>
+
+    <h2><span class="h-no">2.1</span>구독 목록과 검색</h2>
+    <p>등록된 모든 구독이 최신순으로 표시됩니다. 표의 각 열은 다음을 의미합니다.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>열</th><th>의미</th></tr></thead>
+        <tbody>
+          <tr><td>서비스</td><td>구독이 속한 서비스 이름</td></tr>
+          <tr><td>사용자</td><td>자사 서비스의 사용자 ID(<code>external_user_id</code>). 클릭 시 상세로 이동</td></tr>
+          <tr><td>요금제</td><td>구독 중인 상품명</td></tr>
+          <tr><td>상태</td><td>현재 구독 상태(배지 색으로 구분)</td></tr>
+          <tr><td>만료일</td><td>현재 결제 주기가 끝나는 날짜</td></tr>
+          <tr><td>다음 결제</td><td>다음 자동 결제 예정 시각</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>필터 활용</h3>
+    <p><strong>사용자 검색</strong>(ID 일부 입력), <strong>서비스/요금제 필터</strong>, 그리고 가장 중요한 <strong>상태 필터</strong>로 원하는 구독만 모아 볼 수 있습니다.
+    특히 <span class="badge b-orange">PAST_DUE</span>(미수)와 <span class="badge b-red">SUSPENDED</span>(정지) 필터는 결제 문제 대응에 유용합니다.</p>
+
+    <h2><span class="h-no">2.2</span>구독 상태 이해하기</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>상태</th><th>의미</th><th>이용</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge b-blue">TRIAL</span> 체험</td><td>무료 체험 중, 아직 첫 결제 전</td><td><span class="badge b-green">가능</span></td></tr>
+          <tr><td><span class="badge b-green">ACTIVE</span> 활성</td><td>정상 결제 완료, 정상 이용 중</td><td><span class="badge b-green">가능</span></td></tr>
+          <tr><td><span class="badge b-orange">PAST_DUE</span> 미수</td><td>결제 실패로 자동 재시도 중(유예)</td><td><span class="badge b-green">가능</span></td></tr>
+          <tr><td><span class="badge b-purple">EXTENDED</span> 연장처리</td><td>관리자가 만료일을 수동 연장</td><td><span class="badge b-green">가능</span></td></tr>
+          <tr><td><span class="badge b-gray">CANCELED</span> 해지예약</td><td>해지 예약됨(만료일까지 유지)</td><td><span class="badge b-green">가능</span></td></tr>
+          <tr><td><span class="badge b-red">SUSPENDED</span> 정지</td><td>반복 실패로 차단됨(수동 결제 대기)</td><td><span class="badge b-red">차단</span></td></tr>
+          <tr><td><span class="badge b-gray">EXPIRED</span> 종료</td><td>완전 종료(최종 상태)</td><td><span class="badge b-red">차단</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2><span class="h-no">2.3</span>구독 상세 화면</h2>
+    <p>목록에서 항목을 클릭하면 상세 화면이 열립니다. 구독 ID(UUID), 결제 주기와 성공 회차, 만료일·다음 결제 시각,
+    재시도 횟수, 마스킹된 카드 정보, <strong>체험(Trial) 사용 정보</strong> 등을 확인할 수 있습니다.</p>
+    <p>'체험' 항목은 이 구독이 무료 체험을 어떻게 사용했는지 한눈에 보여줍니다.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>표시</th><th>의미</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge b-blue">체험 중</span> + 기간·종료일</td><td>현재 체험 기간 중. 종료일에 첫 결제가 일어납니다.</td></tr>
+          <tr><td>체험 사용함 (체험 후 전환)</td><td>체험으로 시작해 이미 유료(ACTIVE 등)로 전환된 구독</td></tr>
+          <tr><td>미사용 (요금제 체험 N일 제공)</td><td>요금제는 체험을 제공하지만 체험 없이 바로 가입한 구독</td></tr>
+          <tr><td>체험 미제공 요금제</td><td>해당 요금제 자체가 체험을 제공하지 않음</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <span class="ico">💡</span>
+      <div><p>체험 사용 여부는 가입 시점의 감사 로그(<code>subscription.create</code>)를 기준으로 판정하므로, 체험 후 유료로 전환된 뒤에도 이력이 유지됩니다. 개발팀에 기술 문의를 할 때는 <strong>구독 ID(UUID)</strong>를 함께 전달하면 빠르게 확인됩니다.</p></div>
+    </div>
+
+    <h2><span class="h-no">2.4</span>관리자 액션 (운영 개입)</h2>
+    <p>상세 화면 우측의 '관리' 영역에서 다음 작업을 할 수 있습니다.</p>
+    <div class="easybox">
+      <p>고객 응대 상황으로 기억하면 쉽습니다.</p>
+      <ul>
+        <li>"카드 정리했어요, 다시 결제해 주세요" → <strong>즉시 재결제</strong></li>
+        <li>"불편을 드려 죄송합니다, 한 달 더 드릴게요" → <strong>만료일 연장</strong></li>
+        <li>"지금 바로 이용을 막아 주세요" → <strong>강제 취소</strong> (단, 환불은 따로 처리)</li>
+      </ul>
+    </div>
+    <div class="card mt0">
+      <h4 class="mt0">즉시 재결제 (Retry Payment)</h4>
+      <p class="muted" style="margin:4px 0 0">구독이 <span class="badge b-orange">PAST_DUE</span> 또는 <span class="badge b-red">SUSPENDED</span>일 때 사용.
+      고객이 카드를 정리했다고 연락하면 다음 자동 시도를 기다리지 않고 <strong>지금 즉시 결제</strong>합니다. 성공하면 즉시 <span class="badge b-green">ACTIVE</span>로 복구됩니다.</p>
+    </div>
+    <div class="card">
+      <h4 class="mt0">만료일 연장 (Extend Expiry)</h4>
+      <p class="muted" style="margin:4px 0 0">특정 날짜를 선택해 만료일을 강제로 늦춥니다. 고객 보상·이벤트 당첨자 등에 유용하며,
+      <strong>연장된 기간 동안은 자동 결제가 발생하지 않습니다.</strong></p>
+    </div>
+    <div class="card">
+      <h4 class="mt0">강제 취소 (Force Cancel)</h4>
+      <p class="muted" style="margin:4px 0 0">구독을 즉시 종료합니다. <strong>이 버튼으로는 이미 결제된 금액이 자동 환불되지 않습니다.</strong>
+      환불이 필요하면 <a href="04-payments.html">결제·환불</a> 메뉴에서 별도로 진행하세요.</p>
+    </div>
+    <p>이 외에 과거 만료일 변경 이력을 보는 <strong>연장 이력 조회</strong>도 제공됩니다.</p>
+
+    <h2><span class="h-no">2.5</span>구독별 결제 이력</h2>
+    <p>상세 화면 하단에는 해당 구독에서 발생한 모든 결제 시도가 표시됩니다. 주문번호, 유형(정기/단건), 금액,
+    상태(<code>DONE</code>/<code>FAILED</code>/<code>CANCELED</code>), 실패 사유(마우스를 올리면 상세), 요청 시각을 확인할 수 있습니다.</p>
+
+    <h2><span class="h-no">2.6</span>해지·취소가 동작하는 방식</h2>
+    <div class="callout note">
+      <span class="ico">ℹ️</span>
+      <div><p><strong>구독 취소는 즉시 종료가 아닙니다.</strong> 취소(해지)하면 <span class="badge b-gray">CANCELED</span>(해지예약) 상태가 되어
+      <strong>만료일까지는 이용이 유지</strong>되고, 만료일이 되면 자동으로 종료됩니다. 자동 갱신만 멈춥니다.
+      취소를 되돌리려면 만료 전 <strong>재개(Resume)</strong>로 자동 갱신을 다시 켤 수 있습니다(API 기준).</p></div>
+    </div>
+
+    <h2><span class="h-no">2.7</span>첫 구독 결제가 실패하면 — 구독은 만들어지지 않습니다</h2>
+    <p>신규 가입에서 <strong>첫 결제가 카드 거절 등으로 확정 실패</strong>하면, 그 구독은 <strong>구독·결제 테이블에 저장되지 않습니다.</strong>
+    즉 구독 목록·결제 내역 어디에도 남지 않고, 실패 사실만 <strong>감사 로그</strong>에 기록됩니다.</p>
+    <div class="easybox">
+      <p><strong>왜 이렇게 하나요?</strong> 결제가 안 됐는데도 구독 행을 남기면, 실제로 성사되지 않은 구독이 만들어진 셈이 됩니다.
+      그러면 <strong>대시보드의 "신규 구독" 수가 부풀려져</strong> 데이터 의미가 틀어집니다. "구독은 안 됐는데 구독 횟수만 늘어나는" 상황을 막기 위해,
+      <strong>첫 결제가 성공한 구독만 진짜 구독</strong>으로 집계합니다.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>상황</th><th>구독/결제 테이블</th><th>기록 위치</th><th>대시보드 신규 구독</th></tr></thead>
+        <tbody>
+          <tr><td>첫 결제 <strong>성공</strong></td><td>구독 생성(ACTIVE)·결제 DONE</td><td>구독·결제 내역 + 감사로그</td><td>+1 집계</td></tr>
+          <tr><td>첫 결제 <strong>확정 실패</strong>(카드 거절 등)</td><td><strong>저장 안 함</strong>(흔적 없음)</td><td><strong>감사 로그만</strong> (<code>subscription.first_payment_failed</code>)</td><td>집계 안 함</td></tr>
+          <tr><td>첫 결제 <strong>결과 불명</strong>(타임아웃)</td><td>PENDING으로 보존(슬롯 점유)</td><td>구독·결제 + 감사로그</td><td>정산 스윕이 성공 확정 시 집계</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul>
+      <li><strong>추적</strong> — 실패는 <a href="08-admin-console.html">감사 로그</a>(행위자=외부 서비스)의 <code>subscription.first_payment_failed</code> 항목에서 사유 코드·사용자·요금제와 함께 확인할 수 있습니다.</li>
+      <li><strong>재시도</strong> — 성공한 결제 이력이 없으므로, 같은 사용자가 다시 시도하면 <strong>첫구독 할인·무료 혜택이 그대로 적용</strong>됩니다.</li>
+      <li><strong>개발 관점</strong> — 외부 서비스가 <code>POST /subscriptions</code> 호출 시 첫 결제 실패면 <code>402 PAYMENT_FAILED</code>를 받고 <strong>구독이 생성되지 않습니다</strong>(다시 호출해도 안전). 자세히는 <a href="06-api-integration.html">7. API 연동</a>.</li>
+    </ul>
+    <div class="callout note">
+      <span class="ico">ℹ️</span>
+      <div><p><strong>타임아웃(결과 불명)은 다릅니다.</strong> 토스 응답 지연으로 성공/실패를 확정할 수 없을 때는 실패로 처리하지 않고 결제를 <code>PENDING</code>으로 보존합니다(이중 결제 방지). 이후 정산 스윕이 실제 결과로 확정합니다.</p></div>
+    </div>
+
+    <div class="pager">
+      <a href="02-plans.html"><small>이전</small><span>← 1. 요금제 관리</span></a>
+      <a class="next" href="04-payments.html"><small>다음</small><span>3. 결제·환불 →</span></a>
+    </div>
+
+  </div>
+  </main>
+</div>
+<script src="assets/glossary.js"></script>
+</body>
+</html>

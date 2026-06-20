@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>11. FAQ — 구독/결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <a class="brand" href="index.html">
+      <span class="logo">결제</span>
+      <span class="t">구독/결제 서버<small>서비스 담당자 매뉴얼</small></span>
+    </a>
+    <div class="nav-cat">시작</div>
+    <nav class="nav">
+      <a href="index.html"><span class="num">★</span> 매뉴얼 홈</a>
+      <a href="09-overview-diagram.html"><span class="num">◆</span> 한눈에 보기(그림)</a>
+      <a href="01-getting-started.html"><span class="num">0</span> 시작하기</a>
+    </nav>
+    <div class="nav-cat">관리자 콘솔</div>
+    <nav class="nav">
+      <a href="02-plans.html"><span class="num">1</span> 요금제 관리</a>
+      <a href="03-subscriptions.html"><span class="num">2</span> 구독 관리</a>
+      <a href="04-payments.html"><span class="num">3</span> 결제·환불</a>
+      <a href="05-settlement.html"><span class="num">4</span> 정산</a>
+      <a href="08-admin-console.html"><span class="num">5</span> 화면별 가이드(캡처)</a>
+    </nav>
+    <div class="nav-cat">개발 연동</div>
+    <nav class="nav">
+      <a href="00-setup.html"><span class="num">6</span> 설치·설정·배포</a>
+      <a href="06-api-integration.html"><span class="num">7</span> API 연동</a>
+      <a href="10-qa-testcases.html"><span class="num">8</span> QA 테스트케이스</a>
+      <a href="11-dev-sandbox.html"><span class="num">9</span> 사전 개발(덤프)</a>
+      <a href="dev_manual/index.html" target="_blank" rel="noopener"><span class="num">10</span> 개발자 매뉴얼 ↗</a>
+    </nav>
+    <div class="nav-cat">참고</div>
+    <nav class="nav">
+      <a href="07-faq.html" class="active"><span class="num">11</span> FAQ</a>
+      <a href="13-status-reference.html"><span class="num">12</span> 상태·코드 레퍼런스</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+  <div class="content">
+
+    <div class="page-head">
+      <div class="page-eyebrow">CHAPTER 11</div>
+      <h1>자주 묻는 질문 (FAQ)</h1>
+      <p class="lead">자주 묻는 질문과 문제 해결을 모았습니다. 구독·결제 상태값과 API 에러 코드는 <a href="13-status-reference.html">12. 상태·코드 레퍼런스</a>를 보세요.</p>
+    </div>
+
+    <h2><span class="h-no">11.1</span>자주 묻는 질문</h2>
+
+    <h3>구독·요금제</h3>
+    <div class="card mt0">
+      <h4 class="mt0">한 사용자가 요금제 2개를 동시에 구독할 수 있나요?</h4>
+      <p class="muted" style="margin:4px 0 0">아니요. <strong>서비스 + 사용자당 구독은 1개</strong>입니다. 이미 열린 구독이 있으면
+      새 구독 생성이 <code>409 CONFLICT</code>로 거부됩니다. 요금제를 바꾸려면 기존 구독을 정리한 뒤 다시 생성하세요.</p>
+    </div>
+    <div class="card">
+      <h4 class="mt0">결제 주기를 나중에 바꿀 수 있나요?</h4>
+      <p class="muted" style="margin:4px 0 0">아니요. 결제 주기는 <strong>요금제 생성 시에만</strong> 설정되고 이후 수정할 수 없습니다.
+      다른 주기가 필요하면 새 요금제를 만드세요.</p>
+    </div>
+    <div class="card">
+      <h4 class="mt0">요금제/서비스를 삭제하려는데 안 돼요.</h4>
+      <p class="muted" style="margin:4px 0 0"><strong>구독이 남아 있으면 삭제할 수 없습니다.</strong> 요금제는 <strong>보관(Archive)</strong> 처리하면
+      신규 구독만 막고 기존 구독은 유지됩니다.</p>
+    </div>
+    <div class="card">
+      <h4 class="mt0">'무료'와 '체험'은 무엇이 다른가요?</h4>
+      <p class="muted" style="margin:4px 0 0"><strong>무료(FREE)</strong>는 첫 회차를 0원으로 처리하며 구독이 바로 시작됩니다.
+      <strong>체험(Trial)</strong>은 결제 없이 일정 기간 이용하다가 체험 종료 시 첫 결제가 발생합니다. 체험은 요금제에서 체험 제공을 켰을 때만 가능합니다.</p>
+    </div>
+    <div class="card">
+      <h4 class="mt0">첫 구독 결제가 실패하면 구독·대시보드에 어떻게 반영되나요?</h4>
+      <p class="muted" style="margin:4px 0 0">첫 결제가 <strong>확정 실패</strong>(카드 거절 등)하면 그 구독은 <strong>구독·결제 테이블에 저장되지 않고 감사 로그에만</strong> 남습니다.
+      성사되지 않은 구독을 남기면 <strong>대시보드 "신규 구독" 수가 부풀려져</strong> 데이터 의미가 틀어지기 때문입니다(실제 결제된 구독만 집계).
+      재시도하면 첫구독 혜택은 그대로 적용됩니다. 자세히는 <a href="03-subscriptions.html">2.7</a>. (타임아웃은 예외 — PENDING으로 보존 후 정산 스윕이 확정)</p>
+    </div>
+
+    <h3>결제·환불</h3>
+    <div class="card">
+      <h4 class="mt0">구독을 강제 취소하면 환불도 되나요?</h4>
+      <p class="muted" style="margin:4px 0 0">아니요. <strong>강제 취소는 환불을 포함하지 않습니다.</strong> 환불이 필요하면
+      <a href="04-payments.html">결제·환불</a> 메뉴에서 해당 결제 건을 정책에 따라 별도로 취소하세요.</p>
+    </div>
+    <div class="card">
+      <h4 class="mt0">고객 카드가 정리됐다는데 다음 결제까지 기다려야 하나요?</h4>
+      <p class="muted" style="margin:4px 0 0">아니요. 구독 상세에서 <strong>즉시 재결제</strong>로 지금 바로 결제를 시도할 수 있습니다.
+      성공하면 구독이 즉시 <span class="badge b-green">ACTIVE</span>로 복구됩니다.</p>
+    </div>
+    <div class="card">
+      <h4 class="mt0">환불이 안 됩니다.</h4>
+      <p class="muted" style="margin:4px 0 0">서비스의 <strong>취소 허용</strong>이 꺼져 있거나, 대상이 단건 결제가 아니거나, 이미 취소된 건일 수 있습니다.
+      취소 정책은 시스템 관리자가 서비스 설정에서 변경합니다.</p>
+    </div>
+
+    <h3>로그인·계정</h3>
+    <div class="card">
+      <h4 class="mt0">비밀번호 설정 링크가 만료됐어요.</h4>
+      <p class="muted" style="margin:4px 0 0">링크는 48시간·1회용입니다. 시스템 관리자에게 <strong>비밀번호 재설정</strong>으로 새 링크 발송을 요청하세요.</p>
+    </div>
+    <div class="card">
+      <h4 class="mt0">로그인이 잠겼어요(LOCKED).</h4>
+      <p class="muted" style="margin:4px 0 0">비밀번호 5회 이상 실패 시 자동 잠금됩니다. 시스템 관리자가 잠금을 해제해야 합니다.</p>
+    </div>
+    <div class="card">
+      <h4 class="mt0">다른 서비스 데이터가 안 보여요.</h4>
+      <p class="muted" style="margin:4px 0 0">정상입니다. <strong>서비스 담당자는 본인 담당 서비스만</strong> 볼 수 있습니다.</p>
+    </div>
+
+    <h3>API 연동(개발)</h3>
+    <div class="card">
+      <h4 class="mt0">계속 401(UNAUTHORIZED)이 납니다.</h4>
+      <p class="muted" style="margin:4px 0 0">대부분 ① 서명에 쓴 본문과 전송 본문의 바이트가 다름, ② 서버·클라이언트 시계 차이(±5분 초과),
+      ③ nonce 재사용, ④ 잘못된 HMAC 시크릿 중 하나입니다. 본문을 한 번만 직렬화해 서명·전송에 동일하게 쓰세요.</p>
+    </div>
+    <div class="card">
+      <h4 class="mt0">403(FORBIDDEN)이 납니다.</h4>
+      <p class="muted" style="margin:4px 0 0">호출 서버의 공인 IP가 <strong>허용 IP 목록</strong>에 없습니다. 운영/개발 서버 IP를 등록 요청하세요.</p>
+    </div>
+    <div class="card">
+      <h4 class="mt0">429(RATE_LIMITED)가 납니다.</h4>
+      <p class="muted" style="margin:4px 0 0">요청 한도를 넘었습니다. 잠시 대기 후 재시도(backoff)하세요. 결제성 API는 한도가 더 엄격합니다.</p>
+    </div>
+    <div class="card">
+      <h4 class="mt0">503(SERVER_DISABLED)이 납니다.</h4>
+      <p class="muted" style="margin:4px 0 0">결제서버 전체가 일시 중단(킬스위치)된 상태입니다. 긴급 점검 등 운영상 조치이며, 시스템 관리자에게 문의하세요.</p>
+    </div>
+
+    <div class="callout tip">
+      <span class="ico">📑</span>
+      <div><p>구독·결제 <strong>상태값</strong>과 <strong>API 에러 코드</strong>는 별도 문서로 분리했습니다 → <a href="13-status-reference.html">12. 상태·코드 레퍼런스</a>.</p></div>
+    </div>
+
+    <h2><span class="h-no">11.2</span>도움이 더 필요할 때</h2>
+    <div class="callout tip">
+      <span class="ico">🙋</span>
+      <div>
+        <p><strong>콘솔 권한·키 발급·서비스 설정·IP 허용</strong> → 시스템 관리자에게 요청하세요.</p>
+        <p><strong>API 연동 기술 이슈</strong> → 구독 ID(UUID)나 주문번호(order_id)를 함께 전달하면 빠르게 확인됩니다.</p>
+        <p><strong>특정 결제 추적</strong> → 결제 상세의 토스 결제키(Payment Key)로 토스 관리자 페이지에서 거래를 찾을 수 있습니다.</p>
+      </div>
+    </div>
+
+    <div class="pager">
+      <a href="11-dev-sandbox.html"><small>이전</small><span>← 9. 사전 개발</span></a>
+      <a class="next" href="13-status-reference.html"><small>다음</small><span>12. 상태·코드 레퍼런스 →</span></a>
+    </div>
+
+  </div>
+  </main>
+</div>
+<script src="assets/glossary.js"></script>
+</body>
+</html>

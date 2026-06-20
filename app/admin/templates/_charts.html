@@ -1,0 +1,157 @@
+{# SnowUI 스타일 SVG 차트 매크로 — 서버 렌더, 외부 라이브러리 없음 #}
+
+{# ---- Area chart (월별 추이) ---- #}
+{%- macro area(series, height=200) -%}
+  {%- set vals = series | map(attribute='value') | list -%}
+  {%- set vmax = (vals | max) if vals and (vals | max) > 0 else 1 -%}
+  {%- set n = series | length -%}
+  {%- set w = 720 -%}{%- set h = height -%}{%- set pad = 24 -%}
+  {%- set iw = w - pad * 2 -%}{%- set ih = h - pad * 2 -%}
+  <svg viewBox="0 0 {{ w }} {{ h }}" class="chart" preserveAspectRatio="none" style="height:{{ height }}px">
+    {%- for g in range(4) -%}
+      {%- set gy = pad + ih * g / 3 -%}
+      <line x1="{{ pad }}" y1="{{ gy }}" x2="{{ w - pad }}" y2="{{ gy }}" stroke="rgba(28,28,28,.06)" stroke-width="1"/>
+    {%- endfor -%}
+    {%- set ns = (n - 1) if n > 1 else 1 -%}
+    {%- set pts = [] -%}
+    {%- for p in series -%}
+      {%- set x = pad + iw * loop.index0 / ns -%}
+      {%- set y = pad + ih - (ih * p.value / vmax) -%}
+      {%- set _ = pts.append(x ~ ',' ~ y) -%}
+    {%- endfor -%}
+    <polygon points="{{ pad }},{{ pad + ih }} {{ pts | join(' ') }} {{ pad + iw }},{{ pad + ih }}"
+             fill="rgba(149,164,252,.18)"/>
+    <polyline points="{{ pts | join(' ') }}" fill="none" stroke="var(--accent-indigo)" stroke-width="2.5"
+              stroke-linejoin="round" stroke-linecap="round"/>
+    {%- for p in series -%}
+      {%- set x = pad + iw * loop.index0 / ns -%}
+      <text x="{{ x }}" y="{{ h - 4 }}" font-size="10" fill="rgba(28,28,28,.4)" text-anchor="middle">{{ p.label }}</text>
+    {%- endfor -%}
+  </svg>
+{%- endmacro -%}
+
+{# ---- Donut chart (상태 비율) ---- #}
+{%- macro donut(items, size=180, extra=None) -%}
+  {%- set total = (items | sum(attribute='value')) or 1 -%}
+  {%- set r = 70 -%}{%- set cx = 90 -%}{%- set cy = 90 -%}{%- set circ = 2 * 3.14159265 * r -%}
+  {%- set offset = [0.0] -%}
+  <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+    <svg viewBox="0 0 180 180" style="width:{{ size }}px;height:{{ size }}px;flex:none">
+      <circle cx="{{ cx }}" cy="{{ cy }}" r="{{ r }}" fill="none" stroke="rgba(28,28,28,.06)" stroke-width="22"/>
+      {%- for it in items -%}
+        {%- set frac = it.value / total -%}
+        {%- set dash = circ * frac -%}
+        <circle cx="{{ cx }}" cy="{{ cy }}" r="{{ r }}" fill="none" stroke="{{ it.color }}" stroke-width="22"
+          stroke-dasharray="{{ '%.2f'|format(dash) }} {{ '%.2f'|format(circ - dash) }}"
+          stroke-dashoffset="{{ '%.2f'|format(-offset[0]) }}" transform="rotate(-90 {{ cx }} {{ cy }})"
+          stroke-linecap="butt"/>
+        {%- set _ = offset.append(offset.pop() + dash) -%}
+      {%- endfor -%}
+      <text x="{{ cx }}" y="{{ cy - 2 }}" font-size="22" font-weight="600" fill="var(--black)" text-anchor="middle">{{ total }}</text>
+      <text x="{{ cx }}" y="{{ cy + 16 }}" font-size="11" fill="rgba(28,28,28,.4)" text-anchor="middle">전체</text>
+    </svg>
+    <div style="flex:1;min-width:160px">
+      {%- for it in items -%}
+      {%- if it.href -%}<a href="{{ it.href }}" class="kv" style="color:inherit;text-decoration:none">
+      {%- else -%}<div class="kv">{%- endif -%}
+        <span style="display:flex;align-items:center;gap:8px">
+          <i style="width:9px;height:9px;border-radius:9999px;display:inline-block;background:{{ it.color }}"></i>
+          {{ it.label }}
+        </span>
+        <span style="font-weight:600">{{ it.value }} <span class="muted" style="font-weight:400">· {{ (it.value / total * 100) | round(1) }}%</span></span>
+      {%- if it.href -%}</a>{%- else -%}</div>{%- endif -%}
+      {%- endfor -%}
+      {%- if extra -%}
+      <div style="border-top:1px solid var(--border);margin:10px 0 6px"></div>
+      {%- for it in extra -%}
+      {%- if it.href -%}<a href="{{ it.href }}" class="kv" style="color:inherit;text-decoration:none">
+      {%- else -%}<div class="kv">{%- endif -%}
+        <span class="muted">{{ it.label }} <span style="font-size:11px">이번 달</span></span>
+        <span style="font-weight:600">{{ it.value }}</span>
+      {%- if it.href -%}</a>{%- else -%}</div>{%- endif -%}
+      {%- endfor -%}
+      {%- endif -%}
+    </div>
+  </div>
+{%- endmacro -%}
+
+{# ---- Grouped bars (두 시리즈; key_a/key_b·label_a/label_b로 지정) ---- #}
+{%- macro bars(series, height=200, label_a='성공', label_b='실패', color_a='var(--accent-mint)', color_b='var(--accent-red)', key_a='done', key_b='failed') -%}
+  {%- set maxv = [] -%}
+  {%- for p in series -%}{%- set _ = maxv.append(p[key_a]) -%}{%- set _ = maxv.append(p[key_b]) -%}{%- endfor -%}
+  {%- set vmax = (maxv | max) if maxv and (maxv | max) > 0 else 1 -%}
+  {%- set n = series | length -%}{%- set w = 720 -%}{%- set h = height -%}{%- set pad = 24 -%}
+  {%- set ih = h - pad * 2 -%}{%- set slot = (w - pad * 2) / (n if n > 0 else 1) -%}
+  <svg viewBox="0 0 {{ w }} {{ h }}" class="chart" preserveAspectRatio="none" style="height:{{ height }}px">
+    {%- for p in series -%}
+      {%- set gx = pad + slot * loop.index0 -%}
+      {%- set bw = 14 -%}
+      {%- set dh = ih * p[key_a] / vmax -%}
+      {%- set fh = ih * p[key_b] / vmax -%}
+      <rect x="{{ gx + slot/2 - bw - 3 }}" y="{{ pad + ih - dh }}" width="{{ bw }}" height="{{ dh }}" rx="4" fill="{{ color_a }}"/>
+      <rect x="{{ gx + slot/2 + 3 }}" y="{{ pad + ih - fh }}" width="{{ bw }}" height="{{ fh }}" rx="4" fill="{{ color_b }}"/>
+      <text x="{{ gx + slot/2 }}" y="{{ h - 4 }}" font-size="10" fill="rgba(28,28,28,.4)" text-anchor="middle">{{ p.label }}</text>
+    {%- endfor -%}
+  </svg>
+  <div class="legend">
+    <span><i style="background:{{ color_a }}"></i>{{ label_a }}</span>
+    <span><i style="background:{{ color_b }}"></i>{{ label_b }}</span>
+  </div>
+{%- endmacro -%}
+
+{# ---- Multi-line (여러 시리즈 추이) — series=[{label, k1, k2, ...}], lines=[(key,라벨,색)] ---- #}
+{%- macro multiline(series, lines, height=200) -%}
+  {%- set vals = [] -%}
+  {%- for p in series -%}{%- for k, _l, _c in lines -%}{%- set _ = vals.append(p[k]) -%}{%- endfor -%}{%- endfor -%}
+  {%- set vmax = (vals | max) if vals and (vals | max) > 0 else 1 -%}
+  {%- set n = series | length -%}{%- set w = 720 -%}{%- set h = height -%}{%- set pad = 24 -%}
+  {%- set iw = w - pad * 2 -%}{%- set ih = h - pad * 2 -%}{%- set ns = (n - 1) if n > 1 else 1 -%}
+  <svg viewBox="0 0 {{ w }} {{ h }}" class="chart" preserveAspectRatio="none" style="height:{{ height }}px">
+    {%- for g in range(4) -%}
+      {%- set gy = pad + ih * g / 3 -%}
+      <line x1="{{ pad }}" y1="{{ gy }}" x2="{{ w - pad }}" y2="{{ gy }}" stroke="rgba(28,28,28,.06)" stroke-width="1"/>
+    {%- endfor -%}
+    {%- for key, _label, color in lines -%}
+      {%- set pts = [] -%}
+      {%- for p in series -%}
+        {%- set x = pad + iw * loop.index0 / ns -%}
+        {%- set y = pad + ih - (ih * p[key] / vmax) -%}
+        {%- set _ = pts.append(x ~ ',' ~ y) -%}
+      {%- endfor -%}
+      <polyline points="{{ pts | join(' ') }}" fill="none" stroke="{{ color }}" stroke-width="2"
+                stroke-linejoin="round" stroke-linecap="round"/>
+    {%- endfor -%}
+    {%- for p in series -%}
+      {%- if loop.index0 % 5 == 0 or loop.last -%}
+        {%- set x = pad + iw * loop.index0 / ns -%}
+        <text x="{{ x }}" y="{{ h - 4 }}" font-size="10" fill="rgba(28,28,28,.4)" text-anchor="middle">{{ p.label }}</text>
+      {%- endif -%}
+    {%- endfor -%}
+    {%- for p in series -%}
+      {%- set x = pad + iw * loop.index0 / ns -%}
+      {%- set slot_w = iw / ns -%}
+      {%- if p.raw_date -%}
+      <rect x="{{ x - slot_w/2 }}" y="0" width="{{ slot_w }}" height="{{ h - pad }}" fill="transparent"
+            style="cursor:pointer" onclick="location.href='/admin/subscriptions?from={{ p.raw_date }}&to={{ p.raw_date }}'"
+            onmouseover="this.style.fill='rgba(71, 108, 255, 0.05)'" onmouseout="this.style.fill='transparent'">
+        <title>{{ p.raw_date }} 구독 내역 보기</title>
+      </rect>
+      {%- endif -%}
+    {%- endfor -%}
+  </svg>
+  <div class="legend">
+    {%- for _key, label, color in lines -%}<span><i style="background:{{ color }}"></i>{{ label }}</span>{%- endfor -%}
+  </div>
+{%- endmacro -%}
+
+{# ---- Horizontal bar ranking ---- #}
+{%- macro hbar(items) -%}
+  {%- set vmax = (items | map(attribute='value') | max) if items else 1 -%}
+  {%- for it in items -%}
+  <div class="kv">
+    <span style="width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ it.name }}</span>
+    <span class="kv-bar"><i style="width:{{ (it.value / vmax * 100) if vmax else 0 }}%"></i></span>
+    <span style="font-weight:600;font-size:13px">{{ '{:,}'.format(it.value) }}원</span>
+  </div>
+  {%- endfor -%}
+{%- endmacro -%}

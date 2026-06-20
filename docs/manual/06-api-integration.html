@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>7. API 연동 (실전) — 구독/결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <a class="brand" href="index.html">
+      <span class="logo">결제</span>
+      <span class="t">구독/결제 서버<small>서비스 담당자 매뉴얼</small></span>
+    </a>
+    <div class="nav-cat">시작</div>
+    <nav class="nav">
+      <a href="index.html"><span class="num">★</span> 매뉴얼 홈</a>
+      <a href="09-overview-diagram.html"><span class="num">◆</span> 한눈에 보기(그림)</a>
+      <a href="01-getting-started.html"><span class="num">0</span> 시작하기</a>
+    </nav>
+    <div class="nav-cat">관리자 콘솔</div>
+    <nav class="nav">
+      <a href="02-plans.html"><span class="num">1</span> 요금제 관리</a>
+      <a href="03-subscriptions.html"><span class="num">2</span> 구독 관리</a>
+      <a href="04-payments.html"><span class="num">3</span> 결제·환불</a>
+      <a href="05-settlement.html"><span class="num">4</span> 정산</a>
+      <a href="08-admin-console.html"><span class="num">5</span> 화면별 가이드(캡처)</a>
+    </nav>
+    <div class="nav-cat">개발 연동</div>
+    <nav class="nav">
+      <a href="00-setup.html"><span class="num">6</span> 설치·설정·배포</a>
+      <a href="06-api-integration.html" class="active"><span class="num">7</span> API 연동</a>
+      <a href="10-qa-testcases.html"><span class="num">8</span> QA 테스트케이스</a>
+      <a href="11-dev-sandbox.html"><span class="num">9</span> 사전 개발(덤프)</a>
+      <a href="dev_manual/index.html" target="_blank" rel="noopener"><span class="num">10</span> 개발자 매뉴얼 ↗</a>
+    </nav>
+    <div class="nav-cat">참고</div>
+    <nav class="nav">
+      <a href="07-faq.html"><span class="num">11</span> FAQ</a>
+      <a href="13-status-reference.html"><span class="num">12</span> 상태·코드 레퍼런스</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+  <div class="content">
+
+    <div class="page-head">
+      <div class="page-eyebrow">CHAPTER 7 · 개발자용 · 실전 예제</div>
+      <h1>API 연동 (실전)</h1>
+      <p class="lead">실제 동작하는 예제 서비스 <code>sample_service</code>(Django)의 코드를 그대로 가져와, 우리 서비스에 바로 적용할 수 있게 설명합니다.</p>
+    </div>
+
+    <div class="easybox">
+      <p>이 장은 개발팀에 그대로 전달하면 됩니다. 모든 코드는 저장소의 <code>sample_service/</code>에 실제로 들어 있는
+      <strong>참고 구현(reference implementation)</strong>입니다. 핵심 파일은 두 개뿐입니다.</p>
+      <ul>
+        <li><code>shop/payment_client.py</code> — 결제 서버를 호출하는 <strong>재사용 클라이언트</strong>(서명·인증·에러 처리)</li>
+        <li><code>shop/views.py</code> — 실제 화면 흐름(요금제 → 카드 등록 → 구독 생성 → 조회/취소)</li>
+      </ul>
+    </div>
+
+    <h2><span class="h-no">7.1</span>전체 구조 — 누가 무엇을 호출하나</h2>
+    <p>연동은 <strong>프론트엔드(토스 SDK)</strong>와 <strong>백엔드(서버 간 API 호출)</strong> 두 부분으로 나뉩니다.
+    카드 번호는 <strong>토스만</strong> 다루며, 우리 서버에도 결제 서버에도 저장되지 않습니다.</p>
+    <div class="flow">
+      <div class="node"><div class="n-no">프론트</div><div class="n-t">① 토스 카드등록창</div><div class="n-d">SDK <code>requestBillingAuth()</code>로 카드 등록 → <code>authKey</code> 획득</div></div>
+      <div class="node"><div class="n-no">브라우저</div><div class="n-t">② successUrl 리다이렉트</div><div class="n-d">토스가 <code>authKey</code>·<code>customerKey</code>를 붙여 우리 백엔드로 복귀</div></div>
+      <div class="node"><div class="n-no">백엔드</div><div class="n-t">③ 결제 서버 API 호출</div><div class="n-d"><code>authKey</code>로 구독 생성/결제 — 서버 간 HMAC 인증 통신</div></div>
+    </div>
+    <div class="callout tip">
+      <span class="ico">🔒</span>
+      <div><p><strong>금액·결제 핵심 로직은 모두 백엔드(③)에서</strong> 처리합니다. 프론트는 카드 등록 인증(<code>authKey</code>)만 받아 오고,
+      실제 빌링키 발급과 결제는 서버 간 통신으로만 일어납니다. 그래야 사용자가 브라우저에서 금액이나 요금제를 조작할 수 없습니다.</p></div>
+    </div>
+
+    <h2><span class="h-no">7.2</span>준비물과 설정값</h2>
+    <p>연동에 필요한 값과, <code>sample_service</code>가 이를 어떻게 보관하는지입니다.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>값</th><th>설명</th><th>sample_service 위치</th></tr></thead>
+        <tbody>
+          <tr><td><code>PAYMENT_API_BASE</code></td><td>결제 서버 베이스 URL</td><td><code>config/settings.py</code> (예: <code>http://127.0.0.1:8000</code>)</td></tr>
+          <tr><td>API 키 (<code>svc_…</code>)</td><td><code>x-service-key</code> 헤더에 사용</td><td><code>ServiceCredential.api_key</code></td></tr>
+          <tr><td>HMAC 시크릿</td><td><code>x-signature</code> 계산에 사용</td><td><code>ServiceCredential.hmac_secret</code></td></tr>
+          <tr><td><code>external_user_id</code></td><td>우리 서비스의 사용자 식별자(구독 1개 규칙의 기준)</td><td>예제에선 <code>SampleUser.email</code></td></tr>
+          <tr><td><code>customer_key</code></td><td>토스가 카드와 사용자를 연결하는 키(사용자별 고정)</td><td><code>SampleUser.customer_key</code> (UUID)</td></tr>
+          <tr><td><code>TOSS_CLIENT_KEY</code></td><td>프론트 토스 SDK용 클라이언트 키</td><td><code>config/settings.py</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="easybox">
+      <p><strong>external_user_id</strong>는 '우리 서비스 안에서 이 사람이 누구인가'를 가리키는 값입니다. 예제는 이메일을 썼지만,
+      여러분 서비스의 회원 번호·UUID 등 <strong>고유하게 한 사람을 가리키는 값이면 무엇이든</strong> 됩니다.
+      <strong>customer_key</strong>는 토스 쪽 사용자 식별자로, 한 사용자에게 <strong>항상 같은 값</strong>을 써야 카드가 올바르게 연결됩니다.</p>
+    </div>
+    <p>예제는 키를 환경변수 또는 DB(<code>ServiceCredential</code>)에 저장합니다. 여러 서비스를 한 앱에서 다룰 수 있도록 서비스별로 키를 보관하고,
+    호출 시 <code>creds=(api_key, hmac_secret)</code>로 넘깁니다.</p>
+    <pre><code># config/settings.py
+PAYMENT_API_BASE   = os.environ.get("PAYMENT_API_BASE", "http://127.0.0.1:8000")
+SERVICE_API_KEY    = os.environ.get("SERVICE_API_KEY", "")      # 단일 서비스 폴백
+SERVICE_HMAC_SECRET= os.environ.get("SERVICE_HMAC_SECRET", "")
+TOSS_CLIENT_KEY    = os.environ.get("TOSS_CLIENT_KEY", "")</code></pre>
+    <div class="callout danger">
+      <span class="ico">⛔</span>
+      <div><p>API 키·HMAC 시크릿은 <strong>코드에 하드코딩하지 말고</strong> 환경변수·시크릿 저장소에 두세요. 노출되면 결제 요청에 악용될 수 있습니다.</p></div>
+    </div>
+
+    <h2><span class="h-no">7.3</span>인증 헤더 4종</h2>
+    <div class="easybox">
+      <p>인증 헤더 4종을 <strong>'봉인된 등기우편'</strong>에 비유하면 이렇습니다.</p>
+      <ul>
+        <li><strong>API 키</strong> = 보내는 사람 이름(누구인지)</li>
+        <li><strong>타임스탬프</strong> = 발송 시각(너무 오래된 편지는 거부)</li>
+        <li><strong>nonce</strong> = 일련번호(같은 번호를 또 보내면 위조로 간주)</li>
+        <li><strong>서명</strong> = 봉투에 찍은 '인감 도장'(내용이 바뀌지 않았음을 증명)</li>
+      </ul>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>헤더</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><code>x-service-key</code></td><td>발급받은 서비스 API 키</td></tr>
+          <tr><td><code>x-timestamp</code></td><td>현재 Unix epoch <strong>초</strong>(정수 문자열). 서버 허용 오차(기본 ±300초) 내</td></tr>
+          <tr><td><code>x-nonce</code></td><td>요청마다 고유한 임의 문자열(1회용, 약 10분간 재사용 불가)</td></tr>
+          <tr><td><code>x-signature</code></td><td>HMAC-SHA256 서명(hex) — 아래 7.4 참고</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>인증이 필요 없는 예외: <span class="method get">GET</span><span class="path">/api/v1/services</span>(서비스 목록)와
+    <span class="method post">POST</span><span class="path">/api/v1/webhooks/toss</span>(토스 → 서버).</p>
+
+    <h2><span class="h-no">7.4</span>재사용 클라이언트 모듈 — <code>payment_client.py</code></h2>
+    <p>서명을 만들고 헤더를 붙여 요청을 보내는 부분을 <strong>한 곳에 모아 재사용</strong>하는 것이 핵심입니다.
+    아래는 <code>sample_service/shop/payment_client.py</code>의 실제 코드입니다. 그대로 복사해 시작점으로 쓸 수 있습니다.</p>
+
+    <h3>① 서명 함수와 공통 요청 함수</h3>
+    <pre><code>import hashlib, hmac, json, time, uuid
+import requests
+from django.conf import settings
+
+
+def sign_request(secret, method, path, timestamp, nonce, body: bytes) -> str:
+    # canonical = METHOD\n PATH\n TIMESTAMP\n NONCE\n SHA256_HEX(BODY)
+    body_hash = hashlib.sha256(body).hexdigest()
+    message = "\n".join([method.upper(), path, timestamp, nonce, body_hash])
+    return hmac.new(secret.encode(), message.encode(), hashlib.sha256).hexdigest()
+
+
+class PaymentAPIError(Exception):
+    """결제 서버 에러 응답 {"error": {code, message}} 을 감싼 예외."""
+    def __init__(self, status, code, message):
+        super().__init__(message)
+        self.status, self.code, self.message = status, code, message
+
+
+def _request(method, path, json_body=None, creds=None):
+    api_key, hmac_secret = creds if creds else (
+        settings.SERVICE_API_KEY, settings.SERVICE_HMAC_SECRET)
+
+    # ① 본문을 한 번만 직렬화 → 서명·전송에 같은 바이트(body)를 사용 (중요)
+    body = b"" if json_body is None else json.dumps(json_body).encode()
+    timestamp = str(int(time.time()))
+    nonce = uuid.uuid4().hex
+
+    # ② 인증 헤더 4종
+    headers = {
+        "x-service-key": api_key,
+        "x-timestamp": timestamp,
+        "x-nonce": nonce,
+        "x-signature": sign_request(hmac_secret, method, path, timestamp, nonce, body),
+    }
+    if json_body is not None:
+        headers["Content-Type"] = "application/json"
+
+    resp = requests.request(method, settings.PAYMENT_API_BASE + path,
+                            headers=headers, data=body or None, timeout=30)
+
+    # ③ 에러는 {"error": {code, message}} 형태 → PaymentAPIError로 변환
+    if resp.status_code >= 400:
+        try:
+            err = resp.json()["error"]
+            raise PaymentAPIError(resp.status_code, err["code"], err["message"])
+        except (ValueError, KeyError):
+            raise PaymentAPIError(resp.status_code, "UNKNOWN", resp.text[:200]) from None
+    return resp.json()</code></pre>
+    <div class="callout danger">
+      <span class="ico">⛔</span>
+      <div><p><strong>가장 흔한 실수:</strong> 서명할 때와 전송할 때 본문을 <em>각각 따로</em> 직렬화하면 바이트가 달라져 서명이 깨집니다(401).
+      위 코드처럼 <strong><code>body</code>를 한 번만 만들어</strong> 서명(<code>sign_request(..., body)</code>)과 전송(<code>data=body</code>)에 똑같이 쓰세요.</p></div>
+    </div>
+
+    <h3>② 엔드포인트별 얇은 래퍼 함수</h3>
+    <p>각 API는 위 <code>_request()</code>를 감싸는 한 줄짜리 함수로 노출됩니다. 호출부가 깔끔해집니다.</p>
+    <pre><code>def list_services():                                   # GET /api/v1/services (무인증)
+    return _request("GET", "/api/v1/services")["services"]
+
+def get_plans(creds=None):                             # GET /api/v1/plans
+    return _request("GET", "/api/v1/plans", creds=creds)["plans"]
+
+def create_subscription(*, plan_id, external_user_id, customer_key,
+                        auth_key, trial, creds=None):  # POST /api/v1/subscriptions
+    return _request("POST", "/api/v1/subscriptions", {
+        "plan_id": plan_id, "external_user_id": external_user_id,
+        "customer_key": customer_key, "auth_key": auth_key, "trial": trial}, creds=creds)
+
+def get_subscription(external_user_id, creds=None):    # GET /subscriptions/{id}
+    return _request("GET", f"/api/v1/subscriptions/{external_user_id}", creds=creds)
+
+def cancel(external_user_id, creds=None):              # POST /subscriptions/{id}/cancel
+    return _request("POST", f"/api/v1/subscriptions/{external_user_id}/cancel", creds=creds)
+
+def resume(external_user_id, creds=None):              # POST /subscriptions/{id}/resume
+    return _request("POST", f"/api/v1/subscriptions/{external_user_id}/resume", creds=creds)
+
+def manual_pay(external_user_id, creds=None):          # POST /subscriptions/{id}/pay
+    return _request("POST", f"/api/v1/subscriptions/{external_user_id}/pay", creds=creds)
+
+def change_card(external_user_id, *, customer_key, auth_key, creds=None):
+    return _request("POST", f"/api/v1/subscriptions/{external_user_id}/change-card",
+                    {"customer_key": customer_key, "auth_key": auth_key}, creds=creds)
+
+def add_usage_days(external_user_id, days, creds=None): # POST /subscriptions/{id}/add-days
+    return _request("POST", f"/api/v1/subscriptions/{external_user_id}/add-days",
+                    {"days": days}, creds=creds)
+
+def create_one_off_payment(*, order_id, order_name, amount, external_user_id,
+                           customer_key, auth_key, creds=None):  # POST /api/v1/payments
+    return _request("POST", "/api/v1/payments", {
+        "order_id": order_id, "order_name": order_name, "amount": amount,
+        "external_user_id": external_user_id, "customer_key": customer_key,
+        "auth_key": auth_key}, creds=creds)
+
+def cancel_one_off_payment(order_id, reason="사용자 취소", creds=None):
+    return _request("POST", f"/api/v1/payments/{order_id}/cancel",
+                    {"reason": reason}, creds=creds)
+
+def get_payments(external_user_id, creds=None):        # GET /payments/{id} (구독+단건 모두)
+    return _request("GET", f"/api/v1/payments/{external_user_id}", creds=creds)["payments"]</code></pre>
+
+    <h2><span class="h-no">7.5</span>실전 ① — 구독 시작 (카드 등록 → 구독 생성)</h2>
+    <p>가장 중요한 흐름입니다. 프론트에서 토스 카드등록창을 띄우고, 토스가 돌려준 <code>authKey</code>로 백엔드가 구독을 만듭니다.</p>
+
+    <h3>프론트: 토스 SDK 카드 등록창 (<code>subscribe.html</code>)</h3>
+    <pre><code>&lt;script src="https://js.tosspayments.com/v2/standard"&gt;&lt;/script&gt;
+&lt;script&gt;
+  const tossPayments = TossPayments("{{ TOSS_CLIENT_KEY }}");
+  // customerKey는 사용자별 고정값(항상 같은 값이어야 카드가 올바르게 연결됨)
+  const payment = tossPayments.payment({ customerKey: "{{ user.customer_key }}" });
+
+  const params = new URLSearchParams({ mode: "subscribe", plan_id: PLAN_ID, trial: "0" });
+
+  document.getElementById("open-toss").addEventListener("click", function () {
+    payment.requestBillingAuth({
+      method: "CARD",
+      // 인증 성공 시 토스가 authKey·customerKey를 붙여 이 URL로 리다이렉트
+      successUrl: window.location.origin + "/billing/success?" + params.toString(),
+      failUrl:   window.location.origin + "/billing/fail",
+      customerEmail: "{{ user.email }}",
+      customerName:  "{{ user.email }}",
+    });
+  });
+&lt;/script&gt;</code></pre>
+    <div class="easybox">
+      <p>이 단계에서 <strong>실제 카드번호는 토스 화면에만</strong> 입력됩니다. 우리 서버는 카드번호를 보지도, 저장하지도 않습니다.
+      토스는 '이 카드 등록을 승인했다'는 증표인 <strong><code>authKey</code></strong>만 돌려줍니다.</p>
+    </div>
+
+    <h3>백엔드: successUrl 처리 → 구독 생성 (<code>views.py</code>)</h3>
+    <p>토스가 <code>/billing/success?authKey=…&amp;customerKey=…</code>로 돌아오면, 백엔드가 그 <code>authKey</code>로 결제 서버 API를 호출합니다.</p>
+    <pre><code>def billing_success_view(request):
+    user = _current_user(request)
+    auth_key     = request.GET.get("authKey", "")
+    customer_key = request.GET.get("customerKey", "")
+
+    # 검증: customerKey가 이 사용자 것인지 확인(위조 차단)
+    if not auth_key or customer_key != user.customer_key:
+        messages.error(request, "토스 인증 정보가 올바르지 않습니다")
+        return redirect("/plans")
+
+    creds = _creds(request)  # 활성 서비스의 (api_key, hmac_secret)
+    try:
+        sub = payment_client.create_subscription(
+            plan_id=request.GET.get("plan_id", ""),
+            external_user_id=user.email,        # 우리 서비스의 사용자 식별자
+            customer_key=customer_key,
+            auth_key=auth_key,                  # 토스가 준 일회용 인증키
+            trial=request.GET.get("trial") == "1",
+            creds=creds)
+    except PaymentAPIError as exc:
+        # 402 PAYMENT_FAILED, 409 CONFLICT(이미 구독중) 등 → 화면에 표시
+        return render(request, "shop/result.html",
+                      {"ok": False, "message": f"{exc.message} ({exc.code})"})
+
+    return render(request, "shop/result.html",
+                  {"ok": True, "sub": sub, "message": "구독이 시작되었습니다"})</code></pre>
+    <p>응답 <code>sub</code>의 핵심 필드는 <code>status</code>(TRIAL/ACTIVE 등)와 <code>access_allowed</code>(true/false)입니다.
+    이용 허용 판단은 <code>access_allowed</code> 하나로 하면 됩니다.</p>
+    <div class="callout note">
+      <span class="ico">ℹ️</span>
+      <div><p><strong>첫 결제가 실패하면 구독이 생성되지 않습니다.</strong> 카드 거절 등 확정 실패 시 <code>402 PAYMENT_FAILED</code>가 반환되고
+      <strong>구독·결제 행이 남지 않으며</strong>(감사 로그에만 기록), 같은 사용자가 다시 호출해도 안전합니다(첫구독 혜택 유지).
+      이유·집계 영향은 <a href="03-subscriptions.html">2.7</a> 참고. (타임아웃은 <code>503 PAYMENT_UNRESOLVED</code> — 실패로 처리하지 말고 잠시 후 조회로 확인)</p></div>
+    </div>
+    <div class="callout tip">
+      <span class="ico">💡</span>
+      <div><p><strong>카드 변경</strong>도 똑같은 흐름입니다. <code>mode=change-card</code>로 카드등록창을 띄우고, successUrl에서
+      <code>change_card(user.email, customer_key=…, auth_key=…)</code>를 호출하면 구독·주기는 그대로 두고 카드만 교체됩니다.</p></div>
+    </div>
+
+    <h2><span class="h-no">7.6</span>실전 ② — 단건(1회성) 결제 + 금액 변조 방지</h2>
+    <p>단건 결제는 금액을 우리 서비스가 정합니다. 그래서 <strong>금액을 브라우저가 아니라 서버 세션에 보관</strong>해, successUrl 조작으로 금액이 바뀌지 않게 합니다.</p>
+    <pre><code># 1) 주문 폼 처리 — 금액을 세션에 저장(클라이언트가 못 바꾸게)
+def oneoff_view(request):
+    if request.method == "POST":
+        order_name = request.POST["order_name"].strip()
+        amount = int(request.POST["amount"])           # 서버에서 검증
+        order_id = f"oo-{uuid.uuid4().hex}"             # 멱등 키(중복 결제 방지)
+        request.session["oneoff"] = {                   # ← 금액은 세션에만 보관
+            "order_id": order_id, "order_name": order_name, "amount": amount}
+        return render(request, "shop/oneoff_checkout.html", {...})  # 토스 카드창
+
+# 2) successUrl — 세션 값만 신뢰해서 결제 요청
+def billing_success_view(request):   # mode == "oneoff"
+    pending = request.session.pop("oneoff", None)       # 세션에서 꺼냄
+    if not pending:
+        messages.error(request, "결제 정보가 만료되었습니다")
+        return redirect("/pay")
+    payment = payment_client.create_one_off_payment(
+        order_id=pending["order_id"], order_name=pending["order_name"],
+        amount=pending["amount"],                       # ← 세션 금액(쿼리스트링 무시)
+        external_user_id=user.email, customer_key=customer_key,
+        auth_key=auth_key, creds=creds)</code></pre>
+    <div class="easybox">
+      <p>핵심은 <strong>"금액 같은 중요한 값은 절대 브라우저(쿼리스트링·폼 hidden)를 믿지 말 것"</strong>입니다. 사용자가 개발자 도구로
+      값을 바꿔 1만 원짜리를 10원으로 만들 수 있으므로, 결제 직전엔 <strong>서버에 저장해 둔 값</strong>만 사용합니다.</p>
+    </div>
+    <div class="callout tip">
+      <span class="ico">💡</span>
+      <div><p><code>order_id</code>는 <strong>멱등 키</strong>입니다. 같은 <code>order_id</code>로 다시 요청하면 새로 결제되지 않고 기존 결과가 돌아옵니다.
+      네트워크 오류로 재시도할 때 <strong>같은 order_id</strong>를 쓰면 이중 결제를 막을 수 있습니다.</p></div>
+    </div>
+
+    <h2><span class="h-no">7.7</span>실전 ③ — 조회·취소·재개·수동결제·사용일 추가</h2>
+    <p>구독 조회와 운영 동작들은 <code>external_user_id</code>만 있으면 호출할 수 있어 간단합니다.</p>
+    <pre><code># 내 구독 조회 — access_allowed로 접근 판단
+def my_view(request):
+    try:
+        sub = payment_client.get_subscription(user.email, creds=_creds(request))
+    except PaymentAPIError as exc:
+        if exc.status == 404:        # 구독이 아예 없는 경우 → 정상(빈 화면)
+            sub = None
+
+# 취소 / 재개 / 수동결제 — 공통 패턴 (POST 후 결과 메시지)
+payment_client.cancel(user.email, creds=creds)       # 해지 예약(만료일까지 이용)
+payment_client.resume(user.email, creds=creds)       # 해지 예약 철회
+payment_client.manual_pay(user.email, creds=creds)   # 정지 구독을 즉시 결제로 복구
+
+# 사용일 추가 — 만료일·다음 결제일을 days만큼 미룸 (보상 등)
+payment_client.add_usage_days(user.email, 30, creds=creds)</code></pre>
+    <p><strong>결제 내역 조회</strong>는 구독 정기결제와 단건 결제를 <strong>모두</strong> 돌려주며, 각 항목의 <code>kind</code>(<code>SUBSCRIPTION</code>/<code>ONE_OFF</code>)로 구분합니다.
+    각 결제에는 취소 안내 필드(<code>cancelable</code>, <code>cancel_fee</code>, <code>cancel_refund_amount</code>, <code>cancel_fee_percent</code>)가 함께 옵니다.</p>
+    <pre><code>all_payments = payment_client.get_payments(user.email, creds=_creds(request))
+sub_payments = [p for p in all_payments if p["kind"] == "SUBSCRIPTION"]
+oneoff_info  = {p["order_id"]: p for p in all_payments if p["kind"] == "ONE_OFF"}
+# 단건 취소 — 서비스 취소 정책이 꺼져 있으면 PaymentAPIError(취소 불가)
+payment_client.cancel_one_off_payment(order_id, creds=creds)</code></pre>
+
+    <h2><span class="h-no">7.8</span>에러 처리 패턴</h2>
+    <p>예제는 모든 호출을 <code>PaymentAPIError</code>로 잡고, <strong>401(키 문제)이면 키 재입력 유도</strong>, 그 외에는 메시지로 안내합니다.</p>
+    <pre><code>def _handle_api_error(request, exc):
+    if isinstance(exc, PaymentAPIError) and exc.status == 401:
+        # 키가 바뀌었거나 서명 오류 → 서비스 키 재입력 화면으로
+        messages.error(request, "이 서비스의 key가 변경되었습니다. 다시 입력하세요.")
+        return redirect("/services")
+    # 그 외(402/409/422/429/503 등)는 코드·메시지를 그대로 노출
+    messages.error(request, f"{exc.message} ({exc.code})")
+    return None</code></pre>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>HTTP · code</th><th>의미</th><th>대응</th></tr></thead>
+        <tbody>
+          <tr><td>401 <code>UNAUTHORIZED</code></td><td>키·서명·시간·nonce 문제</td><td>키 확인, 본문 일관성·시계 동기화 점검</td></tr>
+          <tr><td>403 <code>FORBIDDEN</code></td><td>허용되지 않은 IP</td><td>호출 서버 공인 IP 등록 요청</td></tr>
+          <tr><td>402 <code>PAYMENT_FAILED</code></td><td>토스 결제 실패</td><td>사용자에게 카드 확인 안내</td></tr>
+          <tr><td>404 <code>NOT_FOUND</code></td><td>리소스 없음</td><td>구독 미존재는 정상 처리(빈 화면 등)</td></tr>
+          <tr><td>409 <code>CONFLICT</code></td><td>이미 구독 중(1개 규칙)</td><td>기존 구독 안내</td></tr>
+          <tr><td>422 <code>VALIDATION_ERROR</code></td><td>형식·규칙 위반</td><td>요청 값 점검(예: 체험 미지원에 trial)</td></tr>
+          <tr><td>429 <code>RATE_LIMITED</code></td><td>요청 한도 초과</td><td>대기 후 재시도(backoff)</td></tr>
+          <tr><td>503 <code>SERVER_DISABLED</code></td><td>결제서버 비활성화(킬스위치)</td><td>잠시 후 재시도, 관리자 문의</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2><span class="h-no">7.9</span>엔드포인트 빠른 참조</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>메서드 · 경로 (<code>/api/v1</code> 접두사)</th><th>역할(기능)</th><th>클라이언트 함수</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method get">GET</span><span class="path">/services</span></td><td>등록된 <strong>서비스 목록</strong> 조회(이름·상태). 연동할 서비스 선택용.</td><td><code>list_services()</code> · 무인증</td></tr>
+          <tr><td><span class="method get">GET</span><span class="path">/plans</span></td><td>판매 중인 <strong>요금제와 실제 청구 금액</strong>(<code>amount</code>) 조회. 화면 노출용.</td><td><code>get_plans()</code></td></tr>
+          <tr><td><span class="method post">POST</span><span class="path">/subscriptions</span></td><td><strong>구독 시작</strong> — 빌링키 발급 + 첫 결제(체험이면 결제 없이 시작). 금액은 서버가 계산.</td><td><code>create_subscription()</code></td></tr>
+          <tr><td><span class="method get">GET</span><span class="path">/subscriptions/{id}</span></td><td>구독 <strong>상태·이용 허용 여부</strong>(<code>access_allowed</code>) 조회.</td><td><code>get_subscription()</code></td></tr>
+          <tr><td><span class="method post">POST</span><span class="path">/subscriptions/{id}/cancel</span></td><td><strong>해지 예약</strong> — 만료일까지 이용 유지, 자동 갱신만 중단.</td><td><code>cancel()</code></td></tr>
+          <tr><td><span class="method post">POST</span><span class="path">/subscriptions/{id}/resume</span></td><td><strong>해지 철회</strong> — 만료 전 자동 갱신을 다시 켬.</td><td><code>resume()</code></td></tr>
+          <tr><td><span class="method post">POST</span><span class="path">/subscriptions/{id}/change-card</span></td><td><strong>카드(빌링키) 교체</strong> — 구독·주기는 그대로, 결제 카드만 변경.</td><td><code>change_card()</code></td></tr>
+          <tr><td><span class="method post">POST</span><span class="path">/subscriptions/{id}/pay</span></td><td><strong>수동 결제</strong> — 정지(SUSPENDED) 구독을 즉시 결제로 복구.</td><td><code>manual_pay()</code></td></tr>
+          <tr><td><span class="method post">POST</span><span class="path">/subscriptions/{id}/add-days</span></td><td><strong>사용일 추가</strong> — 만료일·다음 결제일을 N일 연기(보상 등).</td><td><code>add_usage_days()</code></td></tr>
+          <tr><td><span class="method get">GET</span><span class="path">/payments/{id}</span></td><td><strong>결제 내역 조회</strong> — 구독 정기+단건 모두(<code>kind</code>로 구분), 취소 수수료 안내 포함.</td><td><code>get_payments()</code> · 구독+단건</td></tr>
+          <tr><td><span class="method post">POST</span><span class="path">/payments</span></td><td><strong>단건(1회성) 결제</strong> 생성. 같은 <code>order_id</code> 재요청은 멱등.</td><td><code>create_one_off_payment()</code></td></tr>
+          <tr><td><span class="method post">POST</span><span class="path">/payments/{order_id}/cancel</span></td><td><strong>단건 결제 취소(환불)</strong> — 취소 정책에 따라 수수료 차감 후 환불.</td><td><code>cancel_one_off_payment()</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted"><code>{id}</code>는 <code>external_user_id</code>입니다.</p>
+
+    <h2><span class="h-no">7.10</span>연동 체크리스트</h2>
+    <div class="card mt0">
+      <ul style="margin:0">
+        <li>결제 서버 베이스 URL · API 키 · HMAC 시크릿을 <strong>환경변수/시크릿 저장소</strong>에 설정했다.</li>
+        <li>호출 서버의 <strong>공인 IP를 허용 IP 목록</strong>에 등록 요청했다(누락 시 403).</li>
+        <li><code>payment_client.py</code>의 <strong>서명·본문 일관성</strong>(같은 <code>body</code> 바이트 사용)을 지켰다.</li>
+        <li>서버 시계를 <strong>NTP로 동기화</strong>했다(±5분 초과 시 401).</li>
+        <li><code>external_user_id</code>·<code>customer_key</code> 매핑 규칙을 정했다(사용자별 고정).</li>
+        <li>토스 SDK <code>requestBillingAuth()</code> → <code>successUrl</code> 처리 흐름을 구현했다.</li>
+        <li>단건 결제 <strong>금액은 서버 세션</strong>에 보관하고, <code>order_id</code>로 멱등성을 확보했다.</li>
+        <li><code>PaymentAPIError</code>로 <strong>에러 코드별 분기</strong>(특히 401 재인증, 429 backoff)를 처리했다.</li>
+        <li>먼저 <strong>토스 테스트 키</strong>로 전체 흐름을 시연·검증했다.</li>
+      </ul>
+    </div>
+    <div class="callout tip">
+      <span class="ico">📦</span>
+      <div><p>전체 동작 예제는 저장소의 <code>sample_service/</code>에 있습니다. 서비스 선택 → 키 입력 → 로그인 → 요금제 →
+      구독/단건 결제까지 실제로 돌려 보면서 우리 서비스 연동의 시작점으로 삼으세요. 아래 <a href="#walkthrough">7.11 실제 화면으로 따라가기</a>에서 화면을 순서대로 볼 수 있습니다.</p></div>
+    </div>
+
+    <span class="anchor" id="walkthrough"></span>
+    <h2><span class="h-no">7.11</span>실제 화면으로 따라가는 연동 흐름 <span class="badge b-purple">sample_service 데모</span></h2>
+    <p>저장소의 예제 서비스 <code>sample_service</code>를 실제로 실행한 화면입니다. <strong>서비스 선택 → 로그인 → 요금제 → 카드 등록 → 내 구독 → 결제 내역</strong>까지
+    한 번 따라가면 우리 서비스가 결제 서버를 어떻게 쓰는지 전체 그림이 잡힙니다.</p>
+    <div class="easybox">
+      <p>이 데모의 모든 화면 하단에는 검은색 <strong>「🔍 개발자 노트」</strong> 패널이 있습니다. 펼치면 <strong>그 화면이 어떤 API를 호출하고
+      어느 파일이 처리하는지</strong>를 그 자리에서 보여줍니다 — "화면이 곧 문서"입니다.</p>
+    </div>
+
+    <h3>① 서비스 선택 — <span class="method get">GET</span><span class="path">/api/v1/services</span></h3>
+    <p>결제 서버에 등록된 서비스 목록을 받아 보여줍니다(무인증). 사용할 서비스를 고르는 단계입니다.</p>
+    <p>서비스 카드 아래에는 <strong>현재 등록된 이메일 목록</strong>이 함께 표시됩니다. 이 데모에 로그인했던 사용자(<code>external_user_id</code>)들로, 자동으로 등록·누적되며 최근 등록순으로 정렬됩니다. 어떤 이메일로 테스트할지 한눈에 확인하는 용도입니다(서비스를 고른 뒤 로그인 화면에서 해당 이메일로 로그인).</p>
+    <figure class="shot">
+      <img src="assets/sample/sample-01-service-select.png" alt="샘플: 서비스 선택 화면">
+      <figcaption><span class="shot-badge">① 서비스 선택</span> 등록된 서비스 목록 · 등록된 이메일 목록 · 상단 진행 단계 · 하단 개발자 노트(GET /services)</figcaption>
+    </figure>
+
+    <h3>② API 키 입력 — 발급받은 키 저장</h3>
+    <p>고른 서비스의 <strong>API 키 · HMAC 시크릿</strong>을 입력해 저장합니다(이후 모든 호출이 이 키로 서명됨). 한 번 저장하면 다음부터는 선택만 하면 됩니다.</p>
+    <figure class="shot">
+      <img src="assets/sample/sample-02-key-input.png" alt="샘플: API 키 입력 화면">
+      <figcaption><span class="shot-badge">② 키 입력</span> API Key · HMAC Secret 입력란(어드민에서 발급받은 값을 붙여넣기)</figcaption>
+    </figure>
+
+    <h3>③ 로그인 — 이메일이 <code>external_user_id</code></h3>
+    <p>데모는 이메일만으로 로그인합니다. 이 이메일이 결제 서버의 <strong>사용자 식별자 <code>external_user_id</code></strong>로 그대로 쓰입니다(실서비스에서는 회원 ID를 넣으면 됩니다).</p>
+    <figure class="shot">
+      <img src="assets/sample/sample-03-login.png" alt="샘플: 로그인 화면">
+      <figcaption><span class="shot-badge">③ 로그인</span> 이메일 = external_user_id 매핑 (개발자 노트로 설명)</figcaption>
+    </figure>
+
+    <h3>④ 요금제 — <span class="method get">GET</span><span class="path">/api/v1/plans</span></h3>
+    <p>구독 가능한 요금제와 <strong>서버가 계산한 첫 결제액·정기 결제액</strong>(할인 반영)을 보여줍니다. 체험 제공·자동결제 안함 같은 정책도 함께 표시됩니다.</p>
+    <figure class="shot">
+      <img src="assets/sample/sample-04-plans.png" alt="샘플: 요금제 목록 화면">
+      <figcaption><span class="shot-badge">④ 요금제</span> 첫 결제/정기 결제 금액 · 체험·자동결제 배지 · 추가정보 태그</figcaption>
+    </figure>
+
+    <h3>⑤ 구독 시작(카드 등록) — 토스 SDK → successUrl → <span class="method post">POST</span><span class="path">/api/v1/subscriptions</span></h3>
+    <p>가장 중요한 화면입니다. <strong>카드 등록창 열기</strong>를 누르면 토스 SDK <code>requestBillingAuth()</code>가 카드 등록창을 띄우고,
+    인증이 끝나면 <code>authKey</code>를 들고 우리 백엔드로 돌아와 <code>create_subscription()</code>으로 구독을 만듭니다.
+    아래 캡처의 <strong>개발자 노트</strong>가 이 3단계를 그대로 설명합니다.</p>
+    <figure class="shot">
+      <img src="assets/sample/sample-05-subscribe.png" alt="샘플: 구독 시작(카드 등록) 화면 + 개발자 노트">
+      <figcaption><span class="shot-badge">⑤ 카드 등록</span> 개발자 노트: ①프론트 requestBillingAuth → ②successUrl(authKey) → ③백엔드 POST /subscriptions · 구현 파일 위치까지 표시</figcaption>
+    </figure>
+    <div class="callout note">
+      <span class="ico">🔒</span>
+      <div><p>카드번호는 <strong>토스 등록창에서만</strong> 입력되고 우리 서버·결제 서버를 거치지 않습니다. 백엔드는 토스가 준 <code>authKey</code>로만 구독을 만듭니다. (이 캡처는 등록창을 열기 전 단계까지입니다.)</p></div>
+    </div>
+
+    <h3>⑥ 내 구독 — <span class="method get">GET</span><span class="path">/api/v1/subscriptions/{id}</span></h3>
+    <p>현재 구독 상태와 <strong>접근 허용 여부(<code>access_allowed</code>)</strong>, 이용 기간, 다음 결제, 마스킹된 카드를 보여줍니다. 상태에 따라 가능한 동작(취소·재개·카드 변경·사용일 추가)이 달라집니다.</p>
+    <figure class="shot">
+      <img src="assets/sample/sample-06-my.png" alt="샘플: 내 구독 화면">
+      <figcaption><span class="shot-badge">⑥ 내 구독</span> 실제 구독(원데이클래스·EXTENDED·접근 허용) · 이용 기간 · 마스킹 카드</figcaption>
+    </figure>
+
+    <h3>⑦ 결제 내역 — <span class="method get">GET</span><span class="path">/api/v1/payments/{id}</span></h3>
+    <p>구독 정기결제와 단건 결제를 한 화면에서 봅니다. 단건 결제는 취소 시 <strong>수수료·환불액</strong>까지 표시됩니다(서버가 계산해 내려줌).</p>
+    <figure class="shot">
+      <img src="assets/sample/sample-07-history.png" alt="샘플: 결제 내역 화면">
+      <figcaption><span class="shot-badge">⑦ 결제 내역</span> 단건 결제(취소됨) · 취소 수수료 5,000원(8%)·환불 45,000원 · 개발자 노트(GET /payments, POST /payments/{order_id}/cancel)</figcaption>
+    </figure>
+
+    <div class="callout tip">
+      <span class="ico">💡</span>
+      <div><p>이 데모를 직접 실행하려면 결제 서버(<code>8000</code>)와 샘플 서비스(<code>8001</code>)를 함께 띄우고 <code>http://127.0.0.1:8001</code>에 접속하세요.
+      각 화면의 개발자 노트를 펼쳐 가며 따라가면, 위 7.4~7.7의 코드가 실제로 어디서 호출되는지 눈으로 확인할 수 있습니다.</p></div>
+    </div>
+
+    <div class="pager">
+      <a href="05-settlement.html"><small>이전</small><span>← 4. 정산</span></a>
+      <a class="next" href="11-dev-sandbox.html"><small>다음</small><span>9. 사전 개발 →</span></a>
+    </div>
+
+  </div>
+  </main>
+</div>
+<script src="assets/glossary.js"></script>
+</body>
+</html>

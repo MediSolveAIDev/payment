@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15. 서비스 알림(아웃고잉 웹훅) 기능 — 구독·결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>사용·개발 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>📘</span>사용자 매뉴얼</div>
+<a class="nav-link" href="00-overview.html"><span class="n">0</span><span class="tt">0. 구독·결제 서버 전체 개요</span></a>
+<a class="nav-link" href="01-admin-console.html"><span class="n">1</span><span class="tt">1. 관리자 콘솔 사용하기</span></a>
+<a class="nav-link" href="02-admin-card.html"><span class="n">2</span><span class="tt">2. 카드(결제수단) 관리</span></a>
+<a class="nav-link" href="03-admin-subscription.html"><span class="n">3</span><span class="tt">3. 구독 관리</span></a>
+<a class="nav-link" href="04-admin-plan.html"><span class="n">4</span><span class="tt">4. 요금제 관리</span></a>
+<a class="nav-link" href="05-admin-payment-refund.html"><span class="n">5</span><span class="tt">5. 일반결제와 환불(취소)</span></a>
+<a class="nav-link" href="06-admin-accounts.html"><span class="n">6</span><span class="tt">6. 계정 관리</span></a>
+<a class="nav-link" href="07-admin-settings.html"><span class="n">7</span><span class="tt">7. 전체 설정</span></a>
+<a class="nav-link" href="08-admin-audit.html"><span class="n">8</span><span class="tt">8. 감사 로그</span></a>
+<a class="nav-link" href="09-dashboard.html"><span class="n">9</span><span class="tt">9. 대시보드</span></a>
+<div class="nav-group"><span>🛠️</span>개발자 매뉴얼</div>
+<a class="nav-link" href="10-install-deploy.html"><span class="n">10</span><span class="tt">10. 설치·설정·배포</span></a>
+<a class="nav-link" href="11-service-api.html"><span class="n">11</span><span class="tt">11. 서비스 연동 API</span></a>
+<a class="nav-link" href="12-feature-card.html"><span class="n">12</span><span class="tt">12. 카드 보관함(Card Vault) 기능</span></a>
+<a class="nav-link" href="13-feature-subscription.html"><span class="n">13</span><span class="tt">13. 구독 기능</span></a>
+<a class="nav-link" href="14-feature-payment.html"><span class="n">14</span><span class="tt">14. 일반결제·취소·정산 기능</span></a>
+<a class="nav-link active" href="15-feature-notifications.html"><span class="n">15</span><span class="tt">15. 서비스 알림(아웃고잉 웹훅) 기능</span></a>
+<a class="nav-link" href="16-admin-screens.html"><span class="n">16</span><span class="tt">16. 어드민 화면별 설명</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">매뉴얼 홈</a> <span>/</span> <em>개발자 매뉴얼</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">🛠️ 개발자 매뉴얼</span></div>
+      <h1>15. 서비스 알림(아웃고잉 웹훅) 기능</h1>
+      
+    </header>
+    <div class="doc">
+
+<p>구독·결제·카드·요금제의 상태가 바뀌면, 본 시스템은 서비스가 등록한 <code>notification_url</code>로 JSON을 <strong>POST</strong>한다. 이를 "서비스 알림(아웃고잉 웹훅)"이라 부른다. 이 문서는 이벤트 종류, payload·서명 구조, best-effort 발송, 어드민 테스트 버튼, 샘플 수신 흐름을 코드와 함께 추적한다.</p>
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p>쉽게 말하면 "우리 쪽에서 어떤 일이 생겼을 때, 서비스가 알려준 주소로 서명된 JSON을 한 번 쏴 주는" 것이다. 받아도 그만 안 받아도 본 처리는 안 깨진다.</p>
+<p>함께 보기: <a href="11-service-api.html">서비스 API</a>, <a href="14-feature-payment.html">일반결제·취소·정산</a></p>
+</div></blockquote>
+<h2 id="151">15.1 기능 개요·관련 파일</h2>
+<h3 id="_1">핵심 성질</h3>
+<ol>
+<li><strong>best-effort(fire-and-forget)</strong> — 실제 POST는 백그라운드 태스크로 보내고, 실패해도 본 처리(결제·구독)에는 영향을 주지 않는다(로그만 남김).</li>
+<li><strong>HMAC 서명</strong> — 서비스의 기존 HMAC 시크릿(<code>hmac_secret_encrypted</code>)을 재사용해 <code>X-Signature</code>/<code>X-Timestamp</code>/<code>X-Nonce</code> 헤더로 보낸다(수신 측이 진위 검증 가능).</li>
+<li><strong>URL 미등록이면 발송 안 함</strong> — <code>notification_url</code>이 비어 있으면 아무것도 보내지 않는다.</li>
+</ol>
+<h3 id="_2">관련 파일</h3>
+<table>
+<thead>
+<tr>
+<th>역할</th>
+<th>파일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>이벤트 상수·payload 구성·발송기(Notifier)</td>
+<td><code>app/notifications/service_notify.py</code></td>
+</tr>
+<tr>
+<td>알림 URL 저장·테스트 버튼 라우트</td>
+<td><code>app/admin/routes/services.py</code></td>
+</tr>
+<tr>
+<td>HMAC 서명 함수</td>
+<td><code>app/core/security.py</code>(<code>sign_request</code>)</td>
+</tr>
+<tr>
+<td>이벤트 발생 지점(구독/결제/카드/요금제)</td>
+<td><code>app/services/subscriptions.py</code>, <code>renewals.py</code>, <code>payments.py</code>, <code>cards.py</code>, <code>plans.py</code></td>
+</tr>
+<tr>
+<td>샘플 수신기(검증·저장·표시)</td>
+<td><code>sample_service/shop/views.py</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="152-16-1">15.2 이벤트 16종(+테스트 1종)</h2>
+<p><code class="loc">app/notifications/service_notify.py:29</code>~<code>46</code>에 이벤트 식별자 상수가 정의돼 있다. 이 값은 payload의 <code>EVENT</code> 필드와 <code>X-Event</code> 헤더에 들어간다.</p>
+<table>
+<thead>
+<tr>
+<th>분류</th>
+<th>상수</th>
+<th>EVENT 값</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>구독</td>
+<td><code>EVENT_SUBSCRIPTION_CREATED</code></td>
+<td><code>subscription.created</code></td>
+</tr>
+<tr>
+<td>구독</td>
+<td><code>EVENT_SUBSCRIPTION_STATUS</code></td>
+<td><code>subscription.status_changed</code></td>
+</tr>
+<tr>
+<td>구독</td>
+<td><code>EVENT_SUBSCRIPTION_RENEWED</code></td>
+<td><code>subscription.renewed</code></td>
+</tr>
+<tr>
+<td>구독</td>
+<td><code>EVENT_SUBSCRIPTION_FORCE_CANCELED</code></td>
+<td><code>subscription.force_canceled</code></td>
+</tr>
+<tr>
+<td>구독</td>
+<td><code>EVENT_SUBSCRIPTION_EXTENDED</code></td>
+<td><code>subscription.extended</code></td>
+</tr>
+<tr>
+<td>카드</td>
+<td><code>EVENT_CARD_REGISTERED</code></td>
+<td><code>card.registered</code></td>
+</tr>
+<tr>
+<td>카드</td>
+<td><code>EVENT_CARD_REPLACED</code></td>
+<td><code>card.replaced</code></td>
+</tr>
+<tr>
+<td>카드</td>
+<td><code>EVENT_CARD_DELETED</code></td>
+<td><code>card.deleted</code></td>
+</tr>
+<tr>
+<td>카드</td>
+<td><code>EVENT_CARD_ACTIVATED</code></td>
+<td><code>card.activated</code></td>
+</tr>
+<tr>
+<td>카드</td>
+<td><code>EVENT_CARD_DEACTIVATED</code></td>
+<td><code>card.deactivated</code></td>
+</tr>
+<tr>
+<td>결제</td>
+<td><code>EVENT_PAYMENT_ONE_OFF</code></td>
+<td><code>payment.one_off</code></td>
+</tr>
+<tr>
+<td>결제</td>
+<td><code>EVENT_PAYMENT_ONE_OFF_CANCELED</code></td>
+<td><code>payment.one_off_canceled</code></td>
+</tr>
+<tr>
+<td>결제</td>
+<td><code>EVENT_PAYMENT_ONE_OFF_ADMIN_CANCELED</code></td>
+<td><code>payment.one_off_admin_canceled</code></td>
+</tr>
+<tr>
+<td>요금제</td>
+<td><code>EVENT_PLAN_ACTIVATED</code></td>
+<td><code>plan.activated</code></td>
+</tr>
+<tr>
+<td>요금제</td>
+<td><code>EVENT_PLAN_ARCHIVED</code></td>
+<td><code>plan.archived</code></td>
+</tr>
+<tr>
+<td>요금제</td>
+<td><code>EVENT_PLAN_DELETED</code></td>
+<td><code>plan.deleted</code></td>
+</tr>
+<tr>
+<td>요금제</td>
+<td><code>EVENT_PLAN_BONUS_DAYS</code></td>
+<td><code>plan.bonus_days</code></td>
+</tr>
+<tr>
+<td>테스트</td>
+<td><code>EVENT_TEST</code></td>
+<td><code>notification.test</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 표의 데이터 이벤트는 16종이고, 여기에 어드민 "테스트 알림 전송" 버튼이 쓰는 <code>notification.test</code>가 더해진다.</p>
+</div></blockquote>
+<h2 id="153-payload-event">15.3 payload 구조(EVENT 포함)</h2>
+<p><code class="loc">app/notifications/service_notify.py:49</code>의 <code>build_payload</code>가 고정 구조의 dict를 만든다. 없는 값은 빈 문자열로 채운다(키는 항상 존재).</p>
+<pre><code class="language-python"># app/notifications/service_notify.py:53
+return {
+    &quot;EVENT&quot;: event,                  # 이벤트 식별자
+    &quot;subscribe_id&quot;: subscribe_id or &quot;&quot;,
+    &quot;order_id&quot;: order_id or &quot;&quot;,
+    &quot;PRE_STATUS&quot;: pre_status or &quot;&quot;,
+    &quot;STATUS&quot;: status or &quot;&quot;,
+    &quot;service_name&quot;: service.name,
+    &quot;email&quot;: email or &quot;&quot;,
+    &quot;date&quot;: kst_format(utcnow(), &quot;%Y-%m-%d %H:%M:%S&quot;),  # 발생 시각(KST)
+    &quot;DESC&quot;: desc or &quot;&quot;,
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>키</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EVENT</code></td>
+<td>이벤트 식별자(위 표 값)</td>
+</tr>
+<tr>
+<td><code>subscribe_id</code> / <code>order_id</code></td>
+<td>구독 ID / 주문 ID(해당될 때만)</td>
+</tr>
+<tr>
+<td><code>PRE_STATUS</code> / <code>STATUS</code></td>
+<td>변경 전/후 상태</td>
+</tr>
+<tr>
+<td><code>service_name</code></td>
+<td>서비스명</td>
+</tr>
+<tr>
+<td><code>email</code></td>
+<td>대상 외부 사용자(이메일/식별자)</td>
+</tr>
+<tr>
+<td><code>date</code></td>
+<td>발생 시각(KST, <code>YYYY-MM-DD HH:MM:SS</code>)</td>
+</tr>
+<tr>
+<td><code>DESC</code></td>
+<td>사람이 읽는 설명</td>
+</tr>
+</tbody>
+</table>
+<h2 id="154-httpservicenotifiersend-best-effort">15.4 발송 흐름(HttpServiceNotifier.send) — best-effort</h2>
+<p><code class="loc">app/notifications/service_notify.py:86</code>의 <code>send</code>가 발송을 구성한다. 전체가 <code>try/except</code>로 감싸져 <strong>payload 구성·서명·스케줄 어떤 예외도 본 처리를 막지 않는다</strong>.</p>
+<ol>
+<li><strong>URL 확인</strong> — <code>notification_url</code>이 없으면 즉시 반환(발송 안 함) (<code class="loc">service_notify.py:91</code>~<code>93</code>).</li>
+<li><strong>payload 구성</strong> — <code>build_payload(...)</code> 후 <code>json.dumps(..., ensure_ascii=False)</code>로 바이트 본문 생성 (<code class="loc">service_notify.py:94</code>~<code>97</code>).</li>
+<li><strong>서명</strong> — 서비스의 HMAC 시크릿을 복호화하고, 타임스탬프·nonce를 만들어 <code>sign_request</code>로 서명 (<code class="loc">service_notify.py:99</code>~<code>105</code>).</li>
+</ol>
+<pre><code class="language-python"># app/notifications/service_notify.py:99
+secret = self._cipher.decrypt(service.hmac_secret_encrypted)
+ts = str(int(utcnow().timestamp()))
+nonce = secrets.token_hex(16)
+path = urlsplit(url).path or &quot;/&quot;
+sig = sign_request(secret, &quot;POST&quot;, path, ts, nonce, body)
+headers = {&quot;Content-Type&quot;: &quot;application/json&quot;, &quot;X-Event&quot;: event,
+           &quot;X-Signature&quot;: sig, &quot;X-Timestamp&quot;: ts, &quot;X-Nonce&quot;: nonce}
+</code></pre>
+<ol start="4">
+<li><strong>fire-and-forget</strong> — 실제 POST는 <code>asyncio.create_task(self._post(...))</code>로 백그라운드에 띄운다. 태스크 참조를 set에 보관해 GC를 막는다 (<code class="loc">service_notify.py:107</code>~<code>109</code>).</li>
+<li><strong>예외 흡수</strong> — 구성 단계 실패는 <code>logger.warning</code>만 남긴다(<code class="loc">service_notify.py:110</code>). 백그라운드 <code>_post</code>는 HTTP 4xx/5xx·네트워크 오류 모두 로그만 남기고 흡수한다(<code class="loc">service_notify.py:113</code>~<code>121</code>).</li>
+</ol>
+<h3 id="sign_request">서명 규칙(sign_request)</h3>
+<p><code class="loc">app/core/security.py:62</code>. canonical string은 개행으로 연결된 <code>METHOD\nPATH\nTIMESTAMP\nNONCE\nSHA256(body)</code>이며, HMAC-SHA256(시크릿)으로 서명한다. 각 구성요소에 개행이 있으면 거부한다(필드 간 바이트 이동 공격 차단).</p>
+<pre><code class="language-python"># app/core/security.py:73
+body_hash = hashlib.sha256(body).hexdigest()
+message = &quot;\n&quot;.join([method.upper(), path, timestamp, nonce, body_hash])
+return hmac.new(secret.encode(), message.encode(), hashlib.sha256).hexdigest()
+</code></pre>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>중요: 서명 본문은 <code>path</code>(URL의 경로 부분)와 <code>body</code>를 포함한다. 수신 측은 자신이 받은 경로·본문으로 같은 식을 계산해 <code>X-Signature</code>와 비교해야 한다.</p>
+</div></blockquote>
+<h3 id="_3">이벤트 발생 지점</h3>
+<p>각 이벤트는 도메인 서비스에서 <code>notifier.send(...)</code>로 emit된다. 결제 3종은 <code>app/services/payments.py</code>에서, 구독/카드/요금제 이벤트는 각각 <code>subscriptions.py</code>·<code>renewals.py</code>·<code>cards.py</code>·<code>plans.py</code>에서 발생한다. 예: 단건결제 성공 시</p>
+<pre><code class="language-python"># app/services/payments.py:194
+await notifier.send(service, event=EVENT_PAYMENT_ONE_OFF, order_id=payment.order_id,
+                    status=payment.status, email=external_user_id,
+                    desc=f&quot;일반결제 {amount:,}원({order_name})&quot;)
+</code></pre>
+<h2 id="155-url">15.5 알림 URL 등록 + 어드민 테스트 버튼</h2>
+<h3 id="url">URL 저장</h3>
+<p><code class="loc">app/admin/routes/services.py:416</code>의 <code>services_notification_url</code>. CSRF 검증 후 폼 <code>notification_url</code>을 받는다.</p>
+<ul>
+<li>값이 있으면 <code>http://</code> / <code>https://</code>로 시작해야 한다. 아니면 <code>?error=</code>로 안내 후 리다이렉트 (<code class="loc">services.py:428</code>~<code>431</code>).</li>
+<li>빈 값이면 <code>service.notification_url = None</code>(알림 끔)으로 저장 (<code class="loc">services.py:436</code>).</li>
+<li>감사 로그 <code>service.notification_url_updated</code>(old/new URL 기록) (<code class="loc">services.py:437</code>).</li>
+</ul>
+<h3 id="_4">테스트 발송(동기)</h3>
+<p><code class="loc">app/admin/routes/services.py:445</code>의 <code>services_notification_test</code>. 일반 <code>send</code>와 달리 <strong>동기</strong>로 보내 수신 측 응답을 운영자에게 즉시 토스트로 보여준다.</p>
+<pre><code class="language-python"># app/admin/routes/services.py:459
+ok, detail = await notifier.send_test(service)
+if ok:
+    return saved_redirect(f&quot;/admin/services/{service_id}&quot;,
+                          f&quot;테스트 알림을 전송했습니다 ({detail})&quot;)
+return RedirectResponse(
+    f&quot;/admin/services/{service_id}?error={quote(f'테스트 알림 전송 실패: {detail}')}&quot;,
+    status_code=303)
+</code></pre>
+<p><code>send_test</code>(<code class="loc">app/notifications/service_notify.py:123</code>)는 <code>EVENT=notification.test</code>, <code>STATUS=TEST</code>인 payload를 만들어 동일하게 서명한 뒤 <strong>즉시 POST</strong>하고 <code>(성공여부, 상세문자열)</code>을 반환한다.</p>
+<table>
+<thead>
+<tr>
+<th>결과</th>
+<th>반환</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>URL 미등록</td>
+<td><code>(False, "알림 URL이 등록되어 있지 않습니다")</code></td>
+</tr>
+<tr>
+<td>수신 응답 &lt; 400</td>
+<td><code>(True, "수신 측 응답 HTTP {코드}")</code></td>
+</tr>
+<tr>
+<td>수신 응답 ≥ 400</td>
+<td><code>(False, "수신 측 응답 오류 HTTP {코드}")</code></td>
+</tr>
+<tr>
+<td>네트워크 예외</td>
+<td><code>(False, "전송 실패: ...")</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="156-sample_service">15.6 샘플 수신(sample_service)</h2>
+<p>샘플 서비스(<code>sample_service/shop/views.py</code>)가 수신·검증 예시를 보여준다.</p>
+<ol>
+<li><strong>서명 검증</strong> — <code>_verify_notify_signature</code>(<code class="loc">sample_service/shop/views.py:642</code>)가 <code>X-Signature</code>를 읽고, <code>service_name</code>으로 찾은(또는 전체) HMAC 시크릿으로 <code>HMAC-SHA256(message)</code>를 계산해 <code>hmac.compare_digest</code>로 비교한다.</li>
+<li><strong>수신 처리</strong> — 본문 JSON + <code>X-Signature</code>/<code>X-Timestamp</code>/<code>X-Nonce</code>를 검증한 뒤 <code>EVENT</code>/<code>STATUS</code> 등을 꺼내 저장한다(<code class="loc">views.py:672</code>~<code>683</code>).</li>
+<li><strong>표시</strong> — <code>notifications_view</code>(<code class="loc">views.py:690</code>)가 수신 내역을 화면에 보여준다.</li>
+</ol>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 검증 message는 발신 측 <code>sign_request</code>와 동일하게 <code>METHOD\nPATH\nTS\nNONCE\nSHA256(body)</code>를 만들어야 일치한다. 본 시스템은 <code>path</code>로 URL 경로 부분(<code>urlsplit(url).path</code>)을 쓴다.</p>
+</div></blockquote>
+<h2 id="157">15.7 수신 측 구현 규약 (중요)</h2>
+<p>알림을 받는 서비스 서버가 지켜야 할 계약이다. <strong>발송은 단발(at-most-once)이라 전달이 보장되지 않는다</strong>는 점을 전제로 설계해야 한다.</p>
+<h3 id="_5">전달 보장 — 없음(재시도 없음)</h3>
+<ul>
+<li>알림은 <strong>한 번만</strong> POST하며 <strong>재시도·재전송이 없다</strong>(15.4). 수신 서버가 다운·타임아웃·5xx면 그 이벤트는 <strong>영구 유실</strong>된다.</li>
+<li>따라서 <strong>중요한 상태는 알림에만 의존하지 말 것.</strong> 구독·결제의 최종 상태는 조회 API(<code>GET /api/v1/subscriptions/{external_user_id}</code> · <code>GET /api/v1/payments/{external_user_id}</code>, <a href="11-service-api.html">서비스 API</a>)로 <strong>주기적으로 재확인</strong>하거나, 사용자 접근 시점에 <code>access_allowed</code>를 다시 조회해 보정한다.</li>
+</ul>
+<h3 id="_6">응답·타임아웃 계약</h3>
+<ul>
+<li>수신 서버는 <strong>2xx</strong>를 빠르게 반환해야 한다. <strong>응답 본문은 무시</strong>된다.</li>
+<li>발송 측 타임아웃은 <strong>5초</strong>(<code>HttpServiceNotifier(timeout_seconds=5.0)</code>, <code class="loc">app/notifications/service_notify.py:81</code>). 5초 내 응답하지 못하면 실패로 간주되고 재시도는 없다 → 무거운 처리는 <strong>수신 직후 비동기로</strong> 넘기고 즉시 2xx를 반환하라.</li>
+<li>4xx/5xx를 반환해도 발송 측은 <strong>로그만 남기고 흡수</strong>한다(별도 통지·재시도 없음). 단, 어드민 '테스트 알림'은 동기 발송이라 이 응답 코드가 운영자 토스트로 보인다(15.5).</li>
+</ul>
+<h3 id="_7">멱등·중복 처리</h3>
+<ul>
+<li>재전송이 없으므로 정상 경로에선 중복 수신이 발생하지 않는다. 다만 중간 프록시 재시도나 운영자의 수동 테스트로 유사 이벤트가 또 올 수 있으니, 수신 측은 <strong>비즈니스 키로 멱등 처리</strong>하는 편이 안전하다.</li>
+<li>전용 전달 ID는 없다. 멱등 키로는 결제 이벤트는 <code>order_id</code>, 구독 이벤트는 <code>subscribe_id</code> + <code>EVENT</code> + <code>STATUS</code> + <code>date</code> 조합을 쓴다. <code>X-Nonce</code>는 발송마다 랜덤이라 <strong>중복 판별용으로 쓰지 말 것</strong>(서명 검증용일 뿐).</li>
+</ul>
+<h3 id="payload">payload 필드 함정</h3>
+<ul>
+<li><code>subscribe_id</code>는 <strong>구독 ID</strong>다(키 이름이 <code>subscription_id</code>가 아님에 주의).</li>
+<li><code>email</code>은 키 이름과 달리 <strong><code>external_user_id</code>(외부 서비스 측 사용자 식별자)</strong>가 담긴다 — 실제 이메일이 아닐 수 있다.</li>
+<li>요금제 이벤트(<code>plan.*</code>)는 사용자 비귀속이라 <code>subscribe_id</code>/<code>order_id</code>/<code>email</code>이 빈 문자열이고 <code>DESC</code>에 상세가 담긴다.</li>
+</ul>
+<h3 id="_8">서명 검증은 운영에서 필수</h3>
+<p>수신 측은 받은 <code>X-Signature</code>를 <strong>반드시 검증하고, 불일치 시 거부(401/403)</strong>해야 한다. 참고로 샘플(<code>sample_service/shop/views.py</code>)은 데모 편의상 서명이 불일치해도 <code>verified=False</code>로 <strong>기록만 남기고 200</strong>을 돌려준다 — <strong>운영 수신기는 이 동작을 복사하지 말고</strong>, 검증 실패는 거부한다. (<code>X-Event</code>는 본문 <code>EVENT</code>와 동일한 값을 담은 힌트일 뿐이므로, 이벤트 종류는 검증된 본문의 <code>EVENT</code>로 판단한다.)</p>
+<h2 id="158">15.8 제약·에러 처리</h2>
+<table>
+<thead>
+<tr>
+<th>상황</th>
+<th>동작</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>notification_url</code> 미등록</td>
+<td>발송 안 함(<code>send</code>는 조용히 반환, <code>send_test</code>는 실패 보고)</td>
+</tr>
+<tr>
+<td>payload 구성/서명 실패</td>
+<td><code>logger.warning</code>만 남기고 본 처리 계속(<code class="loc">service_notify.py:110</code>)</td>
+</tr>
+<tr>
+<td>백그라운드 POST 실패(4xx/5xx·네트워크)</td>
+<td>로그만 남기고 흡수 — 결제·구독은 영향 없음(<code class="loc">service_notify.py:113</code>)</td>
+</tr>
+<tr>
+<td>URL 형식 오류(어드민 저장)</td>
+<td><code>?error=</code>로 안내, 저장 안 함(<code class="loc">services.py:428</code>)</td>
+</tr>
+<tr>
+<td>테스트 발송</td>
+<td>동기 — 수신 응답/네트워크 오류를 운영자에게 즉시 표시</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>중요: 알림은 전 구간 best-effort다. "알림이 안 왔다"고 해서 결제/구독이 실패한 것이 아니다. 누락 추적은 수신 측 로그와 본 시스템 <code>service_notify</code> 로거(<code>logger.warning</code>)를 함께 봐야 한다.</p>
+</div></blockquote>
+<h2 id="159">15.9 유지보수 팁</h2>
+<ol>
+<li><strong>새 이벤트 추가</strong> — <code>service_notify.py</code>에 <code>EVENT_*</code> 상수를 추가하고, 발생 지점(해당 도메인 서비스)에서 <code>notifier.send(event=..., ...)</code>를 호출한다. payload 구조는 <code>build_payload</code>가 공통이므로 키를 늘릴 때만 그 함수를 수정한다.</li>
+<li><strong>서명 호환 유지</strong> — <code>sign_request</code>의 canonical string 구조를 바꾸면 모든 수신기가 깨진다. 변경 시 샘플 수신기(<code>sample_service/shop/views.py</code>)의 <code>_verify_notify_signature</code>도 함께 맞춰야 한다.</li>
+<li><strong>테스트는 RecordingServiceNotifier로</strong> — 실제 네트워크 없이 발송 내역을 검사한다(<code class="loc">service_notify.py:153</code>). URL 미등록 서비스는 기록하지 않으므로 테스트에서 URL을 먼저 세팅한다.</li>
+<li><strong>best-effort를 깨지 말 것</strong> — 발송 경로에서 예외를 다시 던지면 결제/구독이 함께 실패한다. <code>send</code>의 광범위한 <code>except</code>(<code># noqa: BLE001</code>)는 의도된 것이다.</li>
+<li><strong>HMAC 시크릿 재사용</strong> — 알림 서명은 별도 시크릿이 아니라 서비스 API와 같은 <code>hmac_secret_encrypted</code>를 쓴다. 시크릿 로테이션 시 알림 검증도 함께 영향받는 점을 기억한다.</li>
+</ol>
+    </div>
+    <div class="pager"><a class="pg prev" href="14-feature-payment.html"><small>← 이전</small><b>14. 일반결제·취소·정산 기능</b></a><a class="pg next" href="16-admin-screens.html"><small>다음 →</small><b>16. 어드민 화면별 설명</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#151">15.1 기능 개요·관련 파일</a>
+<a class="toc-h3" href="#_1">핵심 성질</a>
+<a class="toc-h3" href="#_2">관련 파일</a>
+<a class="toc-h2" href="#152-16-1">15.2 이벤트 16종(+테스트 1종)</a>
+<a class="toc-h2" href="#153-payload-event">15.3 payload 구조(EVENT 포함)</a>
+<a class="toc-h2" href="#154-httpservicenotifiersend-best-effort">15.4 발송 흐름(HttpServiceNotifier.send) — best-effort</a>
+<a class="toc-h3" href="#sign_request">서명 규칙(sign_request)</a>
+<a class="toc-h3" href="#_3">이벤트 발생 지점</a>
+<a class="toc-h2" href="#155-url">15.5 알림 URL 등록 + 어드민 테스트 버튼</a>
+<a class="toc-h3" href="#url">URL 저장</a>
+<a class="toc-h3" href="#_4">테스트 발송(동기)</a>
+<a class="toc-h2" href="#156-sample_service">15.6 샘플 수신(sample_service)</a>
+<a class="toc-h2" href="#157">15.7 수신 측 구현 규약 (중요)</a>
+<a class="toc-h3" href="#_5">전달 보장 — 없음(재시도 없음)</a>
+<a class="toc-h3" href="#_6">응답·타임아웃 계약</a>
+<a class="toc-h3" href="#_7">멱등·중복 처리</a>
+<a class="toc-h3" href="#payload">payload 필드 함정</a>
+<a class="toc-h3" href="#_8">서명 검증은 운영에서 필수</a>
+<a class="toc-h2" href="#158">15.8 제약·에러 처리</a>
+<a class="toc-h2" href="#159">15.9 유지보수 팁</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

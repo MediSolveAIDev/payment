@@ -1,0 +1,30 @@
+{% import "_list.html" as L %}
+<div id="list-services">
+{{ L.toolbar('/admin/services', pp, '서비스명·담당자 검색',
+   [('status', [('','전체 상태'),('ACTIVE','활성'),('INACTIVE','비활성')], status_filter)],
+   target='list-services', export_url='/admin/services/export.xlsx') }}
+<div class="card">
+<table>
+  <thead><tr>
+    {{ L.sort_th(pp, '/admin/services', 'name', '이름', target='list-services') }}
+    <th>담당자</th><th>허용 IP</th>
+    {{ L.sort_th(pp, '/admin/services', 'status', '상태', target='list-services') }}
+    <th></th>
+  </tr></thead>
+  <tbody>
+  {% for svc in page.items %}
+    <tr onclick="location.href='/admin/services/{{ svc.id }}'" style="cursor:pointer">
+      <td style="font-weight:500">{{ svc.name }}</td>
+      <td class="muted">{{ svc.manager_email }}</td>
+      <td class="muted" style="font-size:12px">{{ svc.allowed_ips | join(", ") }}</td>
+      <td><span class="badge badge-{{ svc.status }}">{{ svc.status }}</span></td>
+      <td><span class="muted" style="font-size:12px">상세 ›</span></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="muted">등록된 서비스가 없습니다</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ L.pager(page, '/admin/services', pp, target='list-services') }}
+</div>
+</div>

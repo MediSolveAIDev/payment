@@ -1,0 +1,32 @@
+{% import "_list.html" as L %}
+<div id="list-users">
+{{ L.toolbar('/admin/users', pp, '이메일 검색', [
+   ('role', [('','전체 역할'),('SYSTEM_ADMIN','시스템 관리자'),('SERVICE_MANAGER','서비스 담당자')], role_filter),
+   ('status', [('','전체 상태'),('ACTIVE','활성'),('PENDING','대기'),('LOCKED','잠김'),('DISABLED','비활성화')], status_filter)],
+   target='list-users', export_url='/admin/users/export.xlsx') }}
+<div class="card">
+<table>
+  <thead><tr>
+    {{ L.sort_th(pp, '/admin/users', 'email', '이메일', target='list-users') }}
+    {{ L.sort_th(pp, '/admin/users', 'role', '역할', target='list-users') }}
+    <th>주 서비스</th>
+    {{ L.sort_th(pp, '/admin/users', 'status', '상태', target='list-users') }}
+    <th></th>
+  </tr></thead>
+  <tbody>
+  {% for user, svc in page.items %}
+    <tr onclick="location.href='/admin/users/{{ user.id }}'" style="cursor:pointer">
+      <td style="font-weight:500">{{ user.email }}</td>
+      <td>{{ user.role | replace('SYSTEM_ADMIN','시스템 관리자') | replace('SERVICE_MANAGER','서비스 담당자') }}</td>
+      <td class="muted">{{ svc.name if svc else '-' }}</td>
+      <td><span class="badge badge-{{ user.status }}">{{ user.status }}</span></td>
+      <td><span class="muted" style="font-size:12px">상세 ›</span></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="muted">계정이 없습니다</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ L.pager(page, '/admin/users', pp, target='list-users') }}
+</div>
+</div>

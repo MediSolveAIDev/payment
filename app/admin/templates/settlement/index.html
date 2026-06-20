@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% import "_list.html" as L %}
+{% block title %}정산{% endblock %}
+{% block crumb %}정산{% endblock %}
+{% block content %}
+<div class="page-head"><h1>정산</h1>
+  <span class="muted" style="font-size:12px">결제 승인일(approved_at) 기준 · 승인(DONE)+취소(CANCELED) 집계 · 순매출 = 총매출 − 환불</span></div>
+
+<form method="get" action="/admin/settlement" class="toolbar">
+  {# 월 선택 — 고르면 그 달의 1일~말일을 from/to에 채우고 자동 조회.
+     name 없음(서버 미전송) → 서버는 from/to만 처리 #}
+  <input type="month" data-settle-month value="{{ from_filter[:7] }}" style="width:auto"
+         title="월 선택"
+         onchange="if(this.value){var p=this.value.split('-'),f=this.form;
+                   f.from.value=this.value+'-01';
+                   f.to.value=this.value+'-'+String(new Date(+p[0],+p[1],0).getDate()).padStart(2,'0');
+                   f.requestSubmit();}">
+  <input type="date" name="from" value="{{ from_filter }}" style="width:auto"
+         onchange="this.form.requestSubmit()">
+  <input type="date" name="to" value="{{ to_filter }}" style="width:auto"
+         onchange="this.form.requestSubmit()">
+  <select name="service_id" onchange="this.form.plan_name.value='';this.form.requestSubmit()">
+    <option value="">전체 서비스</option>
+    {% for sid, name in service_options %}
+    <option value="{{ sid }}" {{ 'selected' if selected and sid == selected.id|string }}>{{ name }}</option>
+    {% endfor %}
+  </select>
+  <select name="plan_name" onchange="this.form.requestSubmit()">
+    {% for value, label in plan_options %}
+    <option value="{{ value }}" {{ 'selected' if plan_filter == value }}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  {% if pp.sort %}<input type="hidden" name="sort" value="{{ pp.sort }}"><input type="hidden" name="dir" value="{{ pp.direction }}">{% endif %}
+  <button class="btn btn-sub" type="submit">조회</button>
+  <a class="btn-text" href="/admin/settlement">초기화</a>
+  <a class="btn btn-sm btn-ghost"
+     href="/admin/settlement/export.xlsx?from={{ from_filter }}&to={{ to_filter }}{% if selected %}&service_id={{ selected.id }}{% endif %}{% if plan_filter %}&plan_name={{ plan_filter }}{% endif %}">
+    <span data-lucide="download"></span>엑셀</a>
+</form>
+
+{# 정산 요약 — 순매출(강조) = 총매출 − 환불. 아래에 총매출/환불/구독/일반 분해 #}
+<div class="settle-summary" style="margin-bottom:16px">
+  <div class="settle-total">
+    <span class="settle-total-label">{{ selected.name ~ ' 순매출' if selected else '전체 순매출' }}</span>
+    <span class="settle-total-value">{{ "{:,}".format(net_total) }}<small>원</small></span>
+    <span class="settle-total-count">총 {{ "{:,}".format(total_count) }}건</span>
+  </div>
+  <table class="settle-breakdown">
+    <tbody>
+      <tr>
+        <th>총매출</th>
+        <td class="num muted">{{ "{:,}".format(total_count) }}건</td>
+        <td class="num">{{ "{:,}".format(total_amount) }}원</td>
+      </tr>
+      <tr>
+        <th>환불(취소)</th>
+        <td class="num muted">−</td>
+        <td class="num" style="color:var(--red)">−{{ "{:,}".format(refund_total) }}원</td>
+      </tr>
+      <tr>
+        <th>구독 매출</th>
+        <td class="num muted">{{ "{:,}".format(sub_count) }}건</td>
+        <td class="num">{{ "{:,}".format(sub_total) }}원</td>
+      </tr>
+      <tr>
+        <th>일반결제 매출</th>
+        <td class="num muted">{{ "{:,}".format(one_off_count) }}건</td>
+        <td class="num">{{ "{:,}".format(one_off_total) }}원</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+{% if not selected %}
+{# --- 전체 모드: 서비스별 정산 대상 목록 --- #}
+<div class="card">
+<table>
+  <thead><tr><th>서비스</th><th>건수</th><th>구독</th><th>일반</th><th>총매출</th><th>환불</th><th>순매출</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r.service_name }}</td>
+      <td>{{ "{:,}".format(r.count) }}</td>
+      <td class="muted">{{ "{:,}".format(r.sub_amount) }}원</td>
+      <td class="muted">{{ "{:,}".format(r.one_off_amount) }}원</td>
+      <td>{{ "{:,}".format(r.amount) }}원</td>
+      <td class="muted" style="color:var(--red)">{% if r.refund_amount %}−{{ "{:,}".format(r.refund_amount) }}원{% else %}-{% endif %}</td>
+      <td style="font-weight:600">{{ "{:,}".format(r.net_amount) }}원</td>
+      <td><a class="btn btn-sm btn-ghost"
+             href="/admin/settlement?from={{ from_filter }}&to={{ to_filter }}&service_id={{ r.service_id }}">상세보기</a></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="8" class="muted">기간 내 정산 대상이 없습니다</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+{# --- 서비스별 모드: 결제 건별 목록 --- #}
+<div class="card">
+<table>
+  <thead><tr>
+    {{ L.sort_th(pp, '/admin/settlement', 'approved_at', '승인시각') }}
+    <th>사용자</th><th>주문번호</th><th>유형</th><th>종류</th><th>상태</th>
+    {{ L.sort_th(pp, '/admin/settlement', 'amount', '총매출') }}
+    <th>환불</th><th>순매출</th>
+    <th></th>
+  </tr></thead>
+  <tbody>
+  {% for p, sub in pay_page.items %}
+    {# 환불액(canceled_amount)을 빼서 순매출 표시 — 전액취소(CANCELED)·부분취소(DONE) 모두 반영 #}
+    {% set refund = p.canceled_amount or 0 %}
+    <tr>
+      <td class="muted">{{ p.approved_at|kst("%Y-%m-%d %H:%M") }}</td>
+      <td>{{ p.external_user_id or '-' }}</td>
+      <td style="font-family:ui-monospace,monospace;font-size:12px">{{ p.order_id }}</td>
+      <td><span class="badge badge-{{ p.payment_type }}">{{ p.payment_type }}</span></td>
+      <td><span class="badge badge-{{ p.kind }}">{{ '구독' if p.kind == 'SUBSCRIPTION' else '일반' }}</span></td>
+      <td><span class="badge badge-{{ p.status }}">{{ '취소' if p.status == 'CANCELED' else '승인' }}</span>{% if p.status == 'DONE' and p.canceled_amount %} <span class="badge badge-CANCELED">부분취소</span>{% endif %}</td>
+      <td>{{ "{:,}".format(p.amount) }}원</td>
+      <td class="muted" style="color:var(--red)">{% if refund %}−{{ "{:,}".format(refund) }}원{% else %}-{% endif %}</td>
+      <td style="font-weight:600">{{ "{:,}".format(p.amount - refund) }}원</td>
+      <td>{% if sub %}<a class="btn btn-sm btn-ghost" href="/admin/subscriptions/{{ sub.id }}">상세보기</a>{% else %}<a class="btn btn-sm btn-ghost" href="/admin/payments/{{ p.id }}">상세보기</a>{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="10" class="muted">기간 내 정산 대상이 없습니다</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ L.pager(pay_page, '/admin/settlement', pp) }}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,13 @@
+{
+  "id": "9f8e7d6c-1111-4abc-8def-0123456789ab",
+  "external_user_id": "user-1001",
+  "plan_id": "22222222-2222-4222-8222-222222222222",
+  "plan_name": "프로",
+  "status": "ACTIVE",
+  "access_allowed": true,
+  "current_period_start": "2026-06-16T10:00:00+09:00",
+  "current_period_end": "2026-07-16T10:00:00+09:00",
+  "next_billing_at": "2026-07-16T10:00:00+09:00",
+  "card": { "number": "4321-****-****-1234", "company": "신한", "type": "CREDIT" },
+  "retry_count": 0
+}

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4. 요금제 관리 — 구독·결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>사용·개발 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>📘</span>사용자 매뉴얼</div>
+<a class="nav-link" href="00-overview.html"><span class="n">0</span><span class="tt">0. 구독·결제 서버 전체 개요</span></a>
+<a class="nav-link" href="01-admin-console.html"><span class="n">1</span><span class="tt">1. 관리자 콘솔 사용하기</span></a>
+<a class="nav-link" href="02-admin-card.html"><span class="n">2</span><span class="tt">2. 카드(결제수단) 관리</span></a>
+<a class="nav-link" href="03-admin-subscription.html"><span class="n">3</span><span class="tt">3. 구독 관리</span></a>
+<a class="nav-link active" href="04-admin-plan.html"><span class="n">4</span><span class="tt">4. 요금제 관리</span></a>
+<a class="nav-link" href="05-admin-payment-refund.html"><span class="n">5</span><span class="tt">5. 일반결제와 환불(취소)</span></a>
+<a class="nav-link" href="06-admin-accounts.html"><span class="n">6</span><span class="tt">6. 계정 관리</span></a>
+<a class="nav-link" href="07-admin-settings.html"><span class="n">7</span><span class="tt">7. 전체 설정</span></a>
+<a class="nav-link" href="08-admin-audit.html"><span class="n">8</span><span class="tt">8. 감사 로그</span></a>
+<a class="nav-link" href="09-dashboard.html"><span class="n">9</span><span class="tt">9. 대시보드</span></a>
+<div class="nav-group"><span>🛠️</span>개발자 매뉴얼</div>
+<a class="nav-link" href="10-install-deploy.html"><span class="n">10</span><span class="tt">10. 설치·설정·배포</span></a>
+<a class="nav-link" href="11-service-api.html"><span class="n">11</span><span class="tt">11. 서비스 연동 API</span></a>
+<a class="nav-link" href="12-feature-card.html"><span class="n">12</span><span class="tt">12. 카드 보관함(Card Vault) 기능</span></a>
+<a class="nav-link" href="13-feature-subscription.html"><span class="n">13</span><span class="tt">13. 구독 기능</span></a>
+<a class="nav-link" href="14-feature-payment.html"><span class="n">14</span><span class="tt">14. 일반결제·취소·정산 기능</span></a>
+<a class="nav-link" href="15-feature-notifications.html"><span class="n">15</span><span class="tt">15. 서비스 알림(아웃고잉 웹훅) 기능</span></a>
+<a class="nav-link" href="16-admin-screens.html"><span class="n">16</span><span class="tt">16. 어드민 화면별 설명</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">매뉴얼 홈</a> <span>/</span> <em>사용자 매뉴얼</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">📘 사용자 매뉴얼</span></div>
+      <h1>4. 요금제 관리</h1>
+      
+    </header>
+    <div class="doc">
+
+<p>서비스가 고객에게 판매할 <strong>구독 요금제</strong>를 만들고 관리하는 화면입니다. 가격, 결제 주기(년·월·주·일), 첫 구독 할인, 상시 할인, 체험 기간을 한곳에서 설정합니다.</p>
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p>쉽게 말하면 "이 서비스는 한 달에 9,900원, 첫 달은 무료"처럼 <strong>판매 상품을 정의하는 곳</strong>이 요금제 관리입니다.</p>
+<p>함께 보기: <a href="03-admin-subscription.html">구독 관리</a> · <a href="05-admin-payment-refund.html">일반결제와 환불</a></p>
+</div></blockquote>
+<hr />
+<h2 id="41">4.1 요금제 관리 화면 열기</h2>
+<p>요금제는 <strong>두 곳</strong>에서 관리할 수 있습니다. 어느 쪽에서 만들든 결과는 같습니다.</p>
+<table>
+<thead>
+<tr>
+<th>화면</th>
+<th>여는 방법</th>
+<th>특징</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>전체 요금제 목록</td>
+<td>왼쪽 메뉴 <strong>요금제</strong> 클릭</td>
+<td>모든(또는 담당) 서비스의 요금제를 한 번에 보고 검색·필터·엑셀 다운로드</td>
+</tr>
+<tr>
+<td>서비스 안의 요금제 탭</td>
+<td><strong>서비스</strong> 메뉴 → 서비스 클릭 → 아래쪽 "요금제" 카드</td>
+<td>그 서비스의 요금제만 표시. 추가·수정 후 그 자리에서 바로 갱신</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 시스템 관리자(SYSTEM_ADMIN)는 모든 서비스의 요금제를, 서비스 담당자(SERVICE_MANAGER)는 <strong>자신이 맡은 서비스의 요금제만</strong> 볼 수 있습니다. 담당이 아닌 서비스의 요금제 주소로 직접 들어가면 "없음" 화면이 표시됩니다.</p>
+</div></blockquote>
+<p>목록의 각 줄에는 요금제 이름, 정가, 첫 결제액, 정기 결제액, 결제 주기, 상태(<span class="pill pri">ACTIVE</span> / <span class="pill no">ARCHIVED</span>)가 함께 보입니다. 첫 결제액·정기 결제액에 마우스를 올리면 어떻게 계산됐는지 설명이 뜹니다.</p>
+<hr />
+<h2 id="42">4.2 요금제 만들기</h2>
+<ol class="steps">
+<li>전체 요금제 목록에서 오른쪽 위 <b>[요금제 생성]</b>, 또는 서비스 상세의 요금제 카드에서 <b>[요금제 추가]</b>를 누릅니다.</li>
+<li>아래 항목을 채웁니다(자세한 설명은 4.3~4.5 참고).</li>
+<li><b>[저장]</b>을 누릅니다.</li>
+<li>"저장되었습니다" 안내가 뜨고 목록으로 돌아갑니다. 새 요금제는 곧바로 <span class="pill pri">ACTIVE</span> 상태가 되어 구독을 받을 수 있습니다.</li>
+</ol>
+
+<p>입력 항목:</p>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>이름</td>
+<td>요금제 표시 이름. 필수. 예: "스탠다드 월간"</td>
+</tr>
+<tr>
+<td>가격(원)</td>
+<td>정가. 1원 이상. 예: 9,900</td>
+</tr>
+<tr>
+<td>결제 주기</td>
+<td>년 / 월 / 주 / 일 중 선택. "일"을 고르면 일수를 직접 입력(4.3 참고)</td>
+</tr>
+<tr>
+<td>첫 구독 할인</td>
+<td>없음 / 무료 / 할인 금액 / 할인율(4.4 참고)</td>
+</tr>
+<tr>
+<td>상시 할인</td>
+<td>없음 / 할인 금액 / 할인율(4.5 참고)</td>
+</tr>
+<tr>
+<td>체험 제공</td>
+<td>체크하면 체험 일수 입력칸이 나타남. 체험 기간 동안은 결제 없이 이용</td>
+</tr>
+<tr>
+<td>자동결제 안함</td>
+<td>체크하면 첫 주기가 끝난 뒤 자동 연장 없이 만료</td>
+</tr>
+<tr>
+<td>추가정보</td>
+<td>고객 앱에 보여줄 설명을 "키 + 값"으로 자유롭게 추가(예: 용량 = 10GB)</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>팁: 폼 아래쪽에 <strong>금액 미리보기</strong>가 있어 가격·할인을 입력하면 "첫 결제 금액"과 "다음 회차부터" 금액이 실시간으로 계산되어 보입니다. 저장 전에 숫자가 맞는지 확인하세요.</p>
+<p>주의: <strong>추가정보</strong>에 값만 적고 키(이름)를 비워두면 저장이 안 됩니다. "추가정보 키를 입력하세요" 오류가 보이면 키 칸을 채워주세요. 빈 줄(키·값 모두 빈)은 그냥 무시되니 신경 쓰지 않아도 됩니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="43">4.3 결제 주기 정하기 (년·월·주·일)</h2>
+<p>결제 주기는 <strong>얼마마다 자동 결제할지</strong>를 정합니다.</p>
+<table>
+<thead>
+<tr>
+<th>선택</th>
+<th>다음 결제일 계산</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>년</td>
+<td>1년 뒤(예: 2026-03-01 → 2027-03-01)</td>
+</tr>
+<tr>
+<td>월</td>
+<td>1개월 뒤. 월말은 자동 보정(1/31 → 2/28 또는 2/29)</td>
+</tr>
+<tr>
+<td>주</td>
+<td>7일 뒤</td>
+</tr>
+<tr>
+<td>일</td>
+<td>입력한 <strong>일수</strong>만큼 뒤. 예: 10을 넣으면 10일마다 결제</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>중요: 결제 주기는 <strong>요금제를 만들 때만 정할 수 있고, 나중에 수정할 수 없습니다.</strong> 다른 주기가 필요하면 새 요금제를 하나 더 만드세요. (이미 구독 중인 고객은 자기가 시작한 주기를 그대로 유지합니다.)</p>
+</div></blockquote>
+<hr />
+<h2 id="44">4.4 첫 구독 할인 (무료 · 할인)</h2>
+<p>처음 구독하는 고객에게만 적용되는 <strong>1회차 한정 혜택</strong>입니다.</p>
+<table>
+<thead>
+<tr>
+<th>유형</th>
+<th>첫 결제 금액</th>
+<th>예시(정가 10,000원)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>없음</td>
+<td>정가 그대로</td>
+<td>10,000원</td>
+</tr>
+<tr>
+<td>무료</td>
+<td>0원(완전 무료)</td>
+<td>0원</td>
+</tr>
+<tr>
+<td>할인 금액</td>
+<td>정가 − 입력 금액</td>
+<td>3,000원 할인 → 7,000원</td>
+</tr>
+<tr>
+<td>할인율</td>
+<td>정가 − (정가 × 비율)</td>
+<td>30% 할인 → 7,000원</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p>쉽게 말하면 "첫 달 무료" 또는 "첫 결제 30% 할인" 같은 가입 혜택을 여기서 만듭니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="45">4.5 상시 할인 (정기 결제 할인)</h2>
+<p><strong>매 회차(2회차부터) 계속 적용되는 할인</strong>입니다.</p>
+<table>
+<thead>
+<tr>
+<th>유형</th>
+<th>정기 결제 금액</th>
+<th>예시(정가 10,000원)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>없음</td>
+<td>정가 그대로</td>
+<td>10,000원</td>
+</tr>
+<tr>
+<td>할인 금액</td>
+<td>정가 − 입력 금액</td>
+<td>2,000원 할인 → 8,000원</td>
+</tr>
+<tr>
+<td>할인율</td>
+<td>정가 − (정가 × 비율)</td>
+<td>20% 할인 → 8,000원</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>중요: <strong>첫 구독 할인과 상시 할인은 서로 겹치지 않습니다.</strong> 첫 결제는 첫 구독 할인만, 2회차부터는 상시 할인만 적용됩니다.</p>
+<p>예) 정가 10,000원 · 첫 구독 할인 30% · 상시 할인 20%
+- 첫 결제: 7,000원 (첫 구독 할인만)
+- 다음 회차부터: 8,000원 (상시 할인만)</p>
+<p>참고: 상시 할인에는 "무료"가 없습니다. 매번 0원이 되는 정기 결제는 의미가 없기 때문입니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="46">4.6 요금제 수정</h2>
+<ol class="steps">
+<li>목록 또는 서비스 요금제 탭에서 해당 요금제의 <b>[수정]</b>을 누릅니다.</li>
+<li>이름·가격·할인·체험 등을 바꿉니다.</li>
+<li><b>[저장]</b>을 누릅니다. "저장되었습니다" 안내가 뜹니다.</li>
+</ol>
+
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: 수정 화면에서 <strong>결제 주기는 회색으로만 보이고 바꿀 수 없습니다.</strong> 주기를 바꾸려면 새 요금제를 만들어야 합니다(4.3 참고).</p>
+<p>참고: 가격·할인을 바꿔도 이미 구독 중인 고객에게 즉시 소급되지 않고, <strong>다음 결제(갱신)부터</strong> 새 금액이 적용됩니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="47">4.7 비활성화(보관)와 활성화</h2>
+<p>요금제를 더 이상 새로 팔고 싶지 않지만 기존 구독은 유지하고 싶을 때 <strong>비활성화(보관)</strong> 합니다.</p>
+<table>
+<thead>
+<tr>
+<th>동작</th>
+<th>버튼</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>비활성화(보관)</td>
+<td>[비활성화]</td>
+<td>상태가 <span class="pill no">ARCHIVED</span>로 바뀜. <strong>새 구독은 받지 않지만 기존 구독은 그대로 유지</strong></td>
+</tr>
+<tr>
+<td>활성화(재개)</td>
+<td>[활성화]</td>
+<td>상태가 <span class="pill pri">ACTIVE</span>로 돌아가 다시 새 구독을 받음</td>
+</tr>
+</tbody>
+</table>
+<ol class="steps">
+<li>비활성화하려면 <span class="pill pri">ACTIVE</span> 요금제의 <b>[비활성화]</b>를 누릅니다. 바로 보관되고 "보관되었습니다" 안내가 뜹니다.</li>
+<li>다시 팔려면 <span class="pill no">ARCHIVED</span> 요금제의 <b>[활성화]</b>를 누릅니다.</li>
+</ol>
+
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>팁: 구독이 걸려 있어 삭제가 안 되는 요금제는, 먼저 <strong>비활성화</strong>로 새 가입을 막고 기존 구독이 모두 만료된 뒤 삭제하세요.</p>
+</div></blockquote>
+<hr />
+<h2 id="48">4.8 요금제 삭제</h2>
+<ol class="steps">
+<li>요금제의 <b>[삭제]</b>를 누릅니다.</li>
+<li>"요금제를 삭제할까요?" 확인 창에서 <b>[삭제]</b>를 한 번 더 누릅니다.</li>
+<li>성공하면 "삭제되었습니다" 안내가 뜹니다.</li>
+</ol>
+
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>중요: <strong>구독이 한 건이라도 연결된 요금제는 삭제할 수 없습니다.</strong> (현재 이용 중이든, 이미 만료됐든 상관없이 한 건이라도 있으면 거부됩니다.) 이때는 "구독이 있는 요금제는 삭제할 수 없습니다. 보관(아카이브)을 사용하세요."라는 안내가 뜹니다.</p>
+<p>처리 순서: <b>[비활성화]</b>로 새 구독을 막기 → 기존 구독이 모두 만료될 때까지 기다리기 → <b>[삭제]</b>.</p>
+</div></blockquote>
+<hr />
+<h2 id="49">4.9 사용일 추가 (구독 기간 연장 보너스)</h2>
+<p>특정 요금제를 쓰는 고객들에게 <strong>무료로 며칠을 더 얹어주고 싶을 때</strong> 사용합니다(예: 서비스 장애 보상으로 전원 3일 연장).</p>
+<ol class="steps">
+<li>요금제 줄에서 <b>[사용일추가]</b>를 누릅니다.</li>
+<li>작은 입력 창이 뜨면 추가할 <b>일수</b>를 적습니다(1~3650일). Enter로 확인, Esc로 취소.</li>
+<li>확인하면 그 요금제를 쓰는 **현재 이용 중인 구독들**의 만료일·다음 결제일이 입력한 일수만큼 뒤로 미뤄지고, 몇 개 구독에 적용됐는지 안내가 뜹니다.</li>
+</ol>
+
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 적용 대상은 <strong>이용 중인 구독</strong>(이용중·연장·미수)뿐입니다. 체험 중·정지·취소 예약·이미 만료된 구독은 영향을 받지 않습니다.</p>
+<p>팁: 사용일 추가는 시스템 관리자와 서비스 담당자 <strong>모두</strong> 사용할 수 있습니다. (수정·비활성화·삭제와 달리 전체 요금제 목록에서도 버튼이 보입니다.)</p>
+</div></blockquote>
+<hr />
+<h2 id="410">4.10 엑셀로 내려받기</h2>
+<p>목록 위쪽의 <strong>[엑셀]</strong> 버튼을 누르면 현재 검색·필터가 적용된 요금제 목록이 엑셀 파일로 받아집니다. 서비스 / 요금제 / 결제주기 / 정가 / 첫 결제 / 정기 결제 / 상태 컬럼이 들어 있습니다.</p>
+<hr />
+<h2 id="411">4.11 자주 묻는 질문</h2>
+<p><strong>Q. 체험 기간과 "자동결제 안함"을 같이 켜도 되나요?</strong>
+네. 같이 켜면 "체험 종료 → 첫 결제 1회 → 그 주기가 끝나면 자동 연장 없이 만료" 순으로 동작합니다.</p>
+<p><strong>Q. 가격을 바꿨는데 기존 고객 결제 금액이 그대로예요.</strong>
+정상입니다. 변경한 가격은 다음 결제(갱신)부터 반영됩니다.</p>
+<p><strong>Q. 삭제가 안 됩니다.</strong>
+구독이 연결된 요금제입니다. [비활성화]로 새 가입을 막고, 기존 구독이 모두 만료된 뒤 삭제하세요(4.8 참고).</p>
+<blockquote class="cal ref"><span class="cal-i">🔗</span><div class="cal-b">
+<p>함께 보기: 실제 결제가 어떻게 잡히고 환불되는지는 <a href="05-admin-payment-refund.html">일반결제와 환불</a>에서 확인하세요.</p>
+</div></blockquote>
+    </div>
+    <div class="pager"><a class="pg prev" href="03-admin-subscription.html"><small>← 이전</small><b>3. 구독 관리</b></a><a class="pg next" href="05-admin-payment-refund.html"><small>다음 →</small><b>5. 일반결제와 환불(취소)</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#41">4.1 요금제 관리 화면 열기</a>
+<a class="toc-h2" href="#42">4.2 요금제 만들기</a>
+<a class="toc-h2" href="#43">4.3 결제 주기 정하기 (년·월·주·일)</a>
+<a class="toc-h2" href="#44">4.4 첫 구독 할인 (무료 · 할인)</a>
+<a class="toc-h2" href="#45">4.5 상시 할인 (정기 결제 할인)</a>
+<a class="toc-h2" href="#46">4.6 요금제 수정</a>
+<a class="toc-h2" href="#47">4.7 비활성화(보관)와 활성화</a>
+<a class="toc-h2" href="#48">4.8 요금제 삭제</a>
+<a class="toc-h2" href="#49">4.9 사용일 추가 (구독 기간 연장 보너스)</a>
+<a class="toc-h2" href="#410">4.10 엑셀로 내려받기</a>
+<a class="toc-h2" href="#411">4.11 자주 묻는 질문</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

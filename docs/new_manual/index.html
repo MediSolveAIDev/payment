@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>구독·결제 서버 — 인수인계 가이드 (초보 개발자용)</title>
+<style>
+  :root{
+    --primary:#476CFF; --primary-100:#F0F4FF; --primary-700:#2A45C0;
+    --g100:#FBFBFB; --g200:#F3F3F3; --g300:#E3E3E3; --g600:#9F9F9F; --g700:#6E6E6E; --g800:#3E3E3E;
+    --red:#FF4E51; --text:#1a1a1a; --sidebar-w:300px;
+    /* 가독성 토큰(2026-06-11): 흰 배경에서 잘 보이는 보조 텍스트/배경 —
+       기존 g600(#9F9F9F)·primary-100 배경이 바탕과 비슷해 안 보이는 문제 해소 */
+    --muted:#525A66;            /* 보조 텍스트 — 대비 7:1 이상 */
+    --muted-strong:#3A4150;     /* 네비 등 진한 보조 텍스트 */
+    --code-bg:#EDF1FB; --code-text:#2A45C0; --code-line:#D5DEF5;  /* 인라인 코드 */
+    --quote-bg:#E9EFFF; --th-bg:#E7ECF7;    /* 인용구·표 헤더 배경(흰색과 확실히 구분) */
+    --font:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font);color:var(--text);background:#fff;line-height:1.6;font-size:15px}
+  a{color:var(--primary);text-decoration:none}
+  a:hover{text-decoration:underline}
+  /* 레이아웃 */
+  .sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;overflow-y:auto;
+    border-right:1px solid var(--g300);background:var(--g100);padding:16px 0}
+  .brand{padding:8px 20px 14px;border-bottom:1px solid var(--g300);margin-bottom:8px}
+  .brand b{display:block;font-size:15px}
+  .brand small{color:var(--muted);font-size:12px}
+  .search{padding:10px 16px}
+  .search input{width:100%;height:38px;padding:0 12px;border:1px solid var(--g300);border-radius:8px;
+    font:inherit;font-size:13px;outline:none}
+  .search input:focus{border-color:var(--primary)}
+  .nav-group{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.04em;padding:14px 20px 4px}
+  .nav-link{display:block;padding:6px 20px;font-size:13.5px;color:var(--muted-strong);border-left:3px solid transparent}
+  .nav-link:hover{background:var(--primary-100);text-decoration:none}
+  .nav-link.active{background:var(--primary-100);color:var(--primary);border-left-color:var(--primary);font-weight:600}
+  .nav-link.hidden{display:none}
+  .content{margin-left:var(--sidebar-w);padding:0 48px 120px;max-width:1000px}
+  .hero{padding:40px 0 8px;border-bottom:1px solid var(--g300);margin-bottom:24px}
+  .hero h1{font-size:28px;margin:0 0 8px}
+  .hero p{color:var(--muted);margin:6px 0}
+  .quick{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+  .quick a{background:var(--primary-100);color:var(--primary-700);border:1px solid var(--code-line);padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600}
+  /* 문서 섹션 */
+  .doc{padding:32px 0;border-bottom:1px dashed var(--g300);scroll-margin-top:16px}
+  .doc-src{font-size:11px;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin-bottom:8px}
+  .doc h1{font-size:24px;margin:8px 0 16px;padding-bottom:8px;border-bottom:2px solid var(--primary)}
+  .doc h2{font-size:19px;margin:28px 0 10px}
+  .doc h3{font-size:16px;margin:22px 0 8px}
+  .doc h4{font-size:14px;margin:18px 0 6px;color:var(--muted-strong)}
+  .doc p{margin:8px 0}
+  .doc ul,.doc ol{margin:8px 0;padding-left:22px}
+  .doc li{margin:3px 0}
+  /* 인라인 코드: 테두리 없이 파란 배경+글자만으로 구분(2026-06-11) —
+     테두리는 디렉터리 트리/촘촘한 텍스트에서 사각형 외곽선 클러터를 만들어 제거.
+     pre(코드블록) 안의 code는 배경/색/테두리를 모두 리셋해 외곽선이 생기지 않게 한다. */
+  .doc code{background:var(--code-bg);color:var(--code-text);padding:1px 5px;border-radius:4px;font-size:13px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .doc pre{background:#1e2233;color:#e6e9f0;padding:14px 16px;border-radius:10px;overflow-x:auto;font-size:13px}
+  .doc pre code{background:none;color:inherit;border:none;padding:0}
+  .doc table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13.5px;display:block;overflow-x:auto}
+  .doc th,.doc td{border:1px solid var(--g300);padding:7px 10px;text-align:left;vertical-align:top}
+  .doc th{background:var(--th-bg);color:var(--muted-strong);font-weight:700;white-space:nowrap}
+  .doc tbody tr:nth-child(even) td{background:var(--g100)}
+  .doc blockquote{margin:12px 0;padding:10px 14px;background:var(--quote-bg);
+    border-left:4px solid var(--primary);border-radius:0 8px 8px 0;color:#222A38}
+  .doc blockquote p{margin:4px 0}
+  .doc hr{border:none;border-top:1px solid var(--g300);margin:20px 0}
+  .top{position:fixed;right:24px;bottom:24px;background:var(--primary);color:#fff;width:44px;height:44px;
+    border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,.2);border:none}
+  @media(max-width:900px){
+    .sidebar{position:static;width:100%;height:auto;border-right:none;border-bottom:1px solid var(--g300)}
+    .content{margin-left:0;padding:0 20px 80px}
+  }
+  @media print{.sidebar,.top{display:none}.content{margin:0;max-width:none}.doc{break-inside:avoid}}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="brand"><b>구독·결제 서버</b><small>인수인계 가이드 — 학습 경로형</small></div>
+  <div class="search"><input id="q" type="text" placeholder="목차 검색…" autocomplete="off"></div>
+  <a class="nav-link" href="#hero" data-target="hero">⌂ 시작 / 이 문서 사용법</a>
+  <div class="nav-group">시작 — 이 가이드 사용법</div>
+<a class="nav-link" href="#doc-README" data-target="doc-README">인수인계 가이드 — 처음 맡는 개발자를 위한 안내</a>
+<div class="nav-group">첫 주 — 순서대로 읽기</div>
+<a class="nav-link" href="#doc-01-first-day" data-target="doc-01-first-day">01. 첫날 — 셋업하고 직접 띄워보기</a>
+<a class="nav-link" href="#doc-02-big-picture" data-target="doc-02-big-picture">02. 큰그림 — 이 시스템은 무엇이고 어떻게 생겼나</a>
+<a class="nav-link" href="#doc-03-domain" data-target="doc-03-domain">03. 도메인 — 구독과 결제가 움직이는 규칙</a>
+<a class="nav-link" href="#doc-04-code-map" data-target="doc-04-code-map">04. 코드 지도 — &quot;이걸 고치려면 어디를 보나&quot;</a>
+<div class="nav-group">작업 — 기능을 추가할 때</div>
+<a class="nav-link" href="#doc-08-recipes" data-target="doc-08-recipes">08. 기능 추가 레시피 — 그대로 따라 하는 실습 4종</a>
+<div class="nav-group">사전 — 필요할 때 찾기</div>
+<a class="nav-link" href="#doc-05-database" data-target="doc-05-database">05. 데이터베이스와 마이그레이션</a>
+<a class="nav-link" href="#doc-06-auth-ops" data-target="doc-06-auth-ops">06. 인증·보안 — 세 개의 문과 그 열쇠</a>
+<a class="nav-link" href="#doc-07-batch-and-incidents" data-target="doc-07-batch-and-incidents">07. 배치와 장애 대응 — 새벽에 전화 왔을 때 보는 장</a>
+<a class="nav-link" href="#doc-09-testing" data-target="doc-09-testing">09. 테스트 — 안전망 사용법</a>
+<a class="nav-link" href="#doc-10-faq" data-target="doc-10-faq">10. 트러블슈팅 FAQ — 증상으로 찾기</a>
+<div class="nav-group">주의 — 고치기 전에 반드시</div>
+<a class="nav-link" href="#doc-11-known-issues" data-target="doc-11-known-issues">11. 알려진 이슈와 정책 결정 대기 — 코드 고치기 전에 읽어라</a>
+</nav>
+<main class="content">
+  <section id="hero" class="hero" style="scroll-margin-top:16px">
+    <h1>구독·결제 서버 — 인수인계 가이드</h1>
+    <p>이 프로젝트를 <b>처음 맡는 개발자</b>가 혼자서 운영·유지보수·기능추가까지 할 수 있게 만드는
+       학습 경로형 가이드입니다. 첫날 셋업부터 큰그림·도메인 규칙·기능 추가 레시피·장애 대응까지
+       <b>읽는 순서대로</b> 배치했습니다.</p>
+    <p style="color:var(--muted);font-size:13px">기능별 상세 레퍼런스는
+       <a href="../dev_manual/manual.html"><b>개발자 매뉴얼(dev_manual)</b></a>을 함께 보세요 —
+       이 가이드가 지도라면 dev_manual은 백과사전입니다.</p>
+    <div class="quick">
+      <a href="#doc-01-first-day">▶ 첫날: 셋업·실행</a>
+      <a href="#doc-03-domain">▶ 도메인: 상태머신·결제 3원칙</a>
+      <a href="#doc-08-recipes">▶ 기능 추가 레시피</a>
+      <a href="#doc-07-batch-and-incidents">▶ 장애 대응</a>
+      <a href="#doc-11-known-issues">▶ 알려진 이슈</a>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:16px">
+      이 HTML은 <code>docs/new_manual/</code>의 마크다운을 변환해 생성됩니다.
+      내용이 코드와 다르면 <b>코드가 정답</b>입니다. 갱신: <code>uv run --with markdown python docs/new_manual/build_html.py</code></p>
+  </section>
+  <section id="doc-README" class="doc">
+<div class="doc-src">파일: docs/new_manual/README.md</div>
+<h1 id="_1">인수인계 가이드 — 처음 맡는 개발자를 위한 안내</h1>
+<blockquote>
+<p>이 매뉴얼은 <strong>이 프로젝트를 처음 맡는 개발자가 혼자서 운영·유지보수·기능추가까지
+할 수 있게 되는 것</strong>을 목표로 한다. 기능별 상세 레퍼런스인
+<a href="../dev_manual/manual.html">개발자 매뉴얼(dev_manual)</a>과 달리, <strong>읽는 순서가 있는 학습 경로</strong>로 구성했다.</p>
+</blockquote>
+<h2 id="_2">어떻게 읽어야 하나</h2>
+<table>
+<thead>
+<tr>
+<th>시점</th>
+<th>읽을 장</th>
+<th>목표</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>첫날</strong></td>
+<td>01</td>
+<td>내 PC에서 서버·어드민·샘플을 실제로 띄우고 테스트를 돌린다</td>
+</tr>
+<tr>
+<td><strong>첫 주</strong></td>
+<td>02 → 03 → 04</td>
+<td>시스템 큰그림, 도메인 규칙(상태머신·결제 3원칙), 코드 지도를 머리에 넣는다</td>
+</tr>
+<tr>
+<td><strong>필요할 때</strong></td>
+<td>05 · 06 · 07 · 09 · 10</td>
+<td>DB/인증/배치/테스트/트러블슈팅 — 사전처럼 찾아본다</td>
+</tr>
+<tr>
+<td><strong>기능을 추가할 때</strong></td>
+<td>08</td>
+<td>실제 변경 작업의 단계별 레시피를 그대로 따라 한다</td>
+</tr>
+<tr>
+<td><strong>코드를 고치기 전에 반드시</strong></td>
+<td>11</td>
+<td>알려진 이슈·정책 결정 대기 항목 — 모르고 건드리면 다치는 곳</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3">3가지 대원칙 (이것만은 외우자)</h2>
+<ol>
+<li><strong>코드가 정답이다.</strong> 문서와 코드가 다르면 코드가 맞다. 문서를 고치고
+   <code>uv run --with markdown python docs/new_manual/build_html.py</code>로 재생성하라.</li>
+<li><strong>결제 코드는 "결제 3원칙"을 절대 깨지 마라.</strong> (03장) — PENDING 선커밋,
+   타임아웃은 실패가 아님, 멱등 order_id. 이 원칙이 이중결제를 막는 전부다.</li>
+<li><strong>변경에는 흔적을 남겨라.</strong> 주석/docstring 갱신 → 테스트 → 매뉴얼 반영 →
+   <code>docs/audit/</code>에 날짜별 워크로그. 이 프로젝트의 모든 변경이 이 규칙으로 기록되어 있다.</li>
+</ol>
+<h2 id="_3">다른 문서와의 관계</h2>
+<ul>
+<li><strong><a href="../dev_manual/manual.html">dev_manual (manual.html)</a></strong> — 기능별 상세 레퍼런스(요청→파일→DB→응답 추적). 이 가이드가 "지도"라면 dev_manual은 "백과사전".</li>
+<li><strong><a href="../audit/">docs/audit/</a></strong> — 보안·성능·구조 감사와 로직 검증 리포트, 변경 워크로그. 11장에서 요약한다.</li>
+<li><strong><a href="../../sample_service/README.md">sample_service/</a></strong> — 외부 서비스 연동 샘플(서비스팀 제공용). 화면마다 「개발자 노트」가 붙어 있어 API 학습에 가장 빠르다.</li>
+<li><strong>docs/toss/</strong> — 토스페이먼츠 연동 참고 문서.</li>
+</ul>
+</section>
+<section id="doc-01-first-day" class="doc">
+<div class="doc-src">파일: docs/new_manual/01-first-day.md</div>
+<h1 id="01">01. 첫날 — 셋업하고 직접 띄워보기</h1>
+<blockquote>
+<p>목표: 퇴근 전까지 ① 서버 기동 ② 어드민 로그인 ③ 샘플 쇼핑몰에서 실제 구독 1건 생성
+④ 전체 테스트 통과 — 네 가지를 내 PC에서 확인한다.</p>
+</blockquote>
+<h2 id="1">1. 사전 준비</h2>
+<ul>
+<li><strong>Docker Desktop</strong> (PostgreSQL/Redis 컨테이너용)</li>
+<li><strong>uv</strong> (파이썬 패키지/실행 관리자) — <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code></li>
+<li>토스페이먼츠 <strong>테스트 키</strong>(<code>test_sk_…</code>, <code>test_ck_…</code>) — 팀 공유 계정의 개발자센터에서 확인</li>
+</ul>
+<h2 id="2">2. 인프라 기동 + 환경 설정</h2>
+<pre><code class="language-bash">docker compose up -d        # PostgreSQL(127.0.0.1:5433) + Redis(127.0.0.1:6380)
+cp .env.example .env.dev    # 환경별 설정 — 아래 두 값은 반드시 채울 것
+</code></pre>
+<p><code>.env.dev</code>에서 채울 핵심 값:</p>
+<pre><code class="language-dotenv"># AES-256 암호화 키(빌링키·HMAC 시크릿 보관용) — 아래 명령으로 생성
+# python3 -c &quot;import os,base64; print(base64.b64encode(os.urandom(32)).decode())&quot;
+ENCRYPTION_KEY=&lt;생성한 base64 32바이트&gt;
+TOSS_SECRET_KEY=test_sk_...
+</code></pre>
+<blockquote>
+<p>환경 분리: 공통 <code>.env</code> → 환경별 <code>.env.dev</code>/<code>.env.prod</code>가 덮어쓴다.
+실행 환경은 OS 환경변수 <code>APP_ENV</code>(기본 dev)로 정해진다.</p>
+</blockquote>
+<h2 id="3-db">3. DB 마이그레이션 + 관리자 계정</h2>
+<pre><code class="language-bash">uv run alembic upgrade head                 # 전체 테이블 생성
+uv run python -m app.cli create-admin --email admin@medisolveai.com --password '&lt;10자 이상&gt;'
+</code></pre>
+<h2 id="4">4. 서버 기동 + 어드민 접속</h2>
+<pre><code class="language-bash">uv run uvicorn app.main:app --reload --port 8000
+</code></pre>
+<ul>
+<li>어드민 콘솔: http://127.0.0.1:8000/admin — 방금 만든 계정으로 로그인</li>
+<li>헬스체크: http://127.0.0.1:8000/health</li>
+<li>데모 데이터가 필요하면: <code>uv run python scripts/seed_demo.py</code> (DEMO-* 서비스 생성 — 운영 DB 금지)</li>
+</ul>
+<h2 id="5">5. 샘플 쇼핑몰로 실제 구독 만들어보기</h2>
+<p>어드민에서 <strong>서비스 등록</strong>(허용 IP <code>127.0.0.1</code>) → 키 화면에서 API 키/HMAC Secret 복사 →
+요금제 1개 생성. 그 다음:</p>
+<pre><code class="language-bash">cd sample_service
+cp .env.example .env &amp;&amp; python3 -m venv .venv &amp;&amp; .venv/bin/pip install -r requirements.txt
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py runserver 8001
+</code></pre>
+<p>http://127.0.0.1:8001 접속 → 서비스 선택(복사한 키 입력) → 이메일 로그인 → 요금제 →
+카드 등록(토스 테스트 모드 — 실제 청구 없음) → 어드민의 구독/결제 메뉴에서 방금 만든
+구독을 확인한다. <strong>샘플 화면마다 하단 「개발자 노트」가 그 화면의 API·코드를 설명한다 —
+첫 주 학습 자료로 가장 좋다.</strong></p>
+<h2 id="6">6. 테스트 돌려보기</h2>
+<pre><code class="language-bash">uv run pytest          # 전체 (docker compose가 떠 있어야 함 — 테스트 전용 DB/Redis 사용)
+uv run pytest -q tests/unit            # 빠른 단위 테스트만
+</code></pre>
+<blockquote>
+<p>⚠️ <strong>전체 테스트는 동시에 두 개 띄우지 마라.</strong> 두 실행이 같은 테스트 DB(payment_test)를
+쓰며 시작 시 스키마를 새로 만들기 때문에 서로를 파괴해 수십 건의 가짜 실패가 난다. (09장)</p>
+</blockquote>
+<h2 id="_1">첫날 체크리스트</h2>
+<ul>
+<li>[ ] <code>docker compose up -d</code> 후 <code>uv run pytest</code> 전체 통과</li>
+<li>[ ] 어드민 로그인 + 대시보드 확인</li>
+<li>[ ] 샘플에서 구독 1건 생성 → 어드민에서 확인</li>
+<li>[ ] <code>/my</code>에서 구독 취소 → 재개까지 눌러보기 (상태가 어떻게 변하는지 관찰)</li>
+</ul>
+</section>
+<section id="doc-02-big-picture" class="doc">
+<div class="doc-src">파일: docs/new_manual/02-big-picture.md</div>
+<h1 id="02">02. 큰그림 — 이 시스템은 무엇이고 어떻게 생겼나</h1>
+<blockquote>
+<p>목표: "어떤 요청이 들어오면 어떤 파일을 지나 어디에 기록되는지"를 그림으로 그릴 수 있다.</p>
+</blockquote>
+<h2 id="1">1. 시스템의 역할</h2>
+<p>사내 여러 서비스(쇼핑몰, 진료 앱 등)가 <strong>공통으로 쓰는 구독·결제 허브</strong>다.
+각 서비스는 회원/화면만 만들고, 구독 상태와 돈 문제는 전부 이 서버가 책임진다.</p>
+<pre><code>사내 서비스 A·B·C ──(HMAC 서명 API)──▶ ┌──────────────────────┐
+                                       │  구독·결제 서버        │──▶ 토스페이먼츠
+운영자(담당자/관리자) ──(어드민 htmx)──▶ │  FastAPI              │     (빌링키 발급·청구·취소)
+                                       │  ├ PostgreSQL (원장)   │
+토스 웹훅 ──(IP 검증)─────────────────▶ │  └ Redis (락·세션·캐시)│
+                                       └─────────┬────────────┘
+                                    APScheduler(5분) — 자동갱신·만료·정산 스윕
+</code></pre>
+<p>네 가지 진입점만 기억하면 된다:</p>
+<table>
+<thead>
+<tr>
+<th>진입점</th>
+<th>누가</th>
+<th>인증</th>
+<th>코드 위치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/api/v1/*</code></td>
+<td>사내 서비스</td>
+<td>API키+IP+HMAC 3중</td>
+<td><code>app/api/v1/</code></td>
+</tr>
+<tr>
+<td><code>/admin/*</code></td>
+<td>운영자</td>
+<td>세션 쿠키+CSRF</td>
+<td><code>app/admin/</code></td>
+</tr>
+<tr>
+<td><code>/api/v1/webhooks/toss</code></td>
+<td>토스</td>
+<td>발신 IP 검증</td>
+<td><code>app/api/v1/webhooks.py</code></td>
+</tr>
+<tr>
+<td>(HTTP 아님) 스케줄러</td>
+<td>시스템</td>
+<td>—</td>
+<td><code>app/scheduler/runner.py</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="2">2. 디렉터리 지도</h2>
+<pre><code>app/
+├── main.py          앱 조립(create_app) — 의존성 주입·라우터 등록·보안헤더
+├── core/            설정(config)·DB엔진(db)·암호화(crypto)·에러(errors)·공통 의존성(deps)
+├── models/          SQLAlchemy 모델 + enums(상태 정의의 단일 출처)
+├── schemas/api.py   외부 API 요청/응답 스키마 (ORM 비노출)
+├── api/             외부 API — deps.py(3중 인증), v1/(엔드포인트)
+├── admin/           어드민 — routes/(화면), templates/(htmx), filters·pagination(공용)
+├── services/        ★ 비즈니스 로직 전부 — 구독·결제·갱신·정산·전이·감사
+├── toss/            토스 클라이언트(client) + 테스트용 가짜(fake)
+├── scheduler/       5분 배치 러너(전역 락+heartbeat)
+└── notifications/   이메일 발송
+tests/               unit / integration / e2e / security (09장)
+alembic/versions/    DB 마이그레이션 (05장)
+sample_service/      외부 서비스 연동 샘플 (Django)
+</code></pre>
+<h2 id="3-1">3. 요청의 일생 ① — 외부 서비스가 구독을 만들 때</h2>
+<pre><code>POST /api/v1/subscriptions
+ 1) app/api/deps.py        authenticate_service — 킬스위치 → API키 → IP → rate limit
+                            → 타임스탬프 → HMAC 서명 → nonce (하나라도 실패 시 즉시 거부)
+ 2) app/api/v1/subscriptions.py   라우트 — 스키마 검증 후 서비스 함수 호출만
+ 3) app/services/subscriptions.py create_subscription
+      검증 → 토스 빌링키 발급 → Subscription+PENDING Payment 생성 → 1차 commit
+      → 토스 첫 결제 → 결과 확정 → 2차 commit + 감사 로그
+ 4) app/schemas/api.py     SubscriptionResponse.from_model — 민감정보 제외 응답
+</code></pre>
+<h2 id="4-2">4. 요청의 일생 ② — 운영자가 어드민에서 목록을 볼 때</h2>
+<pre><code>GET /admin/subscriptions
+ 1) app/admin/deps.py      세션 쿠키 → Redis 세션 → 역할/담당 서비스 스코프 결정
+ 2) app/admin/routes/subscriptions.py   PageParams(검색·정렬·필터 파싱)
+ 3) app/admin/filters.py   subscription_query — 목록·엑셀·탭이 공유하는 단일 쿼리 빌더
+ 4) app/admin/pagination.py paginate — count·페이징 자동 처리
+ 5) templates/…            전체 페이지 또는 htmx partial(_table.html)만 렌더
+</code></pre>
+<h2 id="5-4">5. 레이어 규칙 — 어기면 안 되는 4가지</h2>
+<ol>
+<li><strong>라우트는 얇게</strong>: 파싱·렌더만. 비즈니스 규칙은 전부 <code>app/services/</code>에.</li>
+<li><strong>commit은 서비스 레이어가</strong> 한다. 라우트에서 commit하지 않는다.</li>
+<li><strong>오류는 <code>app/core/errors.py</code>의 DomainError 계열</strong>을 던진다 — HTTP 변환은 핸들러가 자동으로.</li>
+<li><strong>services는 api/admin을 import하지 않는다</strong> (방향: 라우트 → 서비스 → 모델).</li>
+</ol>
+<blockquote>
+<p>더 깊이: <a href="../dev_manual/manual.html">dev_manual 01·02·03장</a></p>
+</blockquote>
+</section>
+<section id="doc-03-domain" class="doc">
+<div class="doc-src">파일: docs/new_manual/03-domain.md</div>
+<h1 id="03">03. 도메인 — 구독과 결제가 움직이는 규칙</h1>
+<blockquote>
+<p>목표: 상태머신과 결제 3원칙을 설명할 수 있다. <strong>이 장이 이 시스템의 심장이다.</strong></p>
+</blockquote>
+<h2 id="1">1. 용어 사전</h2>
+<table>
+<thead>
+<tr>
+<th>용어</th>
+<th>의미</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Service</td>
+<td>이 서버를 쓰는 사내 서비스(테넌트)</td>
+<td>API키·HMAC 시크릿·허용 IP 보유</td>
+</tr>
+<tr>
+<td>Plan</td>
+<td>요금제 — 가격·주기(년/월/주/일)·할인·체험</td>
+<td><strong>결제 주기는 생성 후 수정 불가</strong></td>
+</tr>
+<tr>
+<td>Subscription</td>
+<td>(서비스, 사용자)의 구독 1건</td>
+<td>서비스+사용자당 열린 구독 1개 규칙</td>
+</tr>
+<tr>
+<td>Payment</td>
+<td>개별 결제 시도 기록 — 성공/실패 모두 보존</td>
+<td>금액은 전부 <strong>정수 KRW</strong></td>
+</tr>
+<tr>
+<td>external_user_id</td>
+<td>외부 서비스 쪽 사용자 ID 문자열</td>
+<td>이 서버엔 회원 개념이 없다</td>
+</tr>
+<tr>
+<td>customer_key / billing key</td>
+<td>토스 고객키 / 자동결제 키</td>
+<td>빌링키는 AES 암호화 보관, 평문 저장 금지</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-appservicestransitionspy">2. 구독 상태머신 — 단일 출처는 <code>app/services/transitions.py</code></h2>
+<pre><code>TRIAL ──▶ ACTIVE ──▶ PAST_DUE ──▶ SUSPENDED ──▶ EXPIRED(종단)
+  │          │ ▲        │ ▲           │
+  │          │ └────────┘ └─(수동결제)─┴──▶ ACTIVE
+  └────┬─────┴─────────────┘
+       ▼
+   CANCELED ──▶ EXPIRED          (만료 전 재개: CANCELED → ACTIVE | PAST_DUE)
+   EXTENDED(운영자 만료일 연장) — 활성과 동등, 새 만료일에 자동갱신   ※ 최근 추가
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>상태</th>
+<th>뜻</th>
+<th>접근</th>
+<th>자동결제</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TRIAL</td>
+<td>체험 중(결제 없음)</td>
+<td>O</td>
+<td>체험 만료일에 첫 결제</td>
+</tr>
+<tr>
+<td>ACTIVE</td>
+<td>정상</td>
+<td>O</td>
+<td>주기마다 갱신</td>
+</tr>
+<tr>
+<td>PAST_DUE</td>
+<td>갱신 실패, 재시도 중(미수)</td>
+<td>O</td>
+<td>12시간 간격 최대 4회(전역설정)</td>
+</tr>
+<tr>
+<td>SUSPENDED</td>
+<td>재시도 소진 → 정지</td>
+<td><strong>X</strong></td>
+<td>중지 — 수동결제로만 복구</td>
+</tr>
+<tr>
+<td>CANCELED</td>
+<td>해지 예약(만료일까지 이용)</td>
+<td>O</td>
+<td>중지 — 만료 전 재개 가능</td>
+</tr>
+<tr>
+<td>EXTENDED</td>
+<td>운영자가 만료일 수동 연장</td>
+<td>O</td>
+<td>새 만료일에 갱신</td>
+</tr>
+<tr>
+<td>EXPIRED</td>
+<td>완전 종료(<strong>종단</strong> — 어떤 전이도 불가)</td>
+<td>X</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>규칙</strong>: 상태를 바꿀 땐 반드시 <code>transition(sub, 새상태)</code>를 호출한다.
+허용 전이 테이블(<code>ALLOWED_TRANSITIONS</code>)에 없는 전이는 예외로 즉시 터지고,
+보편 불변식(EXPIRED/CANCELED→자동결제 중지, SUSPENDED→정지시각 기록,
+ACTIVE 복귀→실패 흔적 초기화)이 자동 적용된다. <code>sub.status = ...</code> 직접 대입 금지.</p>
+<h2 id="3-3">3. 결제 3원칙 — 절대 깨지 마라</h2>
+<blockquote>
+<p>이 세 가지가 <strong>이중결제를 막는 전부</strong>다. 결제 코드를 고칠 때마다 자문하라:
+"이 변경이 3원칙을 깨는가?"</p>
+</blockquote>
+<ol>
+<li><strong>PENDING 선커밋</strong> — 토스를 호출하기 <em>전에</em> PENDING Payment를 commit한다.
+   서버가 죽어도 "돈이 나갔을 수 있다"는 기록이 남아 정산 스윕이 확정할 수 있다.</li>
+<li><strong>타임아웃은 실패가 아니다</strong> — 토스 응답을 못 받으면 결과 불명이다. FAILED로
+   확정하는 순간, 실제론 승인된 결제 위에 재결제가 얹혀 이중결제가 된다.
+   PENDING 유지 → 10분 후 정산 스윕(<code>reconciliation.py</code>)이 토스 재조회로 확정.</li>
+<li><strong>멱등 order_id</strong> — 갱신 결제는 <code>(구독, 기간, 시도번호)</code>로 만든 <strong>결정적</strong>
+   order_id를 쓴다. 같은 주문을 재시도하면 토스가 멱등키로 같은 결과를 재생한다.</li>
+</ol>
+<h2 id="4-appservicesbilling_mathpy">4. 돈 계산 규칙 — 단일 출처는 <code>app/services/billing_math.py</code></h2>
+<ul>
+<li>금액은 전부 <strong>정수(KRW)</strong>. float 금지. 나눗셈은 <code>//</code>(내림 — 항상 고객에게 유리).</li>
+<li><strong>첫 결제액</strong> = 정가 + 첫구독 할인(FREE/정액/정률) — <em>첫구독에만</em>.</li>
+<li><strong>정기 결제액</strong> = 정가 + 상시 할인 — 2회차부터, 그리고 <strong>체험 전환 첫 결제도 이 금액</strong>.</li>
+<li><strong>취소 수수료</strong> = <code>금액 × 수수료% // 100</code>, 환불액 = 금액 − 수수료. (fee+refund==amount 항상 성립)</li>
+<li>기간 계산(<code>compute_period_end</code>)은 relativedelta — 1/31 + 1개월 = 2/28(월말 클램프).</li>
+</ul>
+<h2 id="5">5. 그 밖의 핵심 규칙</h2>
+<ul>
+<li><strong>서비스+사용자당 열린 구독 1개</strong> — DB 부분 유니크 인덱스가 최종 심판(EXPIRED만 제외 → 재구독 허용).</li>
+<li><strong>자동결제 안함(auto_renew=False)</strong> 요금제 — 첫 결제 후 다음 결제를 예약하지 않고 기간 종료 시 만료.</li>
+<li><strong>첫구독 혜택은 1회</strong> — "결제를 소진한(또는 무료로 활성화된) 과거 구독"이 있으면 재구독은 혜택 없음.</li>
+<li><strong>접근 판단은 <code>access_allowed</code> 하나로</strong> — 외부 서비스는 상태별 분기를 직접 만들지 말 것.</li>
+<li><strong>요금제·서비스는 구독이 있으면 삭제 불가</strong> (DB FK RESTRICT + 서비스 레이어 검증).</li>
+</ul>
+<blockquote>
+<p>더 깊이: <a href="../dev_manual/manual.html">dev_manual 04(생성)·05(갱신)·06(관리)·08(요금제)</a></p>
+</blockquote>
+</section>
+<section id="doc-04-code-map" class="doc">
+<div class="doc-src">파일: docs/new_manual/04-code-map.md</div>
+<h1 id="04">04. 코드 지도 — "이걸 고치려면 어디를 보나"</h1>
+<blockquote>
+<p>목표: 변경 요청을 받았을 때 30초 안에 열어야 할 파일을 안다.</p>
+</blockquote>
+<h2 id="1">1. 변경 유형별 진입 지점</h2>
+<table>
+<thead>
+<tr>
+<th>바꾸고 싶은 것</th>
+<th>여기를 고친다</th>
+<th>주의</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>금액 계산(할인·수수료·기간)</td>
+<td><code>app/services/billing_math.py</code></td>
+<td>화면·API·실행이 전부 이 함수를 공유 — 여기만 고치면 전체 일관</td>
+</tr>
+<tr>
+<td>구독 상태/전이 규칙</td>
+<td><code>app/models/enums.py</code> + <code>app/services/transitions.py</code></td>
+<td>상태 추가는 08장 레시피 D의 체크리스트 필수</td>
+</tr>
+<tr>
+<td>갱신·재시도·만료 정책</td>
+<td><code>app/services/renewals.py</code> (+ 어드민 전체설정=GlobalSettings)</td>
+<td>재시도 횟수/간격/유예는 DB 설정 — 코드 수정 불필요</td>
+</tr>
+<tr>
+<td>외부 API 추가/응답 필드</td>
+<td><code>app/schemas/api.py</code> + <code>app/api/v1/…</code> + <code>app/services/…</code></td>
+<td>레시피 B</td>
+</tr>
+<tr>
+<td>어드민 화면</td>
+<td><code>app/admin/routes/…</code> + <code>templates/…</code></td>
+<td>레시피 C — 라우터 등록 순서 주의</td>
+</tr>
+<tr>
+<td>목록 검색/필터</td>
+<td><code>app/admin/filters.py</code></td>
+<td>목록·엑셀·탭이 공유 — 한 곳만 고친다</td>
+</tr>
+<tr>
+<td>외부 API 인증 정책</td>
+<td><code>app/api/deps.py</code> (authenticate_service)</td>
+<td>6단계 검증 순서에 이유가 있음 — 06장</td>
+</tr>
+<tr>
+<td>공통 의존성(get_db 등)</td>
+<td><code>app/core/deps.py</code></td>
+<td>api/admin 양쪽이 사용</td>
+</tr>
+<tr>
+<td>오류 메시지/HTTP 코드</td>
+<td><code>app/core/errors.py</code></td>
+<td>DomainError 서브클래스가 HTTP 코드를 들고 있음</td>
+</tr>
+<tr>
+<td>토스 API 연동</td>
+<td><code>app/toss/client.py</code> (+ <code>fake.py</code>도 같이!)</td>
+<td>Fake를 안 고치면 테스트가 현실과 어긋남</td>
+</tr>
+<tr>
+<td>이메일 문구</td>
+<td><code>app/services/renewals.py</code>·<code>reconciliation.py</code> 호출부</td>
+<td>발송 구현은 <code>app/notifications/email.py</code></td>
+</tr>
+<tr>
+<td>배치 주기/락</td>
+<td><code>app/scheduler/runner.py</code> + Settings</td>
+<td>heartbeat 로직 주의 (07장)</td>
+</tr>
+<tr>
+<td>DB 컬럼/인덱스</td>
+<td><code>app/models/…</code> + <code>alembic/versions/</code> 새 리비전</td>
+<td>레시피 A</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-services">2. services/ 모듈별 책임 한 줄 요약</h2>
+<table>
+<thead>
+<tr>
+<th>모듈</th>
+<th>책임</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>subscriptions.py</code></td>
+<td>구독 생성·취소·재개·수동결제·카드변경·강제취소·연장</td>
+</tr>
+<tr>
+<td><code>renewals.py</code></td>
+<td>5분 배치 — 자동갱신·재시도·각종 만료 처리</td>
+</tr>
+<tr>
+<td><code>reconciliation.py</code></td>
+<td>결과불명(PENDING) 결제를 토스 재조회로 확정하는 정산 스윕</td>
+</tr>
+<tr>
+<td><code>payments.py</code></td>
+<td>단건(1회성) 결제 생성·취소</td>
+</tr>
+<tr>
+<td><code>transitions.py</code></td>
+<td>구독 상태 전이의 단일 출처(허용표+불변식)</td>
+</tr>
+<tr>
+<td><code>billing_math.py</code></td>
+<td>모든 금액·기간 계산의 단일 출처</td>
+</tr>
+<tr>
+<td><code>registry.py</code></td>
+<td>서비스(테넌트) 등록·키 발급/회전/조회·취소정책</td>
+</tr>
+<tr>
+<td><code>plans.py</code></td>
+<td>요금제 CRUD·검증·보너스 일수</td>
+</tr>
+<tr>
+<td><code>accounts.py</code></td>
+<td>어드민 계정·담당 서비스 배정</td>
+</tr>
+<tr>
+<td><code>auth.py</code></td>
+<td>어드민 로그인·세션(Redis)·비밀번호</td>
+</tr>
+<tr>
+<td><code>audit.py</code></td>
+<td>감사 로그 기록/조회 — <strong>모든 변경은 record_audit를 남긴다</strong></td>
+</tr>
+<tr>
+<td><code>settlement.py</code> / <code>dashboard.py</code></td>
+<td>월별 정산 집계 / 대시보드 집계</td>
+</tr>
+<tr>
+<td><code>app_settings.py</code></td>
+<td>전역설정(재시도 정책·킬스위치·어드민 IP)</td>
+</tr>
+<tr>
+<td><code>locks.py</code></td>
+<td>Redis 분산 락 + 배치 공유 상수</td>
+</tr>
+<tr>
+<td><code>webhooks.py</code></td>
+<td>토스 웹훅 처리(멱등+페이로드 불신)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3">3. 이 프로젝트의 코딩 규약 (지켜야 기존 코드와 결이 맞는다)</h2>
+<ul>
+<li><strong>모든 변경 코드에 한국어 주석/docstring</strong> — "왜"를 적는다. 기존 밀도를 따라갈 것.</li>
+<li>상태 변경은 <code>transition()</code>, 금액은 <code>billing_math</code>, 감사는 <code>record_audit</code> — <strong>우회 금지</strong>.</li>
+<li>외부(토스) 호출 중에는 DB 트랜잭션/FOR UPDATE를 쥐지 않는다 — 호출 전 commit,
+  호출 후 재취득+재검증 (renewals <code>_renew_one</code>이 표준 패턴).</li>
+<li>어드민 목록은 <code>PageParams + filters.py 빌더 + paginate</code> 3종 세트를 재사용.</li>
+<li>기능 변경 후: dev_manual 해당 장 갱신 → <code>manual.html</code> 재빌드 → <code>docs/audit/</code> 워크로그.</li>
+</ul>
+</section>
+<section id="doc-08-recipes" class="doc">
+<div class="doc-src">파일: docs/new_manual/08-recipes.md</div>
+<h1 id="08-4">08. 기능 추가 레시피 — 그대로 따라 하는 실습 4종</h1>
+<blockquote>
+<p>목표: 실제 변경 작업을 단계 누락 없이 수행한다. 각 레시피의 "참고 예시"는
+실제로 이 저장소에 있는 과거 작업이다 — 막히면 그 커밋/파일을 열어 모방하라.</p>
+</blockquote>
+<h2 id="_1">공통 마무리 (모든 레시피의 마지막 단계)</h2>
+<ol>
+<li>변경 코드에 주석/docstring (왜 그렇게 했는지)</li>
+<li><code>uv run pytest</code> 전체 통과</li>
+<li><code>docs/dev_manual/</code> 해당 장 갱신 → <code>uv run --with markdown python docs/dev_manual/build_html.py</code></li>
+<li><code>docs/audit/YYYY-MM-DD-&lt;주제&gt;-worklog.md</code> 작업 기록</li>
+<li>main에 커밋 (메시지에 무엇을·왜)</li>
+</ol>
+<hr />
+<h2 id="a">레시피 A — 모델에 컬럼 추가 (예: 구독에 메모 필드)</h2>
+<ol>
+<li><code>app/models/subscription.py</code>에 컬럼 추가 + 줄 끝 주석</li>
+<li>새 마이그레이션: <code>alembic/versions/</code> 최신 파일 복사 →
+   <code>revision</code> 새 값/<code>down_revision</code>=직전 head, <code>upgrade()/downgrade()</code> 작성
+   (기존 데이터 백필 필요 시 <code>op.execute</code> — 예시: <code>a7b8c9d0e1f2_payment_order_scope.py</code>)</li>
+<li><code>uv run alembic upgrade head</code></li>
+<li>노출이 필요하면: 어드민 템플릿 / <code>schemas/api.py</code>(외부 API라면)</li>
+<li>integration 테스트에 케이스 추가</li>
+</ol>
+<h2 id="b-api">레시피 B — 외부 API 엔드포인트 추가</h2>
+<ol>
+<li><strong>서비스 함수부터</strong>: <code>app/services/…</code>에 비즈니스 로직 — 검증 → 처리 →
+   <code>record_audit</code> → <code>commit</code>. 오류는 DomainError 계열로.</li>
+<li>스키마: <code>app/schemas/api.py</code>에 요청/응답 모델(+<code>from_model</code>) — ORM 직접 반환 금지,
+   민감 필드(빌링키 등) 절대 비노출</li>
+<li>라우트: <code>app/api/v1/…</code> — <code>service: Service = Depends(authenticate_service)</code>
+   (결제성이면 <code>payment_rate_limit</code>). 라우트 본문은 서비스 함수 호출+응답 변환만</li>
+<li>테스트: <code>tests/integration/</code>에 서비스 함수 테스트, <code>tests/e2e/test_api_endpoints…</code>에 HTTP 테스트
+   (HMAC 서명 헬퍼는 <code>tests/helpers.py</code> 참고)</li>
+<li>샘플 반영: <code>sample_service/shop/payment_client.py</code>에 함수 1개 추가 +
+   해당 화면 「개발자 노트」 — 서비스팀이 보는 레퍼런스이므로 잊지 말 것
+   - 참고 예시: 구독 조회/취소/재개 일습 — <code>app/api/v1/subscriptions.py</code></li>
+</ol>
+<h2 id="c">레시피 C — 어드민 화면(목록) 추가</h2>
+<ol>
+<li>라우트: <code>app/admin/routes/</code>에 모듈 — <code>PageParams.from_request</code>(검색·정렬·필터) →
+   쿼리 빌더(공유 가능하면 <code>app/admin/filters.py</code>에) → <code>paginate(db, q, pp)</code> →
+   <code>render_list(전체템플릿, _partial템플릿)</code> (htmx가 partial만 갱신)</li>
+<li>템플릿: <code>templates/&lt;영역&gt;/list.html</code> + <code>_table.html</code> — 기존 구독 목록을 복사해 시작</li>
+<li>라우터 등록: <code>app/admin/__init__.py</code> — ⚠️ <strong>고정 경로(<code>/foo/export.xlsx</code>)가 있는
+   라우터는 가변 경로(<code>/foo/{id}</code>)를 가진 라우터보다 먼저 등록</strong>(아니면 UUID 파싱 422)</li>
+<li>쓰기 액션이 있으면: POST 라우트에서 <code>validate_csrf</code> → 서비스 함수 →
+   성공 <code>saved_redirect</code>, 실패 <code>?error=</code> 리다이렉트 패턴</li>
+<li>e2e 테스트: <code>tests/e2e/</code> — <code>admin_login</code> 헬퍼 + 화면 응답 검증
+   - 참고 예시: <code>app/admin/routes/services_export.py</code>(분리·등록 순서 주석 포함)</li>
+</ol>
+<h2 id="d-extended">레시피 D — 구독 상태 추가 (최근 EXTENDED 추가가 실제 사례)</h2>
+<p>상태 하나를 추가하면 <strong>아래 전부</strong>를 손봐야 한다. 하나라도 빠지면 어디서 터지는지 함께 적는다:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>수정 지점</th>
+<th>빠뜨리면</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>app/models/enums.py</code> — 상태 + ACCESS_ALLOWED/OPEN 집합</td>
+<td>접근 판정·1구독 규칙 오동작</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>app/models/subscription.py</code> 부분 유니크 인덱스 WHERE + <strong>마이그레이션</strong></td>
+<td>그 상태에서 중복 구독 생성 가능</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>app/services/transitions.py</code> ALLOWED_TRANSITIONS</td>
+<td>전이 시도가 500(InvalidStateTransition)</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>app/services/locks.py</code> DUE_STATUSES(갱신 대상이면)</td>
+<td>배치가 갱신을 안 함</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>app/services/renewals.py</code> 만료 스윕 대상 여부</td>
+<td>영원히 안 끝나는 구독</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>app/services/dashboard.py</code> _STATUS_ORDER/_COLOR/_KO/_OPEN_STATUSES</td>
+<td>대시보드 KeyError 또는 집계 누락</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>app/admin/__init__.py</code> 상태 한글 라벨 + 템플릿 배지</td>
+<td>화면에 영문 원값 노출</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>app/schemas/api.py</code> status/access_allowed 설명</td>
+<td>외부 서비스가 새 값에 당황</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>sample_service</code> base.html <code>st-&lt;상태&gt;</code> 배지 + README</td>
+<td>샘플 화면 회색 배지</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>tests/unit/test_transitions.py</code> — "전 상태 등재" 테스트가 누락을 자동으로 잡는다</td>
+<td>—</td>
+</tr>
+<tr>
+<td>11</td>
+<td>dev_manual 05장 상태 전이표 + 이 가이드 03장</td>
+<td>문서·코드 불일치</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠️ 새 상태가 결제와 얽히면 11장(알려진 이슈)의 W-1~W-3을 먼저 읽어라 —
+EXTENDED 작업에서 발견된 함정(비자동갱신 정책, 기존 PENDING 고아화)이 그대로 재발한다.</p>
+</blockquote>
+</section>
+<section id="doc-05-database" class="doc">
+<div class="doc-src">파일: docs/new_manual/05-database.md</div>
+<h1 id="05">05. 데이터베이스와 마이그레이션</h1>
+<blockquote>
+<p>목표: 테이블 구조를 파악하고, 컬럼 하나를 안전하게 추가할 수 있다.</p>
+</blockquote>
+<h2 id="1-8">1. 테이블 한 줄 요약 (8개)</h2>
+<table>
+<thead>
+<tr>
+<th>테이블</th>
+<th>역할</th>
+<th>꼭 알아야 할 것</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>services</td>
+<td>테넌트(사내 서비스)</td>
+<td>API키는 SHA-256 해시로 대조, 평문은 AES 암호문으로 별도 보관</td>
+</tr>
+<tr>
+<td>plans</td>
+<td>요금제</td>
+<td>결제 주기(billing_cycle/cycle_days)는 생성 후 불변</td>
+</tr>
+<tr>
+<td>subscriptions</td>
+<td>구독</td>
+<td><strong>부분 유니크</strong> <code>uq_subscriptions_one_per_user</code> — EXPIRED 제외 (서비스,사용자)당 1개</td>
+</tr>
+<tr>
+<td>payments</td>
+<td>결제 원장(불변, 삭제 금지)</td>
+<td><code>order_id</code>는 서비스 내 고유, <strong>토스 전달용은 <code>toss_order_id</code>(전역 고유)</strong></td>
+</tr>
+<tr>
+<td>users / user_services</td>
+<td>어드민 계정 / 담당 서비스 N:M</td>
+<td>역할: SYSTEM_ADMIN / SERVICE_MANAGER</td>
+</tr>
+<tr>
+<td>audit_logs</td>
+<td>감사 이력(append-only)</td>
+<td>모든 중요 행위가 여기 남는다 — 디버깅 1차 도구</td>
+</tr>
+<tr>
+<td>webhook_events</td>
+<td>웹훅 멱등 기록</td>
+<td>transmission-id 유니크</td>
+</tr>
+<tr>
+<td>global_settings</td>
+<td>전역설정 단일 행(id=1)</td>
+<td>재시도 정책·킬스위치·어드민 IP</td>
+</tr>
+</tbody>
+</table>
+<p>돈 컬럼은 전부 BigInteger(정수 KRW), 시각은 전부 timezone-aware UTC.</p>
+<h2 id="2">2. 성능을 위해 존재하는 인덱스 (지우면 안 됨)</h2>
+<ul>
+<li><code>ix_subscriptions_due (status, next_billing_at)</code> — 5분 배치의 결제 대상 조회</li>
+<li><code>ix_payments_status_requested</code> — 정산 스윕(5분마다)</li>
+<li><code>ix_subscriptions_service_id</code>, <code>ix_subscriptions_status_period_end</code>,
+  <code>ix_payments_service_approved</code>, <code>ix_audit_logs_created_at</code>, <code>ix_audit_logs_target</code>
+  — 어드민 목록·대시보드·만료 스윕용 (성능 감사 Phase 3에서 추가)</li>
+</ul>
+<h2 id="3">3. 마이그레이션 절차 (이 프로젝트는 <strong>수동 작성</strong> 방식)</h2>
+<pre><code class="language-bash">ls alembic/versions/        # 최신 리비전 확인 — 새 파일의 down_revision으로 쓴다
+</code></pre>
+<ol>
+<li><code>app/models/…</code>에 컬럼/인덱스 추가 (주석 필수)</li>
+<li><code>alembic/versions/</code>의 <strong>최근 파일을 복사</strong>해 새 리비전 작성 — docstring에 "왜",
+   <code>revision</code>/<code>down_revision</code> 체인 정확히, <code>upgrade()</code>와 <code>downgrade()</code> 모두 구현</li>
+<li><code>uv run alembic upgrade head</code> (dev DB 적용) → <code>uv run pytest</code> (테스트 DB는
+   create_all이라 모델만 맞으면 됨 — 모델과 마이그레이션이 어긋나면 여기서 안 잡히니 주의)</li>
+<li>기존 데이터가 있으면 백필(<code>op.execute("UPDATE …")</code>)을 마이그레이션 안에서 처리
+   — <code>a7b8c9d0e1f2_payment_order_scope.py</code>가 좋은 예시(컬럼 추가→백필→NOT NULL→제약 교체)</li>
+</ol>
+<p><strong>운영 반영 시</strong>: 인덱스 생성은 잠금을 유발할 수 있다 — 트래픽 적은 시간에 <code>alembic upgrade head</code>.</p>
+<blockquote>
+<p>더 깊이: <a href="../dev_manual/manual.html">dev_manual 02장 — 컬럼 단위 상세</a></p>
+</blockquote>
+</section>
+<section id="doc-06-auth-ops" class="doc">
+<div class="doc-src">파일: docs/new_manual/06-auth-ops.md</div>
+<h1 id="06">06. 인증·보안 — 세 개의 문과 그 열쇠</h1>
+<blockquote>
+<p>목표: 401/403이 났을 때 어느 단계에서 막혔는지 바로 짚을 수 있다.</p>
+</blockquote>
+<h2 id="1-api-3-appapidepspy-authenticate_service">1. 외부 API — 3중 인증 (app/api/deps.py <code>authenticate_service</code>)</h2>
+<p>요청 헤더 4개(<code>x-service-key</code>·<code>x-timestamp</code>·<code>x-nonce</code>·<code>x-signature</code>)로 6단계 검증:</p>
+<pre><code>0 킬스위치(전역설정) → 1 API키 해시 대조 → 2 IP 화이트리스트 → 3 rate limit
+→ 4 타임스탬프 ±300초 → 5 HMAC 서명(본문 포함) → 6 nonce 1회용
+</code></pre>
+<p>서명 = <code>HMAC_SHA256(secret, "METHOD\n경로\n타임스탬프\nnonce\nsha256(본문)")</code>.
+<strong>클라이언트 구현은 <code>sample_service/shop/payment_client.py</code>를 복사하는 게 정답</strong> —
+서버 구현(<code>app/core/security.py:sign_request</code>)의 검증된 미러다.</p>
+<p>401 디버깅 순서: ① 서버 시계 오차(±300초) ② 키 재발급 여부(어드민에서 rotate하면
+즉시 옛 키 무효) ③ nonce 재사용 ④ 본문 그대로 서명했는지(JSON 직렬화 차이).</p>
+<h2 id="2-csrf">2. 어드민 — 세션 + CSRF</h2>
+<ul>
+<li>로그인 실패 5회 → 15분 잠금. <strong>IP당 분당 10회 rate limit</strong>(무차별 시도 차단).</li>
+<li>세션: Redis, 유휴 30분 연장형 + <strong>절대 수명 12시간</strong>(연장돼도 12시간 후 재로그인).</li>
+<li>모든 POST는 CSRF 토큰 검증. 역할: SYSTEM_ADMIN(전체) / SERVICE_MANAGER(담당 서비스만 —
+  남의 리소스는 403이 아니라 <strong>404</strong>로 숨긴다).</li>
+<li>어드민 접속 IP 제한은 전역설정에서 — 현재 IP를 빼고 저장하면 잠기므로 검증이 막아준다.</li>
+</ul>
+<h2 id="3">3. 운영 장치</h2>
+<table>
+<thead>
+<tr>
+<th>장치</th>
+<th>무엇</th>
+<th>어디서</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>킬스위치</strong></td>
+<td>외부 API 전체를 503으로 차단(어드민은 영향 없음)</td>
+<td>어드민 → 전체설정 → 서버 비활성화(본인 비밀번호 재확인). 5초 TTL Redis 캐시 — 전환 시 즉시 무효화</td>
+</tr>
+<tr>
+<td><strong>키 회전</strong></td>
+<td>서비스 API키/HMAC 즉시 재발급(옛 키 무효)</td>
+<td>서비스 상세 → 재발급. 외부 서비스에 새 키 전달 필수</td>
+</tr>
+<tr>
+<td><strong>감사 로그</strong></td>
+<td>누가 언제 무엇을 — 모든 변경 기록</td>
+<td>어드민 → 감사 로그(검색·엑셀)</td>
+</tr>
+<tr>
+<td>웹훅 IP 검증</td>
+<td>토스 공식 발신 IP만 허용</td>
+<td><code>WEBHOOK_IP_CHECK_ENABLED</code> (dev에선 끄고 테스트)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-prod">4. 운영 배포 체크리스트 (prod 반영 전 반드시)</h2>
+<ol>
+<li><code>APP_ENV=prod</code> 설정 — dev 로그인 프리필 차단 + HSTS 활성화 조건</li>
+<li><code>TRUST_PROXY=true</code>면 <strong><code>TRUST_PROXY_HOPS</code>를 실제 프록시 단 수로</strong> — XFF는
+   "오른쪽에서 n번째"를 신뢰한다(왼쪽은 위조 가능). 잘못 설정하면 정상 요청이 거부됨(안전한 방향)</li>
+<li>인터넷 직노출이면 <code>PUBLIC_SERVICE_LIST_ENABLED=false</code> (무인증 서비스 목록 차단)</li>
+<li><code>uv run alembic upgrade head</code></li>
+<li>docker-compose.yml은 <strong>개발 전용</strong> — 운영은 별도 자격증명의 관리형 DB/Redis</li>
+</ol>
+<blockquote>
+<p>더 깊이: <a href="../dev_manual/manual.html">dev_manual 03(인증·보안)·13(계정)·14(전체설정)</a></p>
+</blockquote>
+</section>
+<section id="doc-07-batch-and-incidents" class="doc">
+<div class="doc-src">파일: docs/new_manual/07-batch-and-incidents.md</div>
+<h1 id="07">07. 배치와 장애 대응 — 새벽에 전화 왔을 때 보는 장</h1>
+<blockquote>
+<p>목표: "결제가 이상해요"라는 말을 들었을 때 어디부터 볼지 안다.</p>
+</blockquote>
+<h2 id="1-5-appschedulerrunnerpy-servicesrenewalspy">1. 5분 배치가 하는 일 (app/scheduler/runner.py → services/renewals.py)</h2>
+<pre><code>run_renewals (전역 Redis 락 — 토큰+heartbeat로 중복 실행 방지)
+ └ process_due — 4종 대상을 due 오름차순으로 최대 1000건씩, 병렬 10으로 처리
+    ├ 갱신 결제   TRIAL/ACTIVE/PAST_DUE/EXTENDED + next_billing_at 도래 → 결제·기간 전진
+    ├ 취소 만료   CANCELED + 기간 종료 → EXPIRED + 빌링키 삭제
+    ├ 정지 만료   SUSPENDED + 유예(기본 30일) 초과 → EXPIRED + 빌링키 삭제
+    ├ 비자동갱신  ACTIVE + 자동결제 없음 + 기간 종료 → EXPIRED
+    └ 정산 스윕   10분 넘게 PENDING인 결제를 토스 재조회로 DONE/FAILED 확정
+</code></pre>
+<ul>
+<li>갱신 1건 = Redis 구독 락 → FOR UPDATE 검증+PENDING 선커밋 → <strong>(락/커넥션 반납 후)</strong>
+  토스 호출 → FOR UPDATE 재취득·재검증 → 확정. <strong>이 3단계 구조를 바꾸지 마라</strong> —
+  토스 지연 시 서버 전체가 멈추는 것을 막는 장치다.</li>
+<li>재시도 정책(횟수·간격·유예)은 코드가 아니라 <strong>어드민 전체설정</strong>에서 바꾼다(다음 배치부터 적용).</li>
+</ul>
+<h2 id="2">2. 증상별 대응 — 순서대로 본다</h2>
+<h3 id="pending">"결제했는데 반영이 안 됐대요" (PENDING에 멈춤)</h3>
+<ol>
+<li>어드민 → 결제에서 해당 건 상태 확인. PENDING이면 <strong>정상 동작 중</strong> —
+   토스 타임아웃이고 10분 내 정산 스윕이 확정한다. <strong>절대 수동으로 FAILED 처리하지 마라</strong>(이중결제 위험).</li>
+<li>15분 지나도 PENDING이면: 서버 로그에서 <code>payment.reconciliation</code> 항목 확인,
+   토스 개발자센터에서 해당 주문(toss_order_id) 실제 상태 대조.</li>
+</ol>
+<h3 id="suspended">"구독이 정지됐어요" (SUSPENDED)</h3>
+<ul>
+<li>카드 한도/정지 등으로 재시도 4회 실패한 것. 사용자에게 <strong>카드 변경 후 수동 결제</strong>
+  안내(샘플 <code>/my</code> 화면 또는 외부 서비스의 수동결제 API). 어드민 구독 상세의
+  "재결제" 버튼으로 운영자가 대신 시도할 수도 있다.</li>
+<li>유예(기본 30일) 안에 결제 없으면 자동 EXPIRED — 그 후엔 재구독만 가능.</li>
+</ul>
+<h3 id="_1">"토스가 장애래요"</h3>
+<ul>
+<li>아무것도 끄지 마라. 타임아웃→PENDING→스윕 확정 설계가 알아서 수습한다.</li>
+<li>장애가 길어지면(수 시간) 갱신 대상이 적체된다 — 복구 후 배치가 5분마다
+  1000건씩 자동 소화한다. 로그의 <code>배치 상한 도달</code> 경고는 적체 소화 중이라는 뜻.</li>
+</ul>
+<h3 id="401">"외부 서비스가 전부 401이래요"</h3>
+<ul>
+<li>어드민에서 그 서비스 키를 회전했는지 확인(감사 로그 <code>service.rotate_keys</code>).
+  새 키를 전달하면 끝. 아니면 06장의 401 디버깅 순서.</li>
+</ul>
+<h3 id="_2">긴급 전체 차단이 필요할 때</h3>
+<ul>
+<li>어드민 → 전체설정 → <strong>서버 비활성화</strong>(사유 입력). 외부 API만 503, 어드민은 살아있다.
+  해제도 같은 화면. 모든 전환이 감사 로그에 남는다.</li>
+</ul>
+<h2 id="3">3. 어디를 보나 (관측 지점)</h2>
+<table>
+<thead>
+<tr>
+<th>보고 싶은 것</th>
+<th>위치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>배치 실행 결과</td>
+<td>서버 로그 <code>renewal batch done: {renewed: …, failed: …}</code></td>
+</tr>
+<tr>
+<td>개별 실패 사유</td>
+<td>결제 상세의 failure_code/메시지 + 감사 로그(action으로 검색)</td>
+</tr>
+<tr>
+<td>돈 흐름 요약</td>
+<td>대시보드(이번 달 매출·환불·미수) / 정산 화면(월별)</td>
+</tr>
+<tr>
+<td>시스템이 한 일 전부</td>
+<td>감사 로그 — actor_type=SYSTEM이 배치의 행동</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="doc-09-testing" class="doc">
+<div class="doc-src">파일: docs/new_manual/09-testing.md</div>
+<h1 id="09">09. 테스트 — 안전망 사용법</h1>
+<blockquote>
+<p>목표: 변경 후 무엇을 돌려야 하는지, 새 테스트를 어디에 어떻게 쓰는지 안다.
+이 프로젝트의 1차 안전망은 <strong>실제 Postgres/Redis + 가짜 토스</strong>로 도는 통합 테스트다.</p>
+</blockquote>
+<h2 id="1">1. 구조</h2>
+<table>
+<thead>
+<tr>
+<th>디렉터리</th>
+<th>무엇</th>
+<th>예시</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tests/unit</td>
+<td>DB 없는 순수 로직</td>
+<td>billing_math, transitions(상태머신 규칙), XFF 파싱</td>
+</tr>
+<tr>
+<td>tests/integration</td>
+<td>서비스 함수 + 실제 DB/Redis</td>
+<td><strong>test_renewals.py(갱신 상태머신 — 가장 중요)</strong>, 구독 생성/관리, 정산, 웹훅</td>
+</tr>
+<tr>
+<td>tests/e2e</td>
+<td>HTTP로 화면/API 전체</td>
+<td>어드민 화면, htmx, 엑셀, 외부 API</td>
+</tr>
+<tr>
+<td>tests/security</td>
+<td>인증 전용</td>
+<td>HMAC 6단계, 어드민 보안</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-testsconftestpy">2. 인프라가 어떻게 도는가 (tests/conftest.py)</h2>
+<ul>
+<li><code>docker compose up -d</code>의 같은 컨테이너를 쓰되 <strong>별도 DB(payment_test)·Redis DB 15</strong> 사용</li>
+<li>세션 시작 시 <code>drop_all → create_all</code>(마이그레이션 미사용 — 모델이 곧 스키마),
+  <strong>테스트마다 TRUNCATE + Redis flush</strong> — 테스트 간 독립</li>
+<li>⚠️ <strong>같은 머신에서 pytest 두 개를 동시에 돌리지 마라</strong> — 서로의 스키마를 drop해서
+  수십 건의 가짜 실패(IntegrityError 등)가 난다. 진짜 실패인지 헷갈리면 <strong>단독으로 재실행</strong>이 1순위.</li>
+</ul>
+<h2 id="3-faketossclient-apptossfakepy">3. FakeTossClient — 결제 테스트의 핵심 (app/toss/fake.py)</h2>
+<p>실제 토스 대신 주입되는 가짜. 시나리오 주입이 가능하다:</p>
+<pre><code class="language-python">fake = FakeTossClient()
+fake.fail_charge_with = TossError(&quot;REJECT_CARD&quot;, &quot;카드 거절&quot;)   # 다음 결제를 거절
+fake.fail_charge_with = TossTimeoutError()                      # 타임아웃(결과불명) 시뮬레이션
+fake.payments_by_order[toss_order_id] = FakeTossClient._result_for(toss_order_id, 5000)
+# ↑ &quot;토스에는 사실 승인돼 있었다&quot; 상태를 만들어 정산 스윕 수렴을 테스트
+fake.charges          # 토스에 도달한 청구 기록(금액·멱등키 검증용)
+</code></pre>
+<p>멱등키 재생(같은 키 재요청 시 같은 결과 반환)까지 재현하므로,
+<strong>이중결제 방어 테스트는 fake.charges 길이로 검증</strong>하는 패턴을 쓴다.</p>
+<h2 id="4">4. 자주 쓰는 명령</h2>
+<pre><code class="language-bash">uv run pytest -q                          # 전체 (≈50초)
+uv run pytest tests/integration/test_renewals.py -q     # 갱신 상태머신만
+uv run pytest -k &quot;manual&quot; -q              # 이름 매칭
+uv run pytest --lf -x                     # 직전 실패만, 첫 실패에서 중단
+</code></pre>
+<p>테스트 후 <code>docs/test_report/</code>에 HTML 리포트가 자동 생성된다(conftest 플러그인).</p>
+<h2 id="5">5. 새 테스트를 쓸 때</h2>
+<ul>
+<li>픽스처: <code>db</code>(세션) <code>cipher</code> <code>redis_client</code> <code>client</code>(HTTP) + <code>tests/factories.py</code>
+  (create_service/plan/subscription/user)부터 시작</li>
+<li>시간 의존 로직은 <code>process_due(..., now=특정시각)</code>처럼 <strong>시간을 주입</strong> — sleep 금지</li>
+<li>갱신/결제 테스트는 기존 <code>test_renewals.py</code>의 시나리오 스타일(주석으로 타임라인 서술)을 모방</li>
+</ul>
+</section>
+<section id="doc-10-faq" class="doc">
+<div class="doc-src">파일: docs/new_manual/10-faq.md</div>
+<h1 id="10-faq">10. 트러블슈팅 FAQ — 증상으로 찾기</h1>
+<h2 id="_1">서버가 안 뜬다</h2>
+<ul>
+<li><strong><code>ENCRYPTION_KEY</code> 미설정/형식 오류</strong> — 기동 시 가장 먼저 검증한다. <code>.env.dev</code>에
+  base64 32바이트인지 확인(01장 생성 명령).</li>
+<li>포트 5433/6380 연결 실패 — <code>docker compose up -d</code> 했는지, 다른 프로세스가 점유했는지.</li>
+</ul>
+<h2 id="alembic-upgrade-head"><code>alembic upgrade head</code>가 실패한다</h2>
+<ul>
+<li><code>Multiple heads</code>: 두 갈래 리비전 — <code>uv run alembic heads</code>로 확인 후 down_revision 체인 수정.</li>
+<li>이미 수동으로 스키마를 바꾼 DB라면: 마이그레이션과 실제 스키마 차이를 확인하고
+  맞춰라(테스트 DB는 그냥 지워도 됨 — 다음 pytest가 재생성).</li>
+</ul>
+<h2 id="401">외부 서비스가 401을 받는다</h2>
+<p>06장의 순서대로: 시계 오차(±300초) → 키 회전 여부(감사 로그 <code>service.rotate_keys</code>) →
+nonce 재사용 → 서명 본문 불일치. 빠른 검증법: <code>sample_service</code>에 같은 키를 넣고
+요금제 조회가 되는지 — 되면 키는 정상이고 상대 구현 문제.</p>
+<h2 id="db-pending">결제는 됐다는데 DB에 PENDING이다</h2>
+<p><strong>정상이다.</strong> 토스 타임아웃 → 결과불명 → 10분 후 정산 스윕이 토스 재조회로 확정한다.
+절대 수동으로 FAILED 처리하지 마라(07장). 15분 넘게 안 풀리면 로그 + 토스 콘솔 대조.</p>
+<h2 id="404">어드민에서 어떤 항목이 404가 난다 (분명히 존재하는데)</h2>
+<p>의도된 동작일 수 있다 — SERVICE_MANAGER는 담당 외 서비스 리소스를 <strong>404로 숨긴다</strong>
+(존재 비노출). SYSTEM_ADMIN 계정으로 보이면 권한 스코프 문제다.</p>
+<h2 id="_2">테스트가 수십 개씩 무더기로 실패한다</h2>
+<p>다른 pytest가 동시에 돌고 있는지부터 의심(09장) — <strong>단독 재실행이 1순위 진단</strong>.
+단독에서도 실패하면 그때가 진짜 버그다.</p>
+<h2 id="manualhtml">manual.html을 고쳤는데 다음 빌드에서 사라졌다</h2>
+<p><code>manual.html</code>/<code>index.html</code>은 <strong>생성물</strong>이다. 원본 마크다운(또는 build_html.py)을 고치고
+재빌드하라. (dev_manual·new_manual 동일)</p>
+<h2 id="_3">샘플 쇼핑몰이 "구독서버에 연결할 수 없습니다"라고 한다</h2>
+<p>구독서버(:8000)가 떠 있는지 → 샘플의 서비스 키가 맞는지(어드민 키 화면과 대조) →
+서비스 허용 IP에 <code>127.0.0.1</code>이 있는지.</p>
+<h2 id="_4">갱신이 안 도는 것 같다</h2>
+<ul>
+<li><code>.env</code>의 <code>SCHEDULER_ENABLED</code>/<code>SCHEDULER_INTERVAL_MINUTES</code> 확인.</li>
+<li>로그에 <code>renewal batch skipped — 다른 인스턴스가 실행 중</code>이 계속 찍히면:
+  죽은 프로세스의 전역 락이 남은 것 — Redis에서 <code>lock:scheduler:renewals</code> TTL(최대 240초) 후 자연 해소.</li>
+<li>수동 1회 실행으로 확인: 테스트의 <code>run_renewals(app)</code> 패턴 참고.</li>
+</ul>
+<h2 id="_5">이메일이 안 나간다</h2>
+<p><code>GMAIL_ID</code>/<code>GMAIL_PW</code>(앱 비밀번호) 미설정이면 <strong>콘솔 출력 모드</strong>가 기본 — 로그에서
+메일 내용을 확인할 수 있다. 실제 발송은 두 값을 설정해야 한다.</p>
+</section>
+<section id="doc-11-known-issues" class="doc">
+<div class="doc-src">파일: docs/new_manual/11-known-issues.md</div>
+<h1 id="11">11. 알려진 이슈와 정책 결정 대기 — 코드 고치기 전에 읽어라</h1>
+<blockquote>
+<p>이 저장소는 2026-06에 보안·성능·구조 감사(4 Phase 적용 완료)와 도메인 로직 검증을
+거쳤다. <strong>적용이 끝난 것</strong>과 <strong>알고도 남겨둔 것</strong>을 구분해서 인수한다.
+원문: <a href="../audit/2026-06-11-code-audit.md">감사 리포트</a> ·
+<a href="../audit/2026-06-11-subscription-payment-logic-review.md">로직 검증 리포트</a> ·
+Phase별 워크로그(같은 폴더)</p>
+</blockquote>
+<h2 id="1-high">1. 수정 권장 — 아직 미적용 (로직 검증 High)</h2>
+<p>손대기 전에 반드시 원문 리포트의 재현 시나리오를 읽을 것.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>문제</th>
+<th>한 줄 요약</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H-1</td>
+<td>수동 결제 이중 청구</td>
+<td>수동 결제가 구독 락 없이 매번 새 멱등키로 토스 호출 — 배치와 겹치거나 더블클릭이면 2회 청구</td>
+</tr>
+<tr>
+<td>H-2</td>
+<td>승인된 돈 영구 미기록</td>
+<td>정산 스윕이 수동 결제 PENDING을 "배치가 처리할 것"으로 오인해 영원히 건너뜀</td>
+</tr>
+<tr>
+<td>H-3</td>
+<td>재시도 중 가격 변경 시 금액 불일치</td>
+<td>PENDING 재사용 시 청구액을 재계산하지만 DB 기록액은 안 바꿈</td>
+</tr>
+<tr>
+<td>H-4</td>
+<td>100% 상시할인 = 구독 자동 파괴</td>
+<td>0원 갱신 청구 가드 없음 — 토스 거절 반복 → 정지 → 만료</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2">2. 정책 결정이 먼저 필요한 것 (코드보다 의사결정)</h2>
+<table>
+<thead>
+<tr>
+<th>주제</th>
+<th>현재 동작</th>
+<th>결정할 것</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>환불 월 귀속</td>
+<td>원결제 월에 소급 반영(<code>canceled_at</code> 미사용)</td>
+<td>취소 시점 월로 집계할지</td>
+</tr>
+<tr>
+<td>월말 앵커</td>
+<td>1/31 가입 → 영원히 28일로 드리프트</td>
+<td>가입일 유지 정책으로 바꿀지, 현행 문서화할지</td>
+</tr>
+<tr>
+<td>체험 후 첫구독 혜택</td>
+<td>체험만 쓴 사용자는 할인 영구 상실</td>
+<td>의도(악용 방지)인지 확인·문서화</td>
+</tr>
+<tr>
+<td>집계 시간대</td>
+<td>집계는 UTC 경계, 표시는 KST(00~09시 어긋남)</td>
+<td>KST 경계로 통일할지</td>
+</tr>
+<tr>
+<td>연장(EXTENDED)×비자동갱신</td>
+<td>연장하면 자동결제가 예약됨</td>
+<td>"이용만 연장"인지 "자동결제 재개"인지</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3">3. 알고 보류한 것 (사유 포함 — 워크로그에 상세)</h2>
+<ul>
+<li>보안: 토스 웹훅 서명(토스 미제공 — IP+재조회로 방어), 로그인 폼 CSRF(사내 어드민·rate limit 보완),
+  dev 비밀번호 프리필(배포 체크리스트로 대응)</li>
+<li>구조: 대시보드 표시 로직 분리·registry 이름 변경·conftest 리포트 분리 (이득 대비 보류)</li>
+</ul>
+<h2 id="4-extended">4. 진행 중 작업 — EXTENDED(연장처리) 상태</h2>
+<p>워킹트리에서 진행 중(2026-06 기준). enum·전이표·배치·화면까지 반영도가 높고 테스트
+통과 상태지만, <strong>잔여 3건</strong>: ① 비자동갱신 요금제 연장 정책(위 표), ② 외부 API
+스키마 설명·샘플·dev_manual 미반영, ③ 연장 시 기존 갱신 PENDING 고아화(H-2와 함께 해소).
+이 작업을 이어받는다면 08장 레시피 D의 체크리스트로 누락을 점검하라.</p>
+<h2 id="5">5. 운영 습관 (이 저장소의 일하는 방식)</h2>
+<ul>
+<li>1인 → 소수 인수인계 체제: <strong>main 직접 커밋</strong>, push/PR은 합의 시에만</li>
+<li>모든 수정 작업은 <code>docs/audit/</code>에 날짜별 워크로그 — 과거 워크로그가 곧 변경 이력서다</li>
+<li>문서(이 가이드·dev_manual)는 코드 변경과 <strong>같은 커밋</strong>으로 갱신한다</li>
+</ul>
+</section>
+</main>
+<button class="top" title="맨 위로" onclick="scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script>
+  // 사이드바 검색 — 목차 항목 필터
+  var q=document.getElementById('q');
+  q.addEventListener('input',function(){
+    var v=this.value.trim().toLowerCase();
+    document.querySelectorAll('.nav-link').forEach(function(a){
+      a.classList.toggle('hidden', v && a.textContent.toLowerCase().indexOf(v)<0);
+    });
+  });
+  // 스크롤스파이 — 현재 섹션 네비 강조
+  var links={};
+  document.querySelectorAll('.nav-link').forEach(function(a){links[a.dataset.target]=a;});
+  var obs=new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting){
+        document.querySelectorAll('.nav-link.active').forEach(function(x){x.classList.remove('active');});
+        var a=links[e.target.id]; if(a){a.classList.add('active');
+          a.scrollIntoView({block:'nearest'});}
+      }
+    });
+  },{rootMargin:'-10% 0px -80% 0px'});
+  document.querySelectorAll('section[id]').forEach(function(s){obs.observe(s);});
+</script>
+</body>
+</html>

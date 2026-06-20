@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>08. 계정 관리 — 개발자 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>개발자 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>🧱</span>기반 (먼저 읽기)</div>
+<a class="nav-link" href="README.html"><span class="n">·</span><span class="tt">개발자 인수인계 매뉴얼 (dev_manual)</span></a>
+<a class="nav-link" href="01-getting-started.html"><span class="n">01</span><span class="tt">01. 시작하기 — 구조·실행·테스트·요청 처리 공통 흐름</span></a>
+<a class="nav-link" href="02-database.html"><span class="n">02</span><span class="tt">02. 데이터베이스 — 테이블·모델·관계·마이그레이션</span></a>
+<a class="nav-link" href="03-auth-and-security.html"><span class="n">03</span><span class="tt">03. 인증과 보안 공통</span></a>
+<div class="nav-group"><span>⚙️</span>기능별 상세</div>
+<a class="nav-link" href="04-subscription-create.html"><span class="n">04</span><span class="tt">04. 구독 생성</span></a>
+<a class="nav-link" href="05-subscription-renewal.html"><span class="n">05</span><span class="tt">05. 구독 갱신·만료·재시도·정합성(스케줄러 배치)</span></a>
+<a class="nav-link" href="06-subscription-manage.html"><span class="n">06</span><span class="tt">06. 구독 취소·재개·수동결제·카드변경</span></a>
+<a class="nav-link" href="07-one-off-payment.html"><span class="n">07</span><span class="tt">07. 단건(일반) 결제 + 취소</span></a>
+<a class="nav-link" href="08-plans.html"><span class="n">08</span><span class="tt">08. 요금제 관리 (생성·수정·금액 계산·자동결제안함·추가정보)</span></a>
+<a class="nav-link" href="09-services-registry.html"><span class="n">09</span><span class="tt">09. 서비스 등록·키 발급/회전·취소정책·담당자</span></a>
+<a class="nav-link" href="10-settlement.html"><span class="n">10</span><span class="tt">10. 정산(어드민 화면)</span></a>
+<a class="nav-link" href="11-dashboard.html"><span class="n">11</span><span class="tt">11. 대시보드 — 어드민 메인 화면</span></a>
+<a class="nav-link" href="12-webhooks.html"><span class="n">12</span><span class="tt">12. 웹훅 처리 (토스페이먼츠 → 서버)</span></a>
+<a class="nav-link" href="13-admin-accounts.html"><span class="n">13</span><span class="tt">13. 어드민 계정·역할·로그인/비밀번호</span></a>
+<a class="nav-link" href="14-global-settings.html"><span class="n">14</span><span class="tt">14. 전체 설정(재시도·어드민 IP·킬스위치)</span></a>
+<a class="nav-link" href="15-external-api-and-sample.html"><span class="n">15</span><span class="tt">15. 외부 API 레퍼런스 + 샘플 서비스 연동</span></a>
+<a class="nav-link" href="16-card-vault.html"><span class="n">16</span><span class="tt">16. 카드 보관함(Card Vault) — 카드 등록·교체·조회·삭제</span></a>
+<a class="nav-link" href="17-service-notifications.html"><span class="n">17</span><span class="tt">17. 서비스 알림(아웃고잉 웹훅) — 요청 016</span></a>
+<div class="nav-group"><span>🖥️</span>어드민 화면별 매뉴얼</div>
+<a class="nav-link" href="admin--README.html"><span class="n">·</span><span class="tt">어드민 콘솔 페이지 매뉴얼</span></a>
+<a class="nav-link" href="admin--01-login-and-access.html"><span class="n">01</span><span class="tt">01. 로그인·접근 (로그인 / 비밀번호 설정 / 로그아웃 / IP 제한)</span></a>
+<a class="nav-link" href="admin--02-dashboard.html"><span class="n">02</span><span class="tt">02. 대시보드</span></a>
+<a class="nav-link" href="admin--03-services.html"><span class="n">03</span><span class="tt">03. 서비스 관리</span></a>
+<a class="nav-link" href="admin--04-plans.html"><span class="n">04</span><span class="tt">04. 요금제 관리 (목록·생성·수정·활성/비활성·삭제)</span></a>
+<a class="nav-link" href="admin--05-subscriptions.html"><span class="n">05</span><span class="tt">05. 구독 관리 — 목록·상세·강제 취소</span></a>
+<a class="nav-link" href="admin--06-payments.html"><span class="n">06</span><span class="tt">06. 결제 — 목록·상세·단건 취소</span></a>
+<a class="nav-link" href="admin--07-settlement.html"><span class="n">07</span><span class="tt">07. 정산 화면</span></a>
+<a class="nav-link active" href="admin--08-users.html"><span class="n">08</span><span class="tt">08. 계정 관리</span></a>
+<a class="nav-link" href="admin--09-audit.html"><span class="n">09</span><span class="tt">09. 감사 로그 (조회·검색·정리·엑셀)</span></a>
+<a class="nav-link" href="admin--10-settings.html"><span class="n">10</span><span class="tt">10. 전체 설정 (재시도 정책 · 어드민 IP · 킬스위치)</span></a>
+<div class="nav-group"><span>📋</span>운영 워크플로우</div>
+<a class="nav-link" href="admin--11-onboarding-checklist.html"><span class="n">·</span><span class="tt">신규 서비스 온보딩 체크리스트 (운영자용)</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">개발자 매뉴얼</a> <span>/</span> <em>어드민 화면별 매뉴얼</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">🖥️ 어드민 화면별 매뉴얼</span>
+        <span class="dh-src">docs/dev_manual/admin/08-users.md</span></div>
+      <h1>08. 계정 관리</h1>
+      
+    </header>
+    <div class="doc">
+
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>어드민 계정(SYSTEM_ADMIN · SERVICE_MANAGER)을 만들고 역할·서비스·비밀번호를 관리하는 화면.</strong><br />
+- <strong>운영자</strong>: 계정 생성 → 서비스 배정 → 역할/정보 수정 → 비밀번호 재설정 방법을 확인합니다.<br />
+- <strong>개발자</strong>: 라우트 위치(file:line)·서비스 레이어 호출·보호 규칙(본인/대표 담당자)을 확인합니다.  </p>
+<p>계정·역할·인증 내부 흐름(로그인·세션·비밀번호 설정)은 → <a href="13-admin-accounts.html">../13-admin-accounts.md</a></p>
+</div></blockquote>
+<hr />
+<h2 id="1">1. 이 화면은 무엇인가 / 접근 경로·권한</h2>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>목적</td>
+<td>어드민 콘솔에 로그인하는 계정(SYSTEM_ADMIN/SERVICE_MANAGER)을 생성·관리한다</td>
+</tr>
+<tr>
+<td>접근 경로</td>
+<td>좌측 LNB → <strong>계정</strong></td>
+</tr>
+<tr>
+<td>권한</td>
+<td><strong>SYSTEM_ADMIN 전용</strong> — 모든 라우트에 <code>Depends(require_admin)</code> 적용</td>
+</tr>
+<tr>
+<td>라우트 모듈</td>
+<td><code>app/admin/routes/users.py</code></td>
+</tr>
+<tr>
+<td>템플릿 디렉터리</td>
+<td><code>app/admin/templates/users/</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>require_admin</code>은 <code class="loc">app/admin/deps.py:100</code>에서 <code>require_role(UserRole.SYSTEM_ADMIN)</code>의 축약으로 정의되어 있으며,
+역할 불일치 시 <code>PermissionDeniedError(403)</code>를 반환한다.</p>
+<hr />
+<h2 id="2">2. 화면 구성</h2>
+<h3 id="2-1-get-adminusers">2-1. 목록 (<code>GET /admin/users</code>)</h3>
+<p><strong>파일</strong>: <code>app/admin/templates/users/list.html</code> (전체 레이아웃), <code>users/_table.html</code> (htmx 리프레시용 partial)</p>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>데이터 소스</th>
+<th>정렬 가능</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>이메일</td>
+<td><code>User.email</code></td>
+<td>✓ (<code>email</code>)</td>
+</tr>
+<tr>
+<td>역할</td>
+<td><code>User.role</code> → "시스템 관리자" / "서비스 담당자"</td>
+<td>✓ (<code>role</code>)</td>
+</tr>
+<tr>
+<td>주 서비스</td>
+<td>LEFT JOIN <code>Service.name</code> (없으면 <code>-</code>)</td>
+<td>—</td>
+</tr>
+<tr>
+<td>상태</td>
+<td><code>User.status</code> 배지 (ACTIVE / PENDING / LOCKED / DISABLED)</td>
+<td>✓ (<code>status</code>)</td>
+</tr>
+<tr>
+<td>—</td>
+<td>상세 링크 (<code>상세 ›</code>)</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>툴바</strong> (<code class="loc">users/_table.html:3-6</code>):</p>
+<table>
+<thead>
+<tr>
+<th>컨트롤</th>
+<th>파라미터</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>이메일 검색</td>
+<td><code>?q=</code> (iLIKE)</td>
+</tr>
+<tr>
+<td>역할 필터</td>
+<td><code>?role=SYSTEM_ADMIN \| SERVICE_MANAGER</code></td>
+</tr>
+<tr>
+<td>상태 필터</td>
+<td><code>?status=ACTIVE \| PENDING \| LOCKED</code> (DELETED는 선택지에 없음)</td>
+</tr>
+<tr>
+<td>엑셀 다운로드</td>
+<td><code>/admin/users/export.xlsx</code> (현재 검색·필터 유지)</td>
+</tr>
+<tr>
+<td>계정 추가 버튼</td>
+<td><code>/admin/users/new</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>기본 정렬</strong>: <code>created_at</code> DESC, 페이지당 15건 (<code>PER_PAGE_DEFAULT</code>, <code class="loc">app/admin/pagination.py:18</code>).</p>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>DELETED 계정은 어떤 필터로도 목록에 나타나지 않는다.</strong><br />
+쿼리 기본 조건이 <code>User.status != UserStatus.DELETED</code>(<code class="loc">app/admin/routes/users.py:53</code>)이기 때문이다.</p>
+</div></blockquote>
+<hr />
+<h3 id="2-2-get-adminusersnew">2-2. 생성 폼 (<code>GET /admin/users/new</code>)</h3>
+<p><strong>파일</strong>: <code>app/admin/templates/users/new.html</code></p>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>입력 유형</th>
+<th>필수 여부</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>이메일</td>
+<td><code>type="email"</code></td>
+<td>필수</td>
+</tr>
+<tr>
+<td>전화번호</td>
+<td><code>type="tel"</code></td>
+<td>선택</td>
+</tr>
+<tr>
+<td>역할</td>
+<td><code>&lt;select&gt;</code>: SERVICE_MANAGER(기본값) / SYSTEM_ADMIN</td>
+<td>필수</td>
+</tr>
+<tr>
+<td>담당 서비스</td>
+<td>체크박스 다중 선택 (SERVICE_MANAGER 역할 선택 시만 표시)</td>
+<td>선택</td>
+</tr>
+</tbody>
+</table>
+<p>역할 셀렉트 변경 시 JavaScript <code>onchange</code>로 담당 서비스 블록(<code>#svc-block</code>)의 display를 <code>block/none</code>으로 토글한다 (<code class="loc">new.html:18</code>).<br />
+담당 서비스가 없어도 계정 생성이 가능하다(서비스 등록 시 이후에 배정 가능).</p>
+<hr />
+<h3 id="2-3-get-adminusersuser_id">2-3. 상세 (<code>GET /admin/users/{user_id}</code>)</h3>
+<p><strong>파일</strong>: <code>app/admin/templates/users/detail.html</code></p>
+<p><strong>좌측 카드 — 계정 정보</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>이메일</td>
+<td><code>account.email</code></td>
+</tr>
+<tr>
+<td>전화번호</td>
+<td><code>account.phone</code> (없으면 <code>-</code>)</td>
+</tr>
+<tr>
+<td>역할</td>
+<td>한글 변환 표시</td>
+</tr>
+<tr>
+<td>상태</td>
+<td>배지 (ACTIVE / PENDING / LOCKED / DISABLED)</td>
+</tr>
+<tr>
+<td>버튼</td>
+<td>비밀번호 재설정 메일 / 비활성화(또는 활성화) / 삭제</td>
+</tr>
+</tbody>
+</table>
+<p><strong>우측 카드 — 담당 서비스</strong> (<code>SERVICE_MANAGER</code>에게만 표시):</p>
+<ul>
+<li>현재 담당 서비스 목록 + 개별 <strong>해제</strong> 버튼</li>
+<li>미배정 서비스 드롭다운 + <strong>서비스 추가</strong> 버튼 (<code>assignable</code>이 있을 때만 표시)</li>
+</ul>
+<hr />
+<h3 id="2-4-get-adminusersuser_idedit">2-4. 수정 폼 (<code>GET /admin/users/{user_id}/edit</code>)</h3>
+<p><strong>파일</strong>: <code>app/admin/templates/users/edit.html</code></p>
+<p>수정 가능 항목: <strong>이메일</strong>, <strong>전화번호</strong>만. 역할 변경은 수정 폼에서 지원하지 않는다.</p>
+<hr />
+<h2 id="3">3. 할 수 있는 동작</h2>
+<h3 id="3-1">3-1. 계정 목록 조회 / 검색 / 필터</h3>
+<ol>
+<li>LNB에서 <strong>계정</strong> 클릭 → <code>GET /admin/users</code> → 전체 계정 목록(DELETED 제외).</li>
+<li>검색창에 이메일 일부 입력 → htmx가 <code>GET /admin/users?q=…</code>로 <code>#list-users</code>를 부분 갱신.</li>
+<li>역할/상태 드롭다운 선택 → 즉시 필터 적용.</li>
+<li>컬럼 헤더 클릭 → 오름/내림 정렬 토글.</li>
+<li><strong>엑셀</strong> 버튼 → 현재 검색·필터를 그대로 적용한 전체 결과를 <code>.xlsx</code>로 다운로드.</li>
+</ol>
+<hr />
+<h3 id="3-2">3-2. 계정 생성</h3>
+<ol>
+<li><strong>계정 추가</strong> 버튼 → <code>GET /admin/users/new</code>.</li>
+<li>이메일·역할(·담당 서비스) 입력 후 <strong>계정 생성 + 설정 메일 발송</strong> 클릭.</li>
+<li><code>POST /admin/users</code> 처리:
+   - 이메일 소문자 정규화, 역할 유효성 검사.
+   - SYSTEM_ADMIN 선택 시 서비스 목록 강제 초기화.
+   - 이메일 중복 확인(SELECT 선조회 + <code>flush IntegrityError</code> 이중 방어).
+   - 계정 <code>status=PENDING</code>으로 생성 → <code>PasswordSetupToken</code> 48시간 토큰 발급.
+   - 감사 로그 기록 → DB 커밋.
+   - <strong>계정 설정 메일 발송</strong> (<code>/admin/setup-password?token=…</code>).</li>
+<li>성공: <code>saved_redirect("/admin/users?…", "저장되었습니다")</code> → <strong>완료 모달</strong> + 메일 발송 결과 토스트.</li>
+<li>실패(중복 이메일 등): 폼 재렌더 + 에러 메시지 표시.</li>
+</ol>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>감사 상세(요청 015)</strong>: 계정 동작은 감사 detail에 상세를 남긴다 — 생성(<code>account.create</code>: 이메일·역할·서비스 수), 수정(<code>account.update</code>: 이메일/전화 변경 전→후), 비활성화/활성화(<code>account.disable</code>/<code>enable</code>: 이메일·상태 전→후), 삭제(이메일), 담당 서비스 추가/해제(<code>account.(un)assign_service</code>: 이메일·서비스명), 비밀번호 재설정 메일(<code>user.password_reset_issued</code>: 이메일·발송 안내). 감사로그 화면에서 "변경 전 → 변경 후"로 표시된다.</p>
+<p>메일 발송 실패해도 계정은 생성된다. 토스트에 "메일 발송에 실패했습니다. SMTP 설정을 확인하세요" 가 표시된다.</p>
+</div></blockquote>
+<hr />
+<h3 id="3-3">3-3. 계정 정보 수정</h3>
+<ol>
+<li>상세 화면 우상단 <strong>정보 수정</strong> 버튼 → <code>GET /admin/users/{user_id}/edit</code>.</li>
+<li>이메일·전화번호 변경 후 <strong>저장</strong> 클릭.</li>
+<li><code>POST /admin/users/{user_id}/edit</code> 처리:
+   - 이메일 변경 시 중복 체크.
+   - 이 계정이 대표(<code>Service.manager_email</code>)인 서비스들의 <code>manager_email</code> 일괄 동기화.
+   - 감사 로그 → DB 커밋.</li>
+<li>성공: 상세 페이지로 리다이렉트 + <strong>완료 모달</strong>.</li>
+<li>실패: 수정 폼 재렌더 + 에러 메시지.</li>
+</ol>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><code>DELETED</code> 상태 계정은 수정 폼(<code>GET …/edit</code>) 접근 시 404를 반환한다 (<code class="loc">users.py:209</code>).</p>
+</div></blockquote>
+<hr />
+<h3 id="3-4">3-4. 서비스 배정 / 해제</h3>
+<h4 id="_1">서비스 배정</h4>
+<ol>
+<li>상세 화면 우측 카드 드롭다운에서 서비스 선택 → <strong>서비스 추가</strong> 클릭.</li>
+<li><code>POST /admin/users/{user_id}/services</code> 처리:
+   - <code>SERVICE_MANAGER</code> 역할이 아닌 계정은 오류.
+   - <code>user.service_id</code>가 None이면 주 서비스로 직접 설정, 있으면 <code>UserService</code> 다대다로 추가.
+   - 이미 담당 중이면 조용히 무시(중복 허용 안 함).</li>
+<li>성공: <code>saved_redirect</code> → <strong>완료 모달</strong>.</li>
+<li>실패: <code>?error=</code> 붙여 상세 페이지 리다이렉트 → 에러 토스트.</li>
+</ol>
+<h4 id="_2">서비스 해제</h4>
+<ol>
+<li>담당 서비스 행 옆 <strong>해제</strong> 클릭.</li>
+<li><code>POST /admin/users/{user_id}/services/{service_id}/remove</code> 처리:
+   - 주 서비스를 해제하면 <code>UserService</code>에서 다른 서비스를 주 서비스로 승격.
+   - 남은 담당 서비스가 없으면 <code>user.service_id = None</code>.</li>
+<li>성공: <code>saved_redirect</code> → <strong>"해제되었습니다" 모달</strong>.</li>
+</ol>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>해제 버튼은 보호 확인 없이 즉시 처리</strong>된다. 대표 담당자(<code>Service.manager_email</code>)는 서비스 배정 해제가 아닌 계정 삭제 시점에만 보호된다.</p>
+</div></blockquote>
+<hr />
+<h3 id="3-5">3-5. 비활성화 / 활성화</h3>
+<h4 id="_3">비활성화</h4>
+<ol>
+<li>상세 화면 <strong>비활성화</strong> 버튼 클릭 → <strong>확인 모달</strong> 표시.
+   - 모달 메시지: "이 계정을 비활성화하면 로그인이 차단되고 기존 세션이 모두 종료됩니다."</li>
+<li>확인 후 <code>POST /admin/users/{user_id}/disable</code> (hidden: <code>disabled=true</code>) 처리:
+   - <strong>본인 계정 비활성화 불가</strong> — <code>actor_user_id == user_id</code> 이면 에러.
+   - <code>user.status = DISABLED</code>.
+   - DB 커밋 후 Redis <code>destroy_user_sessions</code>로 해당 사용자 세션 즉시 파기.</li>
+<li>성공: <code>saved_redirect</code> → <strong>"변경되었습니다" 모달</strong>.</li>
+<li>실패: <code>?error=</code> → 에러 토스트.</li>
+</ol>
+<h4 id="_4">활성화</h4>
+<ol>
+<li>상태가 <code>DISABLED</code>인 계정의 상세 화면에는 <strong>비활성화</strong> 대신 <strong>활성화</strong> 버튼이 표시됨 (<code class="loc">detail.html:26-39</code>).</li>
+<li><strong>활성화</strong> 클릭 → <code>POST /admin/users/{user_id}/disable</code> (hidden: <code>disabled=false</code>).
+   - 비밀번호가 설정된 경우 → <code>status=ACTIVE</code>, 미설정 시 → <code>status=PENDING</code>으로 복구.</li>
+</ol>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>폼은 hidden input <code>disabled=true/false</code>로 의도를 명확히 전달한다. 값이 정확히 <code>"false"</code>일 때만 활성화로 처리 (<code class="loc">users.py:250</code>).</p>
+</div></blockquote>
+<hr />
+<h3 id="3-6">3-6. 계정 삭제</h3>
+<ol>
+<li>상세 화면 <strong>삭제</strong> 버튼(빨간색) → <strong>확인 모달</strong> 표시.
+   - 모달 메시지: "이 계정을 삭제하면 로그인이 영구 차단되고 담당 서비스 연결이 모두 해제됩니다. 이 작업은 되돌릴 수 없습니다."</li>
+<li>확인 후 <code>POST /admin/users/{user_id}/delete</code> 처리:
+   - <strong>본인 계정 삭제 불가</strong> — <code>actor_user_id == user_id</code> 이면 에러.
+   - <strong>대표 담당자 보호</strong> — 이 계정이 어느 서비스의 <code>Service.manager_email</code>이면 삭제 불가. 에러: <code>"'{서비스명}' 서비스의 대표 담당자입니다. 먼저 다른 계정을 대표로 지정하세요."</code>
+   - 논리 삭제: <code>status=DELETED</code>, <code>service_id=None</code>, <code>UserService</code> 행 전체 삭제.
+   - DB 커밋 → Redis 세션 파기.</li>
+<li>성공: <code>saved_redirect("/admin/users", "삭제되었습니다")</code> → 목록 + <strong>완료 모달</strong>.</li>
+<li>실패: <code>?error=</code> → 에러 토스트.</li>
+</ol>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>물리 삭제가 아닌 논리 삭제(소프트 삭제)를 사용하는 이유: 감사 로그에 <code>actor_user_id</code>로 남아 있는 외래 참조를 유지하기 위함 (<code class="loc">accounts.py:229</code>).</p>
+</div></blockquote>
+<hr />
+<h3 id="3-7">3-7. 비밀번호 재설정</h3>
+<ol>
+<li>상세 화면 <strong>비밀번호 재설정 메일</strong> 버튼 클릭.</li>
+<li><code>POST /admin/users/{user_id}/reset-password</code> 처리:
+   - <code>PasswordSetupToken</code> 48시간 유효 토큰 생성.
+   - 감사 로그 → DB 커밋.
+   - Redis에서 해당 사용자의 기존 세션 <strong>즉시 파기</strong> (계정 탈취 의심 상황 대비).
+   - 재설정 메일 발송 (<code>/admin/setup-password?token=…</code>).</li>
+<li>결과: 상세 페이지로 303 리다이렉트 + 메일 발송 결과 토스트.</li>
+</ol>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>비밀번호 재설정은 <strong>완료 모달이 아닌 토스트</strong>로만 결과를 전달한다 (<code>saved_redirect</code>가 아닌 일반 <code>RedirectResponse</code> 사용, <code class="loc">users.py:293-294</code>).</p>
+</div></blockquote>
+<hr />
+<h2 id="4">4. 개발 참조</h2>
+<h3 id="4-1">4-1. 라우트 함수 요약</h3>
+<table>
+<thead>
+<tr>
+<th>HTTP</th>
+<th>경로</th>
+<th>함수</th>
+<th>file:line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/admin/users</code></td>
+<td><code>users_list</code></td>
+<td><code class="loc">app/admin/routes/users.py:79</code></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/admin/users/export.xlsx</code></td>
+<td><code>users_export</code></td>
+<td><code class="loc">app/admin/routes/users.py:100</code></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/admin/users/new</code></td>
+<td><code>users_new</code></td>
+<td><code class="loc">app/admin/routes/users.py:116</code></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/admin/users</code></td>
+<td><code>users_create</code></td>
+<td><code class="loc">app/admin/routes/users.py:124</code></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/admin/users/{user_id}</code></td>
+<td><code>users_detail</code></td>
+<td><code class="loc">app/admin/routes/users.py:151</code></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/admin/users/{user_id}/services</code></td>
+<td><code>users_assign_service</code></td>
+<td><code class="loc">app/admin/routes/users.py:172</code></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/admin/users/{user_id}/services/{service_id}/remove</code></td>
+<td><code>users_unassign_service</code></td>
+<td><code class="loc">app/admin/routes/users.py:190</code></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/admin/users/{user_id}/edit</code></td>
+<td><code>users_edit</code></td>
+<td><code class="loc">app/admin/routes/users.py:203</code></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/admin/users/{user_id}/edit</code></td>
+<td><code>users_update</code></td>
+<td><code class="loc">app/admin/routes/users.py:214</code></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/admin/users/{user_id}/disable</code></td>
+<td><code>users_disable</code></td>
+<td><code class="loc">app/admin/routes/users.py:233</code></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/admin/users/{user_id}/delete</code></td>
+<td><code>users_delete</code></td>
+<td><code class="loc">app/admin/routes/users.py:261</code></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/admin/users/{user_id}/reset-password</code></td>
+<td><code>users_reset_password</code></td>
+<td><code class="loc">app/admin/routes/users.py:278</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="4-2">4-2. 서비스 레이어 호출</h3>
+<p>모든 비즈니스 로직은 <code>app/services/accounts.py</code>에 집중되어 있다.</p>
+<table>
+<thead>
+<tr>
+<th>라우트 함수</th>
+<th>호출 함수</th>
+<th>file:line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>users_create</code></td>
+<td><code>account_service.create_account()</code></td>
+<td><code class="loc">accounts.py:72</code></td>
+</tr>
+<tr>
+<td><code>users_detail</code></td>
+<td><code>account_service.list_managed_services()</code></td>
+<td><code class="loc">accounts.py:316</code></td>
+</tr>
+<tr>
+<td><code>users_assign_service</code></td>
+<td><code>account_service.assign_service()</code></td>
+<td><code class="loc">accounts.py:269</code></td>
+</tr>
+<tr>
+<td><code>users_unassign_service</code></td>
+<td><code>account_service.unassign_service()</code></td>
+<td><code class="loc">accounts.py:294</code></td>
+</tr>
+<tr>
+<td><code>users_update</code></td>
+<td><code>account_service.update_account()</code></td>
+<td><code class="loc">accounts.py:149</code></td>
+</tr>
+<tr>
+<td><code>users_disable</code></td>
+<td><code>account_service.set_account_disabled()</code></td>
+<td><code class="loc">accounts.py:191</code></td>
+</tr>
+<tr>
+<td><code>users_delete</code></td>
+<td><code>account_service.delete_account()</code></td>
+<td><code class="loc">accounts.py:223</code></td>
+</tr>
+<tr>
+<td><code>users_reset_password</code></td>
+<td><code>auth_service.issue_password_reset()</code></td>
+<td><code class="loc">app/services/auth.py:257</code></td>
+</tr>
+</tbody>
+</table>
+<p>서비스 목록 조회는 <code>app/services/registry.py</code>의 <code>list_services()</code> 사용 (생성 폼·상세 화면).</p>
+<hr />
+<h3 id="4-3">4-3. 권한 의존성 체인</h3>
+<pre><code>HTTP 요청
+  └─ require_admin (app/admin/deps.py:100)
+       = require_role(UserRole.SYSTEM_ADMIN)
+         └─ require_user (app/admin/deps.py:60)
+              1. SESSION_COOKIE(&quot;admin_session&quot;) → Redis 세션 조회
+              2. DB User 조회 + status == ACTIVE 확인
+              3. admin_allowed_ips 검사 (설정된 경우)
+              4. effective_service_ids() → AdminContext.service_ids
+              → AdminContext 반환
+         └─ role 검사 — SYSTEM_ADMIN 아니면 PermissionDeniedError(403)
+</code></pre>
+<hr />
+<h3 id="4-4-csrf">4-4. CSRF 검증</h3>
+<p>모든 POST 라우트의 첫 번째 호출:</p>
+<pre><code class="language-python">await validate_csrf(request, ctx)  # app/admin/deps.py:105
+</code></pre>
+<p>폼에 항상 포함되어야 하는 hidden 필드:</p>
+<pre><code class="language-html">&lt;input type=&quot;hidden&quot; name=&quot;csrf_token&quot; value=&quot;{{ ctx.csrf_token }}&quot;&gt;
+</code></pre>
+<hr />
+<h3 id="4-5-htmx">4-5. htmx 동작 (목록 화면)</h3>
+<ul>
+<li><code>render_list()</code> (<code class="loc">app/admin/__init__.py:67</code>) — <code>HX-Request</code> 헤더가 있으면 <code>_table.html</code> partial만 반환, 없으면 <code>list.html</code> 전체 렌더.</li>
+<li><code>_table.html</code>의 <code>div#list-users</code>가 htmx 스왑 대상.</li>
+<li>검색·필터·정렬·페이지 이동 모두 htmx가 <code>#list-users</code>만 교체한다.</li>
+</ul>
+<hr />
+<h3 id="4-6">4-6. 엑셀 다운로드 구조</h3>
+<p><code>users_export</code> (<code class="loc">users.py:100-113</code>):</p>
+<ul>
+<li><code>paginate</code>를 거치지 않고 쿼리를 직접 실행 → 페이지 제한 없이 전체 결과 출력.</li>
+<li>컬럼: <code>["이메일", "역할", "주 서비스", "상태"]</code> (순서 고정).</li>
+<li><code>xlsx_response("users", …, sheet_title="관리자")</code> (<code class="loc">app/admin/export.py:23</code>).</li>
+<li>파일명 형식: <code>users-{YYYYmmdd-HHMM(KST)}.xlsx</code>.</li>
+</ul>
+<hr />
+<h3 id="4-7">4-7. 담당 서비스 데이터 모델</h3>
+<pre><code>User.service_id           → 주 서비스 (최초 배정 또는 주 해제 후 승격된 서비스)
+UserService(user_id, service_id) → 추가 담당 서비스 (다대다)
+
+effective_service_ids(db, user) → 합집합 반환 (accounts.py:33)
+  SYSTEM_ADMIN → None (전체 접근)
+  SERVICE_MANAGER → {service_id} ∪ {UserService.service_id...}
+</code></pre>
+<p>배정 시: <code>service_id=None</code>이면 주 서비스로, 아니면 <code>UserService</code> 행 추가 (<code class="loc">accounts.py:284-287</code>).<br />
+해제 시: 주 서비스를 해제하면 <code>UserService</code>의 다른 서비스가 주로 승격 (<code class="loc">accounts.py:300-309</code>).</p>
+<hr />
+<h3 id="4-8">4-8. 보호 규칙 정리</h3>
+<table>
+<thead>
+<tr>
+<th>규칙</th>
+<th>적용 동작</th>
+<th>구현 위치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>본인 비활성화 금지</td>
+<td><code>POST …/disable</code></td>
+<td><code class="loc">accounts.py:208-209</code></td>
+</tr>
+<tr>
+<td>본인 삭제 금지</td>
+<td><code>POST …/delete</code></td>
+<td><code class="loc">accounts.py:241-242</code></td>
+</tr>
+<tr>
+<td>대표 담당자 삭제 금지</td>
+<td><code>POST …/delete</code></td>
+<td><code class="loc">accounts.py:243-247</code></td>
+</tr>
+<tr>
+<td>DELETED 계정 수정 금지</td>
+<td><code>GET …/edit</code></td>
+<td><code class="loc">users.py:209</code></td>
+</tr>
+<tr>
+<td>DELETED 계정은 목록 제외</td>
+<td><code>GET /users</code> 기본 쿼리</td>
+<td><code class="loc">users.py:53</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="4-9-vs">4-9. 저장 완료 모달 vs 토스트</h3>
+<table>
+<thead>
+<tr>
+<th>동작</th>
+<th>결과 UI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>생성·수정·서비스 배정·해제·비활성·활성·삭제</td>
+<td><strong>완료 모달</strong> (<code>saved_redirect()</code> → <code>?saved=</code> → <code>showSaved</code> 이벤트)</td>
+</tr>
+<tr>
+<td>비밀번호 재설정 메일 발송</td>
+<td><strong>토스트만</strong> (<code>?flash=</code> / <code>?flash_type=error</code>)</td>
+</tr>
+<tr>
+<td>메일 발송 실패 (생성·재설정)</td>
+<td><strong>에러 토스트</strong> (<code>flash_type=error</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><code>saved_redirect</code> 구현: <code class="loc">app/admin/__init__.py:39</code>.<br />
+<code>email_flash_qs</code> 구현: <code class="loc">app/admin/flash.py:20</code>.</p>
+<hr />
+<h2 id="5">5. 주의사항 / 자주 하는 실수</h2>
+<h3 id="_5">운영자</h3>
+<ul>
+<li><strong>대표 담당자 삭제 불가</strong>: 계정 삭제 전 반드시 서비스 상세(<code>/admin/services/{id}</code>)에서 다른 계정을 대표로 변경한다 (<code>[../03-services.md](03-services.md)</code> 참고).</li>
+<li><strong>본인 계정 비활성화·삭제 불가</strong>: 서버에서 거부한다.</li>
+<li><strong>PENDING 계정</strong>: 계정 생성 직후 비밀번호를 설정하지 않은 상태. 로그인 불가. 재설정 메일 재발송으로 새 링크를 보낼 수 있다.</li>
+<li><strong>메일 발송 실패</strong>: SMTP 설정 문제. 계정 자체는 생성/발급되므로 SMTP 수정 후 <strong>비밀번호 재설정 메일</strong> 버튼으로 재발송 가능.</li>
+<li><strong>비밀번호 설정 링크 유효기간</strong>: 발송 후 <strong>48시간</strong>. 만료 시 재설정 메일 버튼으로 새 링크를 발급한다.</li>
+</ul>
+<h3 id="_6">개발자</h3>
+<ul>
+<li><strong>목록 쿼리</strong>: <code>_build_users_query</code> (<code class="loc">users.py:34</code>)는 <code>User ✕ Service</code> OUTER JOIN을 수행한다. <code>svc</code>가 <code>None</code>일 수 있으므로 템플릿에서 <code>svc.name if svc else '-'</code>로 처리한다.</li>
+<li><strong>정렬 컬럼 맵</strong>: <code>_USER_SORT</code> (<code class="loc">users.py:30</code>) — <code>email</code>, <code>role</code>, <code>status</code>, <code>created_at</code>만 허용. 이 외 값은 <code>PageParams.from_request</code>에서 <code>default_sort</code>로 대체된다.</li>
+<li><strong>비활성화 hidden input</strong>: 체크박스 방식이 아닌 문자열 <code>"true"/"false"</code>. 서버 파싱: <code>str(…) != "false"</code> (<code class="loc">users.py:250</code>) — 값이 없거나 다른 값이면 비활성화로 처리.</li>
+<li><strong>소프트 삭제 이후 조회</strong>: <code>_get_account()</code> (<code class="loc">accounts.py:141</code>)는 <code>DELETED</code> 상태를 <code>NotFoundError</code>로 처리한다. 따라서 삭제된 계정 ID로 수정/비활성화 API 호출 시 404가 반환된다.</li>
+<li><strong>서비스 배정 권한</strong>: <code>assign_service</code>/<code>unassign_service</code>는 <code>SERVICE_MANAGER</code> 역할만 허용한다 (<code class="loc">accounts.py:278</code>, <code>303</code>). <code>SYSTEM_ADMIN</code>에게 서비스를 배정하려 하면 <code>InputValidationError</code>가 반환된다.</li>
+<li><strong>이메일 수정 시 서비스 manager_email 동기화</strong>: <code>update_account</code> 내부에서 <code>Service.manager_email == old_email</code>인 서비스를 일괄 UPDATE한다 (<code class="loc">accounts.py:173-174</code>). 이 동기화는 수동으로 따로 호출할 필요 없다.</li>
+</ul>
+<hr />
+<h2 id="_7">관련 문서</h2>
+<ul>
+<li>계정·역할·로그인 내부 처리 흐름 → <a href="13-admin-accounts.html">../13-admin-accounts.md</a></li>
+<li>인증·세션·CSRF 공통 구조 → <a href="03-auth-and-security.html">../03-auth-and-security.md</a></li>
+<li>서비스 대표 담당자 변경 → <a href="admin--03-services.html">03-services.md</a></li>
+<li>어드민 화면 공통 개념 (권한·UI 패턴) → <a href="admin--README.html">README.md</a></li>
+</ul>
+    </div>
+    <div class="pager"><a class="pg prev" href="admin--07-settlement.html"><small>← 이전</small><b>07. 정산 화면</b></a><a class="pg next" href="admin--09-audit.html"><small>다음 →</small><b>09. 감사 로그 (조회·검색·정리·엑셀)</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#1">1. 이 화면은 무엇인가 / 접근 경로·권한</a>
+<a class="toc-h2" href="#2">2. 화면 구성</a>
+<a class="toc-h3" href="#2-1-get-adminusers">2-1. 목록 (GET /admin/users)</a>
+<a class="toc-h3" href="#2-2-get-adminusersnew">2-2. 생성 폼 (GET /admin/users/new)</a>
+<a class="toc-h3" href="#2-3-get-adminusersuser_id">2-3. 상세 (GET /admin/users/{user_id})</a>
+<a class="toc-h3" href="#2-4-get-adminusersuser_idedit">2-4. 수정 폼 (GET /admin/users/{user_id}/edit)</a>
+<a class="toc-h2" href="#3">3. 할 수 있는 동작</a>
+<a class="toc-h3" href="#3-1">3-1. 계정 목록 조회 / 검색 / 필터</a>
+<a class="toc-h3" href="#3-2">3-2. 계정 생성</a>
+<a class="toc-h3" href="#3-3">3-3. 계정 정보 수정</a>
+<a class="toc-h3" href="#3-4">3-4. 서비스 배정 / 해제</a>
+<a class="toc-h3" href="#3-5">3-5. 비활성화 / 활성화</a>
+<a class="toc-h3" href="#3-6">3-6. 계정 삭제</a>
+<a class="toc-h3" href="#3-7">3-7. 비밀번호 재설정</a>
+<a class="toc-h2" href="#4">4. 개발 참조</a>
+<a class="toc-h3" href="#4-1">4-1. 라우트 함수 요약</a>
+<a class="toc-h3" href="#4-2">4-2. 서비스 레이어 호출</a>
+<a class="toc-h3" href="#4-3">4-3. 권한 의존성 체인</a>
+<a class="toc-h3" href="#4-4-csrf">4-4. CSRF 검증</a>
+<a class="toc-h3" href="#4-5-htmx">4-5. htmx 동작 (목록 화면)</a>
+<a class="toc-h3" href="#4-6">4-6. 엑셀 다운로드 구조</a>
+<a class="toc-h3" href="#4-7">4-7. 담당 서비스 데이터 모델</a>
+<a class="toc-h3" href="#4-8">4-8. 보호 규칙 정리</a>
+<a class="toc-h3" href="#4-9-vs">4-9. 저장 완료 모달 vs 토스트</a>
+<a class="toc-h2" href="#5">5. 주의사항 / 자주 하는 실수</a>
+<a class="toc-h3" href="#_5">운영자</a>
+<a class="toc-h3" href="#_6">개발자</a>
+<a class="toc-h2" href="#_7">관련 문서</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

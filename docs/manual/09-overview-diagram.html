@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>한눈에 보기 — 구독/결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+<style>
+  .dgram { background:var(--white); border:1px solid var(--border); border-radius:var(--radius-lg);
+    padding:18px; margin:18px 0 6px; box-shadow:var(--shadow-sm); overflow-x:auto; }
+  .dgram svg { width:100%; height:auto; min-width:560px; display:block; }
+  .dg-cap { font-size:13px; color:var(--gray-600); text-align:center; margin:0 0 26px; }
+  .legend { display:flex; flex-wrap:wrap; gap:14px 22px; margin:14px 0 6px; font-size:13.5px; }
+  .legend span { display:inline-flex; align-items:center; gap:7px; }
+  .legend i { width:14px; height:14px; border-radius:4px; display:inline-block; }
+  svg text { font-family:'Pretendard',sans-serif; }
+  /* 클릭 가능한 다이어그램 요소 */
+  .dgram a { cursor:pointer; }
+  .dgram a:hover { opacity:.82; }
+  .dgram a:hover rect { stroke:#476CFF; stroke-width:3; }
+  a.node-link { text-decoration:none; }
+  .flow > a.node-link { flex:1; min-width:140px; display:block; }
+  .node-link .node { height:100%; margin:0; }
+  a.node-link:hover .node { border-color:var(--primary); box-shadow:var(--shadow-pop); transform:translateY(-2px); }
+  .node-link .n-go { display:block; font-size:11px; font-weight:600; color:var(--primary); margin-top:6px; }
+  /* 상세 설명 블록 */
+  .detail { margin:8px 0 10px; }
+  .detail h4 { font-size:15px; font-weight:600; color:var(--black); margin:18px 0 6px; }
+  .detail p { margin:8px 0; }
+  .detail ul { margin:8px 0; padding-left:22px; }
+  .detail li { margin:5px 0; }
+  .linknote { font-size:13.5px; color:#2c3e8c; background:var(--primary-100); border:1px solid var(--primary-300);
+    border-radius:10px; padding:9px 13px; margin:10px 0 26px; line-height:1.7; }
+  .linknote::before { content:"🔗 관련 페이지 "; font-weight:700; }
+  .linknote a { font-weight:600; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <a class="brand" href="index.html">
+      <span class="logo">결제</span>
+      <span class="t">구독/결제 서버<small>서비스 담당자 매뉴얼</small></span>
+    </a>
+    <div class="nav-cat">시작</div>
+    <nav class="nav">
+      <a href="index.html"><span class="num">★</span> 매뉴얼 홈</a>
+      <a href="09-overview-diagram.html" class="active"><span class="num">◆</span> 한눈에 보기(그림)</a>
+      <a href="01-getting-started.html"><span class="num">0</span> 시작하기</a>
+    </nav>
+    <div class="nav-cat">관리자 콘솔</div>
+    <nav class="nav">
+      <a href="02-plans.html"><span class="num">1</span> 요금제 관리</a>
+      <a href="03-subscriptions.html"><span class="num">2</span> 구독 관리</a>
+      <a href="04-payments.html"><span class="num">3</span> 결제·환불</a>
+      <a href="05-settlement.html"><span class="num">4</span> 정산</a>
+      <a href="08-admin-console.html"><span class="num">5</span> 화면별 가이드(캡처)</a>
+    </nav>
+    <div class="nav-cat">개발 연동</div>
+    <nav class="nav">
+      <a href="00-setup.html"><span class="num">6</span> 설치·설정·배포</a>
+      <a href="06-api-integration.html"><span class="num">7</span> API 연동</a>
+      <a href="10-qa-testcases.html"><span class="num">8</span> QA 테스트케이스</a>
+      <a href="11-dev-sandbox.html"><span class="num">9</span> 사전 개발(덤프)</a>
+      <a href="dev_manual/index.html" target="_blank" rel="noopener"><span class="num">10</span> 개발자 매뉴얼 ↗</a>
+    </nav>
+    <div class="nav-cat">참고</div>
+    <nav class="nav">
+      <a href="07-faq.html"><span class="num">11</span> FAQ</a>
+      <a href="13-status-reference.html"><span class="num">12</span> 상태·코드 레퍼런스</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+  <div class="content">
+
+    <div class="page-head">
+      <div class="page-eyebrow">OVERVIEW · 한눈에 보기</div>
+      <h1>전체 프로세스 한눈에 보기</h1>
+      <p class="lead">구독/결제 서버가 어떻게 동작하는지를 그림으로 정리했습니다. 이 페이지만 보고도 전체 그림이 잡히도록 구성했습니다.</p>
+    </div>
+
+    <div class="callout tip">
+      <span class="ico">🖱️</span>
+      <div><p><strong>그림 속 박스·카드를 누르면</strong> 관련 매뉴얼 장으로 이동합니다(마우스를 올리면 파란 테두리로 표시). 각 그림 아래에는 상세 설명과 <strong>🔗 관련 페이지</strong> 링크도 함께 있습니다.</p></div>
+    </div>
+
+    <!-- ============ A. 시스템 구성도 ============ -->
+    <h2><span class="h-no">A.</span>시스템 구성도 — 누가 누구와 통신하나</h2>
+    <p>핵심은 셋입니다. <strong>우리 서비스</strong>가 <strong>구독/결제 서버</strong>에 API로 요청하고, 결제 서버가 <strong>토스페이먼츠</strong>와 결제를 처리합니다.
+    카드 번호는 <strong>토스에만</strong> 입력됩니다.</p>
+    <div class="dgram">
+      <svg viewBox="0 0 900 470" role="img" aria-label="시스템 구성도">
+        <defs>
+          <marker id="aP" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#476CFF"/></marker>
+          <marker id="aG" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#9F9F9F"/></marker>
+          <marker id="aPs" markerWidth="9" markerHeight="9" refX="1" refY="3" orient="auto"><path d="M7,0 L0,3 L7,6 Z" fill="#476CFF"/></marker>
+        </defs>
+
+        <!-- card-info dashed arc: 사용자 → 토스 -->
+        <path d="M110,92 C110,18 815,18 815,92" fill="none" stroke="#9F9F9F" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#aG)"/>
+        <text x="462" y="14" text-anchor="middle" font-size="13" fill="#6E6E6E">카드 정보 입력 — 카드번호는 토스만 취급(우리 서버 미경유)</text>
+
+        <!-- 사용자 -->
+        <rect x="30" y="92" width="150" height="84" rx="12" fill="#F3F3F3" stroke="#D6D6D6"/>
+        <text x="105" y="128" text-anchor="middle" font-size="15" font-weight="600" fill="#3E3E3E">사용자</text>
+        <text x="105" y="148" text-anchor="middle" font-size="12.5" fill="#6E6E6E">(브라우저·앱)</text>
+
+        <!-- 우리 서비스 (클릭 → 6. API 연동) -->
+        <a href="06-api-integration.html">
+          <rect x="258" y="92" width="160" height="84" rx="12" fill="#F0F4FF" stroke="#DDE6FF"/>
+          <text x="338" y="128" text-anchor="middle" font-size="15" font-weight="600" fill="#2c3e8c">우리 서비스</text>
+          <text x="338" y="148" text-anchor="middle" font-size="7.5" fill="#476CFF">앱/웹 서버 (백엔드)</text>
+          <text x="404" y="110" text-anchor="middle" font-size="13" fill="#476CFF">↗</text>
+        </a>
+
+        <!-- 구독/결제 서버 -->
+        <rect x="498" y="80" width="190" height="150" rx="14" fill="#476CFF"/>
+        <text x="593" y="116" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">구독/결제 서버</text>
+        <rect x="516" y="132" width="154" height="30" rx="7" fill="#6f8cff"/>
+        <text x="593" y="151" text-anchor="middle" font-size="12" fill="#ffffff">API · 요금제 · 구독 · 결제</text>
+        <rect x="516" y="168" width="154" height="26" rx="7" fill="#6f8cff"/>
+        <text x="593" y="185" text-anchor="middle" font-size="11.5" fill="#ffffff">PostgreSQL · Redis</text>
+        <rect x="516" y="199" width="154" height="24" rx="7" fill="#6f8cff"/>
+        <text x="593" y="215" text-anchor="middle" font-size="11.5" fill="#ffffff">스케줄러 — 자동 갱신</text>
+
+        <!-- 토스 -->
+        <rect x="758" y="92" width="120" height="84" rx="12" fill="#F3F3F3" stroke="#D6D6D6"/>
+        <text x="818" y="128" text-anchor="middle" font-size="15" font-weight="600" fill="#3E3E3E">토스</text>
+        <text x="818" y="148" text-anchor="middle" font-size="12.5" fill="#6E6E6E">페이먼츠(PG)</text>
+
+        <!-- arrows top pipeline -->
+        <line x1="180" y1="124" x2="252" y2="124" stroke="#476CFF" stroke-width="2.5" marker-end="url(#aP)"/>
+        <text x="216" y="116" text-anchor="middle" font-size="12" fill="#476CFF">① 화면 이용</text>
+        <line x1="418" y1="124" x2="492" y2="124" stroke="#476CFF" stroke-width="2.5" marker-end="url(#aP)"/>
+        <text x="455" y="116" text-anchor="middle" font-size="12" fill="#476CFF">② API 호출</text>
+        <text x="455" y="146" text-anchor="middle" font-size="11" fill="#9F9F9F">(HMAC 인증)</text>
+        <!-- 결제서버 ↔ 토스 (double) -->
+        <line x1="688" y1="124" x2="752" y2="124" stroke="#476CFF" stroke-width="2.5" marker-end="url(#aP)" marker-start="url(#aPs)"/>
+        <text x="720" y="116" text-anchor="middle" font-size="11.5" fill="#476CFF">③ 승인·빌링키</text>
+        <text x="720" y="160" text-anchor="middle" font-size="11" fill="#9F9F9F">웹훅</text>
+
+        <!-- 담당자 / 콘솔 -->
+        <rect x="30" y="350" width="150" height="84" rx="12" fill="#F3F3F3" stroke="#D6D6D6"/>
+        <text x="105" y="386" text-anchor="middle" font-size="15" font-weight="600" fill="#3E3E3E">서비스 담당자</text>
+        <text x="105" y="406" text-anchor="middle" font-size="12.5" fill="#6E6E6E">(운영자)</text>
+
+        <a href="08-admin-console.html">
+          <rect x="258" y="350" width="160" height="84" rx="12" fill="#F8F0FF" stroke="#e9d2ff"/>
+          <text x="338" y="386" text-anchor="middle" font-size="15" font-weight="600" fill="#7a2bbd">관리자 콘솔</text>
+          <text x="338" y="406" text-anchor="middle" font-size="5.5" fill="#AC47FF">웹 화면 (htmx)</text>
+          <text x="404" y="368" text-anchor="middle" font-size="13" fill="#AC47FF">↗</text>
+        </a>
+
+        <line x1="180" y1="392" x2="252" y2="392" stroke="#AC47FF" stroke-width="2.5" marker-end="url(#aP)"/>
+        <text x="216" y="384" text-anchor="middle" font-size="12" fill="#AC47FF">로그인</text>
+        <!-- 콘솔 → 결제서버 -->
+        <path d="M418,378 C470,370 520,300 560,232" fill="none" stroke="#AC47FF" stroke-width="2.5" marker-end="url(#aP)"/>
+        <text x="520" y="350" text-anchor="middle" font-size="12" fill="#AC47FF">요금제·구독·정산 관리</text>
+      </svg>
+    </div>
+    <p class="dg-cap">그림의 <b>우리 서비스</b>·<b>관리자 콘솔</b> 박스(↗)를 누르면 해당 장으로 이동합니다.</p>
+    <div class="detail">
+      <h4>각 구성요소가 하는 일</h4>
+      <ul>
+        <li><strong>사용자</strong> — 우리 서비스의 화면(앱·웹)을 이용하는 실제 고객입니다. 카드 등록 시에만 <strong>토스 결제창</strong>과 직접 통신하며, 카드번호는 우리 서버나 결제 서버를 거치지 않습니다.</li>
+        <li><strong>우리 서비스(백엔드)</strong> — 결제 서버에 <strong>HMAC 인증 API</strong>로 구독 생성·조회·결제를 요청합니다. 연동 방법은 <a href="06-api-integration.html">7. API 연동</a>에서 실제 코드로 다룹니다.</li>
+        <li><strong>구독/결제 서버</strong> — 요금제·구독·결제를 관리하고, 내부 <strong>스케줄러</strong>가 만료일마다 자동 결제를 청구합니다. 데이터는 PostgreSQL·Redis에 보관됩니다.</li>
+        <li><strong>토스페이먼츠(PG)</strong> — 실제 카드 승인·빌링키 발급을 담당합니다. 결제 서버와 서버 간 통신하며, 결제 이벤트를 웹훅으로 알려줍니다.</li>
+        <li><strong>관리자 콘솔</strong> — 서비스 담당자가 로그인해 요금제·구독·결제·정산을 관리하는 웹 화면입니다. 화면별 사용법은 <a href="08-admin-console.html">5. 화면별 가이드</a>에 있습니다.</li>
+      </ul>
+    </div>
+    <p class="linknote"><a href="06-api-integration.html">7. API 연동</a> · <a href="08-admin-console.html">5. 관리자 콘솔 화면별 가이드</a> · <a href="01-getting-started.html">0. 시작하기(권한·개념)</a></p>
+
+    <!-- ============ B. 연동 준비 5단계 ============ -->
+    <h2><span class="h-no">B.</span>연동 준비 — 첫 구독을 받기까지</h2>
+    <p>새 서비스를 결제 서버에 연결해 첫 구독을 받기까지의 순서입니다.</p>
+    <div class="flow">
+      <a class="node-link" href="08-admin-console.html"><div class="node"><div class="n-no">STEP 1</div><div class="n-t">담당자 계정 생성</div><div class="n-d">콘솔 로그인 계정 발급(비밀번호 설정 메일)</div><span class="n-go">→ 5.7 계정 관리</span></div></a>
+      <a class="node-link" href="08-admin-console.html"><div class="node"><div class="n-no">STEP 2</div><div class="n-t">서비스 등록</div><div class="n-d">서비스명·허용 IP·담당자·취소 정책</div><span class="n-go">→ 5.2 서비스 등록</span></div></a>
+      <a class="node-link" href="08-admin-console.html"><div class="node"><div class="n-no">STEP 3</div><div class="n-t">키 발급·전달</div><div class="n-d">API 키·HMAC 시크릿(1회 표시)</div><span class="n-go">→ 5.2.2 키 발급</span></div></a>
+      <a class="node-link" href="02-plans.html"><div class="node"><div class="n-no">STEP 4</div><div class="n-t">요금제 생성</div><div class="n-d">가격·주기·할인·체험 설정</div><span class="n-go">→ 1. 요금제 관리</span></div></a>
+      <a class="node-link" href="06-api-integration.html"><div class="node"><div class="n-no">STEP 5</div><div class="n-t">API 연동</div><div class="n-d">자사 서버에서 구독·결제 호출</div><span class="n-go">→ 7. API 연동</span></div></a>
+    </div>
+    <p class="dg-cap">각 단계 카드를 누르면 해당 설명으로 이동합니다.</p>
+    <div class="detail">
+      <h4>왜 이 순서인가</h4>
+      <p><strong>담당자 계정(1)을 서비스 등록(2)보다 먼저</strong> 만들어야 합니다. 서비스 등록 화면에서 담당자를 <em>선택</em>하는 방식이라, 계정이 없으면 담당자를 지정할 수 없기 때문입니다.
+      <strong>키(3)는 발급 순간 한 번만 전체가 표시</strong>되므로 즉시 안전하게 보관·전달해야 합니다. <strong>요금제(4)가 최소 1개 활성</strong> 상태여야 구독을 받을 수 있고, 그다음 <strong>API 연동(5)</strong>으로 실제 구독·결제를 호출합니다.</p>
+    </div>
+    <p class="linknote"><a href="08-admin-console.html">5. 관리자 콘솔(등록·키·계정)</a> · <a href="02-plans.html">1. 요금제 관리</a> · <a href="06-api-integration.html">7. API 연동</a></p>
+
+    <!-- ============ C. 구독 시작 흐름 ============ -->
+    <h2><span class="h-no">C.</span>구독 시작 흐름 — 카드 등록부터 첫 결제까지</h2>
+    <p>사용자가 카드를 등록하면 토스가 <code>authKey</code>를 주고, 우리 백엔드가 그것으로 구독을 만듭니다(빌링키 발급 + 첫 결제).</p>
+    <div class="dgram">
+      <svg viewBox="0 0 900 430" role="img" aria-label="구독 시작 시퀀스">
+        <defs>
+          <marker id="bP" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#476CFF"/></marker>
+          <marker id="bG" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#1FA971"/></marker>
+        </defs>
+        <!-- lanes -->
+        <text x="95" y="30" text-anchor="middle" font-size="13.5" font-weight="700" fill="#3E3E3E">사용자</text>
+        <text x="335" y="30" text-anchor="middle" font-size="13.5" font-weight="700" fill="#2c3e8c">우리 서비스</text>
+        <text x="575" y="30" text-anchor="middle" font-size="13.5" font-weight="700" fill="#476CFF">결제 서버</text>
+        <text x="815" y="30" text-anchor="middle" font-size="13.5" font-weight="700" fill="#3E3E3E">토스</text>
+        <line x1="95" y1="42" x2="95" y2="410" stroke="#E3E3E3" stroke-width="2"/>
+        <line x1="335" y1="42" x2="335" y2="410" stroke="#E3E3E3" stroke-width="2"/>
+        <line x1="575" y1="42" x2="575" y2="410" stroke="#E3E3E3" stroke-width="2"/>
+        <line x1="815" y1="42" x2="815" y2="410" stroke="#E3E3E3" stroke-width="2"/>
+
+        <!-- step 1: 우리서비스 → 결제서버 GET /plans -->
+        <line x1="335" y1="70" x2="569" y2="70" stroke="#476CFF" stroke-width="2.5" marker-end="url(#bP)"/>
+        <text x="452" y="62" text-anchor="middle" font-size="12" fill="#476CFF">GET /plans (요금제·금액 조회)</text>
+        <!-- step 2: 사용자 → 토스 카드등록창 -->
+        <line x1="95" y1="120" x2="809" y2="120" stroke="#9F9F9F" stroke-width="2.5" marker-end="url(#aG)"/>
+        <text x="455" y="112" text-anchor="middle" font-size="12" fill="#6E6E6E">토스 SDK requestBillingAuth() — 카드 등록창에서 카드 입력</text>
+        <!-- step 3: 토스 → 사용자(successUrl) authKey -->
+        <line x1="815" y1="165" x2="101" y2="165" stroke="#9F9F9F" stroke-width="2.5" marker-end="url(#aG)"/>
+        <text x="455" y="157" text-anchor="middle" font-size="12" fill="#6E6E6E">successUrl 리다이렉트 — authKey · customerKey 전달</text>
+        <!-- step 4: 사용자 → 우리서비스 -->
+        <line x1="95" y1="210" x2="329" y2="210" stroke="#476CFF" stroke-width="2.5" marker-end="url(#bP)"/>
+        <text x="215" y="202" text-anchor="middle" font-size="12" fill="#476CFF">authKey 전달</text>
+        <!-- step 5: 우리서비스 → 결제서버 POST /subscriptions -->
+        <line x1="335" y1="255" x2="569" y2="255" stroke="#476CFF" stroke-width="2.5" marker-end="url(#bP)"/>
+        <text x="452" y="247" text-anchor="middle" font-size="12" fill="#476CFF">POST /subscriptions (authKey)</text>
+        <!-- step 6: 결제서버 → 토스 빌링키+첫결제 -->
+        <line x1="575" y1="300" x2="809" y2="300" stroke="#476CFF" stroke-width="2.5" marker-end="url(#bP)"/>
+        <text x="695" y="292" text-anchor="middle" font-size="12" fill="#476CFF">빌링키 발급 + 첫 결제 승인</text>
+        <!-- step 7: 결제서버 → 우리서비스 구독결과 -->
+        <line x1="575" y1="345" x2="341" y2="345" stroke="#1FA971" stroke-width="2.5" marker-end="url(#bG)"/>
+        <text x="458" y="337" text-anchor="middle" font-size="12" fill="#1FA971">구독 생성됨 · access_allowed=true</text>
+        <!-- step 8: 우리서비스 → 사용자 완료 -->
+        <line x1="335" y1="390" x2="101" y2="390" stroke="#1FA971" stroke-width="2.5" marker-end="url(#bG)"/>
+        <text x="215" y="382" text-anchor="middle" font-size="12" fill="#1FA971">구독 시작 완료</text>
+      </svg>
+    </div>
+    <div class="detail">
+      <h4>단계별로 보면</h4>
+      <ul>
+        <li><strong>요금제 조회</strong> — 우리 서비스가 <code>GET /plans</code>로 구독 가능한 요금제와 실제 청구 금액을 받아 사용자에게 보여줍니다.</li>
+        <li><strong>카드 등록</strong> — 사용자가 토스 SDK <code>requestBillingAuth()</code>로 열린 카드 등록창에 카드를 입력합니다. (카드번호는 토스만 취급)</li>
+        <li><strong>authKey 수신</strong> — 인증이 끝나면 토스가 <code>successUrl</code>로 돌아오며 <code>authKey</code>·<code>customerKey</code>를 전달합니다.</li>
+        <li><strong>구독 생성</strong> — 우리 백엔드가 그 <code>authKey</code>로 <code>POST /subscriptions</code>를 호출하면, 결제 서버가 <strong>빌링키 발급 + 첫 결제</strong>를 처리합니다.</li>
+        <li><strong>접근 판단</strong> — 응답의 <code>access_allowed</code>(true/false) 하나로 사용자 이용 허용 여부를 결정합니다. 상태를 직접 해석할 필요가 없습니다.</li>
+      </ul>
+      <p>이후 만료일마다 결제 서버가 <strong>자동으로 정기 결제</strong>를 청구합니다(아래 E 참고). 핵심 규칙(금액 변조 방지·멱등 <code>order_id</code> 등)과 실제 코드는 API 연동 장에 있습니다.</p>
+    </div>
+    <p class="linknote"><a href="06-api-integration.html">7. API 연동 (실전 코드)</a> · <a href="06-api-integration.html#walkthrough">7.11 실제 화면으로 따라가기</a></p>
+
+    <!-- ============ D. 구독 라이프사이클 ============ -->
+    <h2><span class="h-no">D.</span>구독 상태 라이프사이클</h2>
+    <p>구독은 아래 상태들을 오갑니다. <span class="badge b-green">초록</span>은 이용 가능, <span class="badge b-red">빨강</span>은 차단입니다.</p>
+    <div class="legend">
+      <span><i style="background:#1FA971"></i> 이용 가능(access_allowed = true)</span>
+      <span><i style="background:#FF4E51"></i> 이용 차단(false)</span>
+    </div>
+    <div class="dgram">
+      <svg viewBox="0 0 900 430" role="img" aria-label="구독 상태 라이프사이클">
+        <defs>
+          <marker id="cD" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#6E6E6E"/></marker>
+        </defs>
+        <!-- nodes (클릭 → 3. 구독 관리) -->
+        <a href="03-subscriptions.html">
+          <rect x="30" y="60" width="150" height="58" rx="12" fill="#E7F7F0" stroke="#1FA971"/>
+          <text x="105" y="84" text-anchor="middle" font-size="14" font-weight="700" fill="#146b48">TRIAL</text>
+          <text x="105" y="103" text-anchor="middle" font-size="2.5" fill="#176b4a">체험 중</text>
+        </a>
+        <a href="03-subscriptions.html">
+          <rect x="375" y="60" width="150" height="58" rx="12" fill="#E7F7F0" stroke="#1FA971"/>
+          <text x="450" y="84" text-anchor="middle" font-size="14" font-weight="700" fill="#146b48">ACTIVE</text>
+          <text x="450" y="103" text-anchor="middle" font-size="2.5" fill="#176b4a">정상 이용</text>
+        </a>
+        <a href="03-subscriptions.html">
+          <rect x="720" y="60" width="150" height="58" rx="12" fill="#FFF1ED" stroke="#FF8064"/>
+          <text x="795" y="84" text-anchor="middle" font-size="14" font-weight="700" fill="#9a4321">PAST_DUE</text>
+          <text x="795" y="103" text-anchor="middle" font-size="2.5" fill="#9a4321">미수(재시도)</text>
+        </a>
+        <a href="03-subscriptions.html">
+          <rect x="375" y="185" width="150" height="58" rx="12" fill="#F8F0FF" stroke="#AC47FF"/>
+          <text x="450" y="209" text-anchor="middle" font-size="14" font-weight="700" fill="#7a2bbd">EXTENDED</text>
+          <text x="450" y="228" text-anchor="middle" font-size="2.5" fill="#7a2bbd">연장처리</text>
+        </a>
+        <a href="03-subscriptions.html">
+          <rect x="30" y="185" width="150" height="58" rx="12" fill="#E7F7F0" stroke="#1FA971"/>
+          <text x="105" y="209" text-anchor="middle" font-size="14" font-weight="700" fill="#146b48">CANCELED</text>
+          <text x="105" y="228" text-anchor="middle" font-size="2.5" fill="#176b4a">해지 예약</text>
+        </a>
+        <a href="03-subscriptions.html">
+          <rect x="720" y="185" width="150" height="58" rx="12" fill="#FFEFEF" stroke="#FF4E51"/>
+          <text x="795" y="209" text-anchor="middle" font-size="14" font-weight="700" fill="#a82325">SUSPENDED</text>
+          <text x="795" y="228" text-anchor="middle" font-size="2.5" fill="#a82325">정지(차단)</text>
+        </a>
+        <a href="03-subscriptions.html">
+          <rect x="375" y="330" width="150" height="58" rx="12" fill="#F3F3F3" stroke="#9F9F9F"/>
+          <text x="450" y="354" text-anchor="middle" font-size="14" font-weight="700" fill="#3E3E3E">EXPIRED</text>
+          <text x="450" y="373" text-anchor="middle" font-size="2.5" fill="#6E6E6E">완전 종료</text>
+        </a>
+
+        <!-- transitions -->
+        <!-- TRIAL → ACTIVE -->
+        <line x1="180" y1="89" x2="369" y2="89" stroke="#6E6E6E" stroke-width="2" marker-end="url(#cD)"/>
+        <text x="274" y="80" text-anchor="middle" font-size="11.5" fill="#6E6E6E">체험 종료·첫 결제</text>
+        <!-- ACTIVE → PAST_DUE -->
+        <line x1="525" y1="89" x2="714" y2="89" stroke="#6E6E6E" stroke-width="2" marker-end="url(#cD)"/>
+        <text x="620" y="80" text-anchor="middle" font-size="11.5" fill="#6E6E6E">결제 실패</text>
+        <!-- PAST_DUE → ACTIVE (재결제) curve back -->
+        <path d="M720,108 C600,150 560,140 510,118" fill="none" stroke="#6E6E6E" stroke-width="2" marker-end="url(#cD)"/>
+        <text x="625" y="143" text-anchor="middle" font-size="11.5" fill="#6E6E6E">재결제 성공</text>
+        <!-- PAST_DUE → SUSPENDED -->
+        <line x1="795" y1="118" x2="795" y2="179" stroke="#6E6E6E" stroke-width="2" marker-end="url(#cD)"/>
+        <text x="800" y="155" font-size="11.5" fill="#6E6E6E">재시도 소진</text>
+        <!-- SUSPENDED → ACTIVE (수동결제) -->
+        <path d="M720,205 C600,250 560,150 521,118" fill="none" stroke="#6E6E6E" stroke-width="2" marker-end="url(#cD)"/>
+        <text x="600" y="240" text-anchor="middle" font-size="11.5" fill="#6E6E6E">수동 결제로 복구</text>
+        <!-- SUSPENDED → EXPIRED -->
+        <path d="M770,243 C700,300 560,330 527,352" fill="none" stroke="#6E6E6E" stroke-width="2" marker-end="url(#cD)"/>
+        <text x="660" y="320" text-anchor="middle" font-size="11.5" fill="#6E6E6E">유예 만료</text>
+        <!-- ACTIVE → CANCELED -->
+        <path d="M375,100 C250,120 200,150 160,180" fill="none" stroke="#6E6E6E" stroke-width="2" marker-end="url(#cD)"/>
+        <text x="225" y="150" text-anchor="middle" font-size="11.5" fill="#6E6E6E">해지 예약</text>
+        <!-- CANCELED → EXPIRED -->
+        <path d="M150,243 C200,310 330,335 369,352" fill="none" stroke="#6E6E6E" stroke-width="2" marker-end="url(#cD)"/>
+        <text x="232" y="320" text-anchor="middle" font-size="11.5" fill="#6E6E6E">만료일 도달</text>
+        <!-- ACTIVE ↔ EXTENDED -->
+        <line x1="450" y1="118" x2="450" y2="179" stroke="#6E6E6E" stroke-width="2" marker-end="url(#cD)"/>
+        <text x="458" y="152" font-size="11.5" fill="#6E6E6E">만료일 연장</text>
+      </svg>
+    </div>
+    <p class="dg-cap">각 상태 박스를 누르면 <a href="03-subscriptions.html">2. 구독 관리</a>로 이동합니다.</p>
+    <div class="detail">
+      <h4>상태별 의미</h4>
+      <ul>
+        <li><span class="badge b-blue">TRIAL</span> 체험 중 — 결제 없이 이용, 체험이 끝나면 첫 결제가 발생합니다. <span class="badge b-green">이용 가능</span></li>
+        <li><span class="badge b-green">ACTIVE</span> 정상 이용 — 결제가 완료된 상태. 만료일마다 자동 갱신됩니다. <span class="badge b-green">이용 가능</span></li>
+        <li><span class="badge b-orange">PAST_DUE</span> 미수 — 결제가 실패했지만 <strong>바로 막지 않고</strong> 자동 재시도하는 유예 기간입니다. <span class="badge b-green">이용 가능</span></li>
+        <li><span class="badge b-purple">EXTENDED</span> 연장처리 — 관리자가 만료일을 수동 연장한 상태(보상·이벤트 등). <span class="badge b-green">이용 가능</span></li>
+        <li><span class="badge b-gray">CANCELED</span> 해지 예약 — 해지했지만 <strong>만료일까지는 유지</strong>되고, 만료 시 종료됩니다. <span class="badge b-green">이용 가능</span></li>
+        <li><span class="badge b-red">SUSPENDED</span> 정지 — 반복 결제 실패로 차단된 상태. <strong>즉시 재결제(수동 결제)</strong>로 복구할 수 있습니다. <span class="badge b-red">차단</span></li>
+        <li><span class="badge b-gray">EXPIRED</span> 완전 종료 — 최종 상태로 더 이상 갱신되지 않습니다. <span class="badge b-red">차단</span></li>
+      </ul>
+      <p>핵심은 <strong>결제 한 번 실패 = 즉시 차단이 아니라는 점</strong>입니다. 여러 번 재시도하고 유예 기간을 준 뒤에야 정지됩니다(아래 E 참고).</p>
+    </div>
+    <p class="linknote"><a href="03-subscriptions.html">2. 구독 관리(운영 개입)</a> · <a href="07-faq.html">11. 상태값 레퍼런스</a></p>
+
+    <!-- ============ E. 자동 갱신/재시도 ============ -->
+    <h2><span class="h-no">E.</span>자동 갱신과 결제 재시도</h2>
+    <p>만료일이 되면 서버 스케줄러가 자동으로 정기 결제를 청구합니다. 실패하면 정해진 횟수만큼 재시도합니다.</p>
+    <div class="dgram">
+      <svg viewBox="0 0 900 250" role="img" aria-label="자동 갱신 흐름">
+        <defs>
+          <marker id="eP" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#476CFF"/></marker>
+          <marker id="eG" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#1FA971"/></marker>
+          <marker id="eR" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#FF4E51"/></marker>
+        </defs>
+        <rect x="20" y="95" width="150" height="60" rx="12" fill="#F0F4FF" stroke="#DDE6FF"/>
+        <text x="95" y="121" text-anchor="middle" font-size="13" font-weight="600" fill="#2c3e8c">만료일 도달</text>
+        <text x="95" y="139" text-anchor="middle" font-size="11" fill="#476CFF">스케줄러 감지</text>
+
+        <rect x="240" y="95" width="150" height="60" rx="12" fill="#F0F4FF" stroke="#DDE6FF"/>
+        <text x="315" y="121" text-anchor="middle" font-size="13" font-weight="600" fill="#2c3e8c">자동 결제 시도</text>
+        <text x="315" y="139" text-anchor="middle" font-size="11" fill="#476CFF">빌링키로 청구</text>
+
+        <!-- 성공 -->
+        <rect x="470" y="20" width="170" height="58" rx="12" fill="#E7F7F0" stroke="#1FA971"/>
+        <text x="555" y="44" text-anchor="middle" font-size="13" font-weight="700" fill="#146b48">성공 → ACTIVE</text>
+        <text x="555" y="63" text-anchor="middle" font-size="11" fill="#176b4a">다음 주기로 갱신</text>
+
+        <!-- 실패 재시도 -->
+        <rect x="470" y="110" width="170" height="58" rx="12" fill="#FFF1ED" stroke="#FF8064"/>
+        <text x="555" y="134" text-anchor="middle" font-size="13" font-weight="700" fill="#9a4321">실패 → PAST_DUE</text>
+        <text x="555" y="153" text-anchor="middle" font-size="11" fill="#9a4321">일정 간격 재시도</text>
+
+        <!-- 재시도 소진 -->
+        <a href="03-subscriptions.html">
+          <rect x="710" y="110" width="170" height="58" rx="12" fill="#FFEFEF" stroke="#FF4E51"/>
+          <text x="795" y="134" text-anchor="middle" font-size="13" font-weight="700" fill="#a82325">SUSPENDED</text>
+          <text x="795" y="153" text-anchor="middle" font-size="11" fill="#a82325">재시도 소진 시 차단</text>
+        </a>
+
+        <line x1="170" y1="125" x2="234" y2="125" stroke="#476CFF" stroke-width="2.5" marker-end="url(#eP)"/>
+        <!-- 시도 → 성공 -->
+        <path d="M390,112 C430,95 440,70 464,55" fill="none" stroke="#1FA971" stroke-width="2.5" marker-end="url(#eG)"/>
+        <text x="430" y="80" text-anchor="middle" font-size="11.5" fill="#1FA971">승인</text>
+        <!-- 시도 → 실패 -->
+        <path d="M390,138 C430,150 440,140 464,139" fill="none" stroke="#FF4E51" stroke-width="2.5" marker-end="url(#eR)"/>
+        <text x="430" y="172" text-anchor="middle" font-size="11.5" fill="#FF4E51">거절</text>
+        <!-- 실패 재시도 루프 -->
+        <path d="M520,168 C500,210 360,210 315,160" fill="none" stroke="#FF8064" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#eP)"/>
+        <text x="400" y="208" text-anchor="middle" font-size="11.5" fill="#9a4321">재시도(기본 12시간 간격)</text>
+        <!-- 실패 → suspended -->
+        <line x1="640" y1="139" x2="704" y2="139" stroke="#FF4E51" stroke-width="2.5" marker-end="url(#eR)"/>
+      </svg>
+    </div>
+    <p class="dg-cap"><strong>SUSPENDED</strong> 박스를 누르면 <a href="03-subscriptions.html">2. 구독 관리</a>로 이동합니다.</p>
+    <div class="detail">
+      <h4>자동 갱신·재시도가 동작하는 방식</h4>
+      <ul>
+        <li><strong>만료일 도달</strong> — 서버 스케줄러가 주기적으로 감지해 자동 결제를 시도합니다(담당자·사용자 개입 불필요).</li>
+        <li><strong>성공</strong> — 다음 주기로 갱신되고 상태는 <span class="badge b-green">ACTIVE</span>로 유지됩니다.</li>
+        <li><strong>실패</strong> — <span class="badge b-orange">PAST_DUE</span>(미수)로 두고 정해진 간격으로 재시도합니다(이용은 계속 허용).</li>
+        <li><strong>재시도 소진</strong> — 끝내 실패하면 <span class="badge b-red">SUSPENDED</span>(정지)로 차단됩니다. 이후 유예 기간이 지나면 <span class="badge b-gray">EXPIRED</span>로 종료됩니다.</li>
+      </ul>
+      <p><strong>재시도 횟수·간격</strong>과 <strong>정지 후 만료 유예일</strong>은 콘솔의 <a href="08-admin-console.html">전체 설정</a>에서 조정합니다.
+      고객이 카드를 정리했다면 다음 자동 시도를 기다리지 않고 <a href="03-subscriptions.html">구독 상세의 <strong>즉시 재결제</strong></a>로 바로 복구할 수 있습니다.</p>
+    </div>
+    <p class="linknote"><a href="08-admin-console.html">5.7 전체 설정(재시도 정책)</a> · <a href="03-subscriptions.html">2. 구독 관리(즉시 재결제)</a> · <a href="04-payments.html">3. 결제·환불</a></p>
+
+    <div class="callout tip">
+      <span class="ico">🧭</span>
+      <div><p>더 깊이 보려면: 콘솔 운영은 <a href="08-admin-console.html">5. 화면별 가이드</a>, 개발 연동은 <a href="06-api-integration.html">7. API 연동</a>,
+      용어·상태값은 <a href="07-faq.html">11. FAQ</a>을 참고하세요.</p></div>
+    </div>
+
+    <div class="pager">
+      <a href="index.html"><small>이전</small><span>← 매뉴얼 홈</span></a>
+      <a class="next" href="01-getting-started.html"><small>다음</small><span>0. 시작하기 →</span></a>
+    </div>
+
+  </div>
+  </main>
+</div>
+<script src="assets/glossary.js"></script>
+</body>
+</html>

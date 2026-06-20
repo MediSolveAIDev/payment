@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}요금제 {{ '수정' if plan else '생성' }}{% endblock %}
+{% block crumb %}요금제 {{ '수정' if plan else '생성' }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="btn-text" href="{{ next_url | default('/admin/plans') }}"><span data-lucide="arrow-left"></span>뒤로</a>
+  <h1 style="margin:0">요금제 {{ '수정' if plan else '생성' }}{% if service %} · {{ service.name }}{% endif %}</h1>
+</div>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<div class="card" style="max-width:560px">
+<form method="post" action="{{ action | default('/admin/plans') }}">
+  <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+  <input type="hidden" name="next" value="{{ next_url | default('/admin/plans') }}">
+  <label for="name">이름</label>
+  <input id="name" name="name" value="{{ plan.name if plan else '' }}" required>
+  <label for="price">가격 (원)</label>
+  <input id="price" name="price" type="number" min="1" value="{{ plan.price if plan else '' }}" required>
+  {# 결제 주기: 생성 시에만 선택 가능. 수정 시에는 변경 불가(읽기 전용 표시) — 요청. #}
+  <label for="billing_cycle">결제 주기 (반복회차)</label>
+  {% if plan %}
+  {# 수정 모드 — 결제 주기는 변경 불가. 현재 값을 비활성 입력으로만 표시(폼 전송 안 함). #}
+  {% set _cycle_ko = {'MONTH': '월', 'YEAR': '년', 'WEEK': '주', 'DAY': '일'} %}
+  <input type="text" disabled
+         value="{{ _cycle_ko.get(plan.billing_cycle, plan.billing_cycle) }}{% if plan.cycle_days %} ({{ plan.cycle_days }}일) {% endif %}">
+  <p class="muted" style="font-size:12px;margin-top:6px">결제 주기는 수정할 수 없습니다. 주기를 바꾸려면 새 요금제를 만들어 주세요.</p>
+  {% else %}
+  <select id="billing_cycle" name="billing_cycle"
+          onchange="document.getElementById('cd').style.display=this.value==='DAY'?'block':'none'">
+    <option value="MONTH">월</option>
+    <option value="YEAR">년</option>
+    <option value="WEEK">주</option>
+    <option value="DAY">일(일수 지정)</option>
+  </select>
+  <div id="cd" style="display:none">
+    <label for="cycle_days">반복 일수 (DAY 주기)</label>
+    <input id="cycle_days" name="cycle_days" type="number" min="1" placeholder="예: 30">
+  </div>
+  {% endif %}
+  {# 첫구독 할인: 유형 select + 할인 값 input을 한 줄(.field-row)에 배치 #}
+  <div class="field-row" style="margin-top:16px">
+    <div class="field">
+      <label for="first_payment_type">첫구독 할인</label>
+      <select id="first_payment_type" name="first_payment_type"
+              onchange="var v=this.value;document.getElementById('fpv-wrap').style.display=(v==='DISCOUNT_AMOUNT'||v==='DISCOUNT_PERCENT')?'block':'none';document.getElementById('fpv-unit').textContent=v==='DISCOUNT_PERCENT'?'%':'원'">
+        <option value="NONE" {{ 'selected' if plan and plan.first_payment_type=='NONE' }}>없음 (정가)</option>
+        <option value="FREE" {{ 'selected' if plan and plan.first_payment_type=='FREE' }}>무료 (첫 회차 0원)</option>
+        <option value="DISCOUNT_AMOUNT" {{ 'selected' if plan and plan.first_payment_type=='DISCOUNT_AMOUNT' }}>할인 금액(원)</option>
+        <option value="DISCOUNT_PERCENT" {{ 'selected' if plan and plan.first_payment_type=='DISCOUNT_PERCENT' }}>할인율(%)</option>
+      </select>
+    </div>
+    {# 값 입력은 할인 유형 선택 시에만 표시(JS가 display 토글) — 같은 행의 옆 칸 #}
+    <div class="field" id="fpv-wrap" style="display:{{ 'block' if plan and plan.first_payment_type in ['DISCOUNT_AMOUNT','DISCOUNT_PERCENT'] else 'none' }}">
+      <label for="first_payment_value">할인 값 <span id="fpv-unit" class="muted">{{ '%' if plan and plan.first_payment_type=='DISCOUNT_PERCENT' else '원' }}</span></label>
+      <input id="first_payment_value" name="first_payment_value" type="number" min="1"
+             value="{{ plan.first_payment_value if plan and plan.first_payment_value is not none else '' }}">
+    </div>
+  </div>
+
+  {# 상시 할인: 유형 select + 상시 할인 값 input을 한 줄(.field-row)에 배치 #}
+  <div class="field-row" style="margin-top:18px">
+    <div class="field">
+      <label for="recurring_discount_type">상시 할인 <span class="muted" style="font-weight:400">(모든 결제에 적용)</span></label>
+      <select id="recurring_discount_type" name="recurring_discount_type"
+              onchange="var v=this.value;document.getElementById('rdv-wrap').style.display=v==='NONE'?'none':'block';document.getElementById('rdv-unit').textContent=v==='DISCOUNT_PERCENT'?'%':'원'">
+        <option value="NONE" {{ 'selected' if not plan or plan.recurring_discount_type=='NONE' }}>없음 (정가)</option>
+        <option value="DISCOUNT_AMOUNT" {{ 'selected' if plan and plan.recurring_discount_type=='DISCOUNT_AMOUNT' }}>할인 금액(원)</option>
+        <option value="DISCOUNT_PERCENT" {{ 'selected' if plan and plan.recurring_discount_type=='DISCOUNT_PERCENT' }}>할인율(%)</option>
+      </select>
+    </div>
+    <div class="field" id="rdv-wrap" style="display:{{ 'block' if plan and plan.recurring_discount_type in ['DISCOUNT_AMOUNT','DISCOUNT_PERCENT'] else 'none' }}">
+      <label for="recurring_discount_value">상시 할인 값 <span id="rdv-unit" class="muted">{{ '%' if plan and plan.recurring_discount_type=='DISCOUNT_PERCENT' else '원' }}</span></label>
+      <input id="recurring_discount_value" name="recurring_discount_value" type="number" min="1"
+             value="{{ plan.recurring_discount_value if plan and plan.recurring_discount_value is not none else '' }}">
+    </div>
+  </div>
+  <p class="muted" style="font-size:12px;margin-top:4px">첫 결제는 정가 기준으로 첫구독 할인만 적용됩니다(상시 할인 미적용).</p>
+  {# 체험 제공이 먼저, 자동결제 안함이 아래(요청). 두 옵션은 독립 — 체험 후 1회 결제하고
+     자동결제 안함이면 그 주기 종료 시 만료(체험+자동결제안함 공존 허용). #}
+  <label style="display:flex;align-items:center;gap:8px;margin-top:18px;font-weight:400">
+    <input type="checkbox" id="trial_enabled_chk" name="trial_enabled" value="on"
+           style="width:auto;height:auto"
+           {{ 'checked' if plan and plan.trial_enabled }}
+           onchange="document.getElementById('td-wrap').style.display=this.checked?'block':'none'">
+    체험(Trial) 제공 — 결제정보 등록 시 신청 가능, 체험 만료 시 자동 결제
+  </label>
+  <div id="td-wrap" style="display:{{ 'block' if plan and plan.trial_enabled else 'none' }}">
+    <label for="trial_days">체험 일수</label>
+    <input id="trial_days" name="trial_days" type="number" min="1" placeholder="예: 14"
+           value="{{ plan.trial_days if plan and plan.trial_days is not none else '' }}">
+  </div>
+  {# 자동결제 안함(요청 013, 체험과 공존): 체험이 있으면 체험→첫 결제 후, 없으면 첫 주기 후 자동 갱신 없이 만료 #}
+  <label style="display:flex;align-items:center;gap:8px;margin-top:18px;font-weight:400">
+    <input type="checkbox" id="auto_renew_disabled" name="auto_renew_disabled" value="on"
+           style="width:auto;height:auto"
+           {{ 'checked' if plan and not plan.auto_renew }}>
+    자동결제 안함 — (체험 후) 첫 주기 종료 후 자동 갱신 없이 만료
+  </label>
+  {# 추가정보(요청 013): 키/값을 한 줄(행)씩 입력 — 행 추가/삭제. 서비스단 요금제 설명용. #}
+  <label style="margin-top:18px">추가정보 <span class="muted" style="font-weight:400">(선택; 키와 값을 한 줄씩)</span></label>
+  <div id="extra-rows" class="extra-rows">
+    {# 기존 값은 행으로 펼치고, 없으면 빈 행 하나를 보여 입력 위치를 안내 #}
+    {% set extra_items = (plan.extra_info.items() | list) if plan and plan.extra_info else [] %}
+    {% for k, v in extra_items %}
+    <div class="extra-row">
+      <input name="extra_key" placeholder="키 (예: 용량)" value="{{ k }}">
+      <input name="extra_value" placeholder="값 (예: 10GB)" value="{{ v }}">
+      <button type="button" class="btn btn-sm btn-text" onclick="this.closest('.extra-row').remove()">삭제</button>
+    </div>
+    {% endfor %}
+    {% if not extra_items %}
+    <div class="extra-row">
+      <input name="extra_key" placeholder="키 (예: 용량)">
+      <input name="extra_value" placeholder="값 (예: 10GB)">
+      <button type="button" class="btn btn-sm btn-text" onclick="this.closest('.extra-row').remove()">삭제</button>
+    </div>
+    {% endif %}
+  </div>
+  <button type="button" class="btn btn-sm btn-sub" onclick="addExtraRow()" style="margin-top:8px">+ 항목 추가</button>
+  {# 새 행 템플릿 — JS가 복제해 추가(키 없는 값은 서버에서 거부) #}
+  <template id="extra-row-tpl">
+    <div class="extra-row">
+      <input name="extra_key" placeholder="키 (예: 용량)">
+      <input name="extra_value" placeholder="값 (예: 10GB)">
+      <button type="button" class="btn btn-sm btn-text" onclick="this.closest('.extra-row').remove()">삭제</button>
+    </div>
+  </template>
+  <script>
+  // 추가정보 행 추가: 템플릿을 복제해 #extra-rows에 덧붙인다(요청 013)
+  function addExtraRow(){
+    var tpl = document.getElementById('extra-row-tpl');
+    document.getElementById('extra-rows').appendChild(tpl.content.cloneNode(true));
+  }
+  </script>
+  <div id="amount-preview" style="margin-top:18px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+    <div class="kv"><span class="muted">첫 결제 금액</span><span id="amt-first" style="font-weight:600">—</span></div>
+    <div class="kv"><span class="muted">다음 회차부터</span><span id="amt-next" style="font-weight:600">—</span></div>
+  </div>
+  <div class="actions"><button class="btn btn-primary" type="submit">저장</button></div>
+</form>
+</div>
+<script>
+// 금액 미리보기 — billing_math.py 미러(표시 전용, 실제 결제액은 서버가 계산)
+// 주의: billing_math.py 변경 시 함께 수정 —
+//   compute_recurring_amount → applyDiscount(price, recurring_discount_type, ...)
+//   compute_first_amount     → applyDiscount(price, first_payment_type, ...) + FREE→0
+(function () {
+  "use strict";
+  function num(id) {
+    var el = document.getElementById(id);
+    if (!el) return null;
+    var v = parseInt(el.value, 10);
+    return isNaN(v) ? null : v;
+  }
+  // compute_recurring_amount/compute_first_amount의 할인 공통식
+  function applyDiscount(price, type, val) {
+    if (type === "DISCOUNT_AMOUNT") return Math.max(0, price - (val || 0));
+    if (type === "DISCOUNT_PERCENT") {
+      if (val === null || val < 0 || val > 100) return null; // 서버는 거부 — 표시 보류
+      return price - Math.floor(price * (val || 0) / 100);
+    }
+    return price; // NONE
+  }
+  function fmt(v) { return v === null ? "—" : v.toLocaleString("ko-KR") + "원"; }
+  function recalc() {
+    var first = document.getElementById("amt-first");
+    var next = document.getElementById("amt-next");
+    var price = num("price");
+    if (price === null || price <= 0) { first.textContent = "—"; next.textContent = "—"; return; }
+    var rec = applyDiscount(price, document.getElementById("recurring_discount_type").value,
+                            num("recurring_discount_value"));
+    var ft = document.getElementById("first_payment_type").value;
+    // 요청 005: 첫 결제는 정가(price) 기준 — 상시 할인과 무관
+    var fa = ft === "FREE" ? 0 : applyDiscount(price, ft, num("first_payment_value"));
+    first.textContent = fmt(fa);
+    next.textContent = fmt(rec);
+  }
+  ["price", "first_payment_type", "first_payment_value",
+   "recurring_discount_type", "recurring_discount_value"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", recalc);
+    el.addEventListener("change", recalc);
+  });
+  recalc(); // 수정 폼: 저장된 값으로 초기 표시
+})();
+</script>
+{% endblock %}

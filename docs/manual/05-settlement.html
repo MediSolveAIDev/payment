@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4. 정산 — 구독/결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <a class="brand" href="index.html">
+      <span class="logo">결제</span>
+      <span class="t">구독/결제 서버<small>서비스 담당자 매뉴얼</small></span>
+    </a>
+    <div class="nav-cat">시작</div>
+    <nav class="nav">
+      <a href="index.html"><span class="num">★</span> 매뉴얼 홈</a>
+      <a href="09-overview-diagram.html"><span class="num">◆</span> 한눈에 보기(그림)</a>
+      <a href="01-getting-started.html"><span class="num">0</span> 시작하기</a>
+    </nav>
+    <div class="nav-cat">관리자 콘솔</div>
+    <nav class="nav">
+      <a href="02-plans.html"><span class="num">1</span> 요금제 관리</a>
+      <a href="03-subscriptions.html"><span class="num">2</span> 구독 관리</a>
+      <a href="04-payments.html"><span class="num">3</span> 결제·환불</a>
+      <a href="05-settlement.html" class="active"><span class="num">4</span> 정산</a>
+      <a href="08-admin-console.html"><span class="num">5</span> 화면별 가이드(캡처)</a>
+    </nav>
+    <div class="nav-cat">개발 연동</div>
+    <nav class="nav">
+      <a href="00-setup.html"><span class="num">6</span> 설치·설정·배포</a>
+      <a href="06-api-integration.html"><span class="num">7</span> API 연동</a>
+      <a href="10-qa-testcases.html"><span class="num">8</span> QA 테스트케이스</a>
+      <a href="11-dev-sandbox.html"><span class="num">9</span> 사전 개발(덤프)</a>
+      <a href="dev_manual/index.html" target="_blank" rel="noopener"><span class="num">10</span> 개발자 매뉴얼 ↗</a>
+    </nav>
+    <div class="nav-cat">참고</div>
+    <nav class="nav">
+      <a href="07-faq.html"><span class="num">11</span> FAQ</a>
+      <a href="13-status-reference.html"><span class="num">12</span> 상태·코드 레퍼런스</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+  <div class="content">
+
+    <div class="page-head">
+      <div class="page-eyebrow">CHAPTER 4</div>
+      <h1>정산</h1>
+      <p class="lead">기간별 매출을 집계하고, 실제 정산받아야 할 순매출을 확정합니다. 엑셀로 내려받아 재무·세무에 활용할 수 있습니다.</p>
+    </div>
+
+    <div class="easybox">
+      <p>정산은 <strong>한 달 장사를 마치고 가계부를 정리하는 일</strong>입니다. "이번 달에 얼마를 벌었고, 환불로 얼마가 나갔고,
+      결국 실제로 남은 돈은 얼마인가"를 계산합니다. 이 '실제로 남은 돈'이 <strong>순매출</strong>이고, 정산의 기준이 됩니다.
+      엑셀로 내려받아 재무팀에 넘기면 됩니다.</p>
+    </div>
+
+    <h2><span class="h-no">4.1</span>정산 요약과 기간 선택</h2>
+    <p>화면 상단에서 조회할 <strong>월</strong> 또는 <strong>특정 날짜 범위</strong>를 선택합니다. 가장 중요한 지표는 <strong>순매출</strong>입니다.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>지표</th><th>계산</th></tr></thead>
+        <tbody>
+          <tr><td><strong>순매출 (Net Total)</strong></td><td><code>총 결제액 − 환불액</code> — 실제 정산 기준 금액</td></tr>
+          <tr><td>총매출</td><td>취소 전 전체 승인 금액 합계</td></tr>
+          <tr><td>환불</td><td>기간 내 처리된 환불액 합계</td></tr>
+          <tr><td>구독 / 일반</td><td>정기 결제 매출 / 단건 결제 매출 구분</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2><span class="h-no">4.2</span>정산 내역 보기</h2>
+    <p>서비스 담당자는 본인 담당 서비스의 정산 내역을 봅니다. 상세 화면에는 해당 기간에 발생한 모든 결제 건이
+    승인 시각·사용자·주문번호·유형(정기/단건)·상태(승인/취소)·총매출·환불·순매출 열로 표시됩니다.</p>
+    <div class="callout note">
+      <span class="ico">ℹ️</span>
+      <div><p>시스템 관리자는 전체 서비스의 정산을 한 표에서 비교할 수 있습니다. 서비스 담당자는 담당 서비스 기준으로만 집계됩니다.</p></div>
+    </div>
+
+    <h2><span class="h-no">4.3</span>엑셀 다운로드</h2>
+    <p>모든 정산 화면에는 <strong>엑셀 다운로드</strong> 버튼이 있습니다. 주문번호·사용자 ID·승인번호·카드사 등
+    재무 교차검증과 세무 처리에 필요한 데이터가 모두 포함됩니다.</p>
+    <div class="callout note">
+      <span class="ico">ℹ️</span>
+      <div><p>한 번의 엑셀 다운로드는 <strong>최대 100,000행</strong>까지 받습니다(성능 보호). 행 수가 더 많으면 <strong>최근(정렬 상위) 항목부터</strong> 상한까지만 포함되므로,
+      대량 데이터는 <strong>기간을 나눠</strong> 여러 번 받으세요. 이 상한은 정산뿐 아니라 결제·구독·감사 로그 등 모든 엑셀 내보내기에 동일하게 적용됩니다.</p></div>
+    </div>
+
+    <h2><span class="h-no">4.4</span>집계 기준 유의사항</h2>
+    <div class="callout warn">
+      <span class="ico">⚠️</span>
+      <div>
+        <p><strong>승인일 기준</strong> — 정산은 결제가 실제로 승인된 시점을 기준으로 집계합니다.</p>
+        <p><strong>시간대(KST/UTC)</strong> — 시스템 내부는 UTC를 쓰지만 화면·엑셀은 한국 시간(KST)으로 변환해 보여줍니다.
+        매월 1일 오전처럼 <strong>월 경계 결제</strong>는 전월/익월 귀속이 헷갈릴 수 있으니 꼼꼼히 확인하세요.</p>
+      </div>
+    </div>
+
+    <div class="pager">
+      <a href="04-payments.html"><small>이전</small><span>← 3. 결제·환불</span></a>
+      <a class="next" href="06-api-integration.html"><small>다음</small><span>7. API 연동 →</span></a>
+    </div>
+
+  </div>
+  </main>
+</div>
+<script src="assets/glossary.js"></script>
+</body>
+</html>

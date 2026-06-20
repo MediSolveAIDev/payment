@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}전체 설정{% endblock %}
+{% block crumb %}전체 설정{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1 style="margin:0">전체 설정</h1>
+</div>
+
+{# 오류 메시지 — ?error= 쿼리파람으로 전달. 성공은 완료 모달(body[data-saved])로 처리 #}
+{% if error %}
+<div class="error" style="margin-bottom:16px">{{ error }}</div>
+{% endif %}
+
+<div class="grid grid-2" style="align-items:start">
+
+  {# ─── 카드 1: 자동결제 재시도 설정 ─── #}
+  {# 세 개의 숫자 입력을 .field-grid로 묶어 화면이 넓으면 한 줄(여러 열), 좁으면 자동 1열로 흐른다. #}
+  <div class="card">
+    <div class="block-head"><h2 style="margin:0">자동결제 재시도</h2></div>
+    <p class="muted" style="font-size:13px;margin-bottom:12px">
+      구독 갱신 결제 실패 시 재시도 횟수와 간격, SUSPENDED 상태 유예 기간을 설정합니다.
+    </p>
+    <form method="post" action="/admin/settings/retry">
+      <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+      <div class="field-grid">
+        <div class="field">
+          <label for="retry_limit">최대 재시도 횟수</label>
+          <input id="retry_limit" name="retry_limit" type="number" min="0" max="99"
+                 value="{{ gs.retry_limit }}">
+        </div>
+        <div class="field">
+          <label for="retry_interval_hours">재시도 간격(시간)</label>
+          <input id="retry_interval_hours" name="retry_interval_hours" type="number" min="1"
+                 value="{{ gs.retry_interval_hours }}">
+        </div>
+        <div class="field">
+          <label for="suspended_grace_days">SUSPENDED 만료 유예(일)</label>
+          <input id="suspended_grace_days" name="suspended_grace_days" type="number" min="0"
+                 value="{{ gs.suspended_grace_days }}">
+        </div>
+      </div>
+      <div class="actions" style="margin-top:16px">
+        <button class="btn btn-sm btn-primary" type="submit">저장</button>
+      </div>
+    </form>
+  </div>
+
+  {# ─── 카드: 보안/결제 정책(런타임 적용) ─── #}
+  <div class="card">
+    <div class="block-head"><h2 style="margin:0">보안/결제 정책</h2></div>
+    <p class="muted" style="font-size:13px;margin-bottom:12px">
+      어드민 로그인 잠금 정책과 단건결제 한도를 설정합니다. <strong>저장 즉시 적용</strong>(재배포 불필요)되며,
+      사고 대응 시 한도를 즉시 조이거나 잠금을 강화할 때 사용합니다.
+    </p>
+    <form method="post" action="/admin/settings/security-policy">
+      <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+      <div class="field-grid">
+        <div class="field">
+          <label for="max_failed_logins">로그인 실패 잠금 임계치(회)</label>
+          <input id="max_failed_logins" name="max_failed_logins" type="number" min="1" max="99"
+                 value="{{ gs.max_failed_logins }}">
+        </div>
+        <div class="field">
+          <label for="account_lock_minutes">잠금 지속(분)</label>
+          <input id="account_lock_minutes" name="account_lock_minutes" type="number" min="1"
+                 value="{{ gs.account_lock_minutes }}">
+        </div>
+        <div class="field">
+          <label for="one_off_max_amount">단건결제 1회 최대 금액(원)</label>
+          {# 천단위 콤마 표시(type=text). admin.js의 data-comma가 입력 중 콤마를 포맷하고
+             제출 직전 콤마를 제거 → 서버는 순수 숫자(int)만 수신 #}
+          <input id="one_off_max_amount" name="one_off_max_amount" type="text"
+                 inputmode="numeric" data-comma value="{{ '{:,}'.format(gs.one_off_max_amount) }}">
+        </div>
+      </div>
+      <div class="actions" style="margin-top:16px">
+        <button class="btn btn-sm btn-primary" type="submit">저장</button>
+      </div>
+    </form>
+  </div>
+
+  {# ─── 카드 2: 어드민 접속 허용 IP ─── #}
+  <div class="card">
+    <div class="block-head"><h2 style="margin:0">어드민 접속 허용 IP</h2></div>
+    <p class="muted" style="font-size:13px;margin-bottom:12px">
+      어드민 화면에 접속할 수 있는 IP를 한 줄(행)씩 입력합니다(각 칸 0~255, 숫자만).
+      목록이 비어 있으면 모든 IP에서 접속 가능합니다.
+      <br><strong>주의:</strong> 현재 접속 IP를 반드시 포함해야 잠금을 피할 수 있습니다.
+      <br><strong>127.0.0.1</strong>(같은 서버·로컬)은 <strong>항상 허용</strong>되므로 목록에 표시·저장하지 않습니다.
+    </p>
+    {# 옥텟 입력 UI 재사용(서비스 등록 폼과 동일): admin.js의 data-ip-form 처리가 행들을
+       모아 hidden input(admin_allowed_ips)에 줄바꿈으로 채운다.
+       data-ip-target: 채울 hidden 필드명. data-ip-allow-empty: 빈 목록 허용(제한 없음). #}
+    <form method="post" action="/admin/settings/admin-ips"
+          data-ip-form data-ip-target="admin_allowed_ips" data-ip-allow-empty>
+      <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+      <input type="hidden" name="admin_allowed_ips">
+      <div data-ip-rows>
+        {# 저장된 IP를 옥텟 행으로 펼침(IPv4 4칸). 없으면 빈 행 1개. 루프백은 항상 허용이라 제외. #}
+        {% for ip in gs.admin_allowed_ips %}{% if ip not in '127.0.0.1 ::1'.split() %}
+        {% set p = ip.split('.') %}
+        <div class="ip-row" data-ip-row>
+          <input type="text" inputmode="numeric" maxlength="3" class="ip-oct" value="{{ p[0] if p|length == 4 else '' }}">
+          <input type="text" inputmode="numeric" maxlength="3" class="ip-oct" value="{{ p[1] if p|length == 4 else '' }}">
+          <input type="text" inputmode="numeric" maxlength="3" class="ip-oct" value="{{ p[2] if p|length == 4 else '' }}">
+          <input type="text" inputmode="numeric" maxlength="3" class="ip-oct" value="{{ p[3] if p|length == 4 else '' }}">
+          <button type="button" class="btn-text" data-ip-del style="color:#E5396E">삭제</button>
+        </div>
+        {% endif %}{% endfor %}
+        {% if not gs.admin_allowed_ips %}
+        <div class="ip-row" data-ip-row>
+          <input type="text" inputmode="numeric" maxlength="3" class="ip-oct">
+          <input type="text" inputmode="numeric" maxlength="3" class="ip-oct">
+          <input type="text" inputmode="numeric" maxlength="3" class="ip-oct">
+          <input type="text" inputmode="numeric" maxlength="3" class="ip-oct">
+          <button type="button" class="btn-text" data-ip-del style="color:#E5396E">삭제</button>
+        </div>
+        {% endif %}
+      </div>
+      <button type="button" class="btn btn-sm btn-ghost" data-ip-add style="margin-top:8px">
+        <span data-lucide="plus"></span>IP 추가</button>
+      <div class="actions" style="margin-top:16px">
+        <button class="btn btn-sm btn-primary" type="submit">저장</button>
+      </div>
+    </form>
+  </div>
+
+  {# ─── 카드 3: 결제서버 킬스위치 (어드민 허용 IP 옆 — grid-2 같은 행) ─── #}
+  <div class="card">
+    <div class="block-head"><h2 style="margin:0">결제서버 킬스위치</h2></div>
+    {# 내용은 .killswitch(최대 560px) 컬럼으로 묶어 늘어짐 방지 #}
+    <div class="killswitch">
+      <p class="muted" style="font-size:13px">
+        결제서버를 비활성화하면 외부 API(구독·결제)가 503을 반환합니다.
+        어드민 화면은 영향을 받지 않습니다.
+      </p>
+
+      {# 현재 상태 패널 — 배지를 라벨 옆에 붙이고, 비활성화 시 사유를 우측에 표시 #}
+      <div class="kill-status">
+        <span class="muted">현재 상태</span>
+        {% if gs.server_disabled %}
+        <span class="badge badge-INACTIVE">비활성화(점검 중)</span>
+        {% if gs.disabled_reason %}<span class="kill-reason muted">사유: {{ gs.disabled_reason }}</span>{% endif %}
+        {% else %}
+        <span class="badge badge-ACTIVE">정상 운영</span>
+        {% endif %}
+      </div>
+
+      <form method="post" action="/admin/settings/server-toggle"
+            {% if not gs.server_disabled %}
+            data-confirm="결제서버를 비활성화하면 외부 서비스에서 결제·구독 요청이 차단됩니다."
+            data-confirm-title="결제서버를 비활성화할까요?" data-confirm-ok="비활성화"
+            {% endif %}>
+        <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+        {# 버튼이 곧 동작 — 목표 상태를 hidden으로 전달(체크박스 제거).
+           현재 정상이면 버튼은 '비활성화'(disabled=on), 현재 비활성이면 '활성화'(disabled 비움). #}
+        <input type="hidden" name="disabled" value="{{ 'on' if not gs.server_disabled else '' }}">
+
+        {# 사유는 비활성화할 때만 입력(활성화 시에는 불필요) #}
+        {% if not gs.server_disabled %}
+        <div class="field">
+          <label for="kill_reason">비활성화 사유 <span class="muted" style="font-size:12px">(필수)</span></label>
+          <input id="kill_reason" name="reason" type="text" maxlength="500"
+                 placeholder="예: 정기 점검 2026-06-09 00:00~06:00">
+        </div>
+        {% endif %}
+
+        <div class="field" style="margin-top:10px">
+          <label for="kill_password">
+            본인 비밀번호 확인 <span class="muted" style="font-size:12px">(킬스위치 변경 시 필수)</span>
+          </label>
+          <input id="kill_password" name="password" type="password"
+                 autocomplete="current-password" placeholder="현재 비밀번호 입력">
+        </div>
+
+        <div class="actions" style="margin-top:16px">
+          {% if gs.server_disabled %}
+          {# 복구(활성화)는 긍정 동작 → primary #}
+          <button class="btn btn-sm btn-primary" type="submit">활성화(복구)</button>
+          {% else %}
+          {# 비활성화는 파급이 큰 위험 동작 → danger #}
+          <button class="btn btn-sm btn-danger" type="submit">비활성화</button>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

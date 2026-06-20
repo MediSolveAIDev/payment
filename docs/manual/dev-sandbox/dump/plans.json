@@ -1,0 +1,64 @@
+{
+  "plans": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": "베이직",
+      "price": 9900,
+      "amount": 9900,
+      "currency": "KRW",
+      "billing_cycle": "MONTH",
+      "cycle_days": null,
+      "first_payment_type": "NONE",
+      "first_payment_value": null,
+      "trial_enabled": false,
+      "trial_days": null,
+      "auto_renew": true,
+      "extra_info": { "용량": "10GB" }
+    },
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "name": "프로",
+      "price": 29000,
+      "amount": 26100,
+      "currency": "KRW",
+      "billing_cycle": "MONTH",
+      "cycle_days": null,
+      "first_payment_type": "DISCOUNT_PERCENT",
+      "first_payment_value": 50,
+      "trial_enabled": false,
+      "trial_days": null,
+      "auto_renew": true,
+      "extra_info": { "용량": "100GB", "좌석": "5" }
+    },
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "name": "프리미엄(체험)",
+      "price": 19000,
+      "amount": 19000,
+      "currency": "KRW",
+      "billing_cycle": "MONTH",
+      "cycle_days": null,
+      "first_payment_type": "NONE",
+      "first_payment_value": null,
+      "trial_enabled": true,
+      "trial_days": 7,
+      "auto_renew": true,
+      "extra_info": {}
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444444",
+      "name": "30일권",
+      "price": 12000,
+      "amount": 12000,
+      "currency": "KRW",
+      "billing_cycle": "DAY",
+      "cycle_days": 30,
+      "first_payment_type": "FREE",
+      "first_payment_value": null,
+      "trial_enabled": false,
+      "trial_days": null,
+      "auto_renew": false,
+      "extra_info": {}
+    }
+  ]
+}

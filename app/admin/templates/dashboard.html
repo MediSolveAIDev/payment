@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% import "_charts.html" as charts %}
+{% block title %}대시보드{% endblock %}
+{% block crumb %}대시보드{% endblock %}
+{% block content %}
+<div class="page-head" style="display:flex;align-items:center;gap:12px">
+  <h1 style="margin:0">대시보드</h1>
+  <span class="spacer" style="flex:1"></span>
+  <span class="muted" style="font-size:13px">현재 시각(KST)</span>
+  <span id="dash-clock" style="font:600 15px ui-monospace,SFMono-Regular,Menlo,monospace;
+        background:var(--black-4);padding:4px 10px;border-radius:8px">{{ now|kst("%Y-%m-%d %H:%M:%S") }}</span>
+</div>
+<script>
+(function(){
+  var el = document.getElementById('dash-clock');
+  if (!el) return;
+  function tick(){
+    el.textContent = new Date().toLocaleString('sv-SE', {timeZone: 'Asia/Seoul'});
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+
+{# ===== 매출 섹션 ===== #}
+<div class="block-head" style="margin-top:8px"><h2>매출 <span class="muted" style="font-size:12px;font-weight:400">이번 달</span></h2></div>
+<div class="stats">
+  {% for c in d.revenue_cards %}
+  {% if c.href %}<a class="stat stat-tint-{{ c.tint }}" href="{{ c.href }}" style="color:inherit">
+  {% else %}<div class="stat stat-tint-{{ c.tint }}">{% endif %}
+    <span class="stat-label">{{ c.label }}</span>
+    <div class="stat-row"><span class="stat-value">{{ c.value }}</span></div>
+  {% if c.href %}</a>{% else %}</div>{% endif %}
+  {% endfor %}
+</div>
+{% if is_admin and d.service_revenue %}
+<div class="block">
+  <div class="block-head"><h2>서비스별 매출</h2></div>
+  <table>
+    <thead><tr><th>서비스</th><th>총매출</th><th>구독</th><th>일반</th><th>환불</th></tr></thead>
+    <tbody>
+    {% for r in d.service_revenue %}
+      <tr style="cursor:pointer" onclick="location.href='/admin/services/{{ r.id }}'">
+        <td><a href="/admin/services/{{ r.id }}">{{ r.name }}</a></td>
+        <td style="font-weight:600">{{ "{:,}".format(r.total) }}원</td>
+        <td class="muted">{{ "{:,}".format(r.sub) }}원</td>
+        <td class="muted">{{ "{:,}".format(r.one_off) }}원</td>
+        <td class="muted">{{ "{:,}".format(r.refund) }}원</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ===== 12개월 차트 ===== #}
+<div class="grid grid-2">
+  <div class="block">
+    <div class="block-head"><h2>최근 12개월 구독</h2><span class="muted" style="font-size:12px">전체/신규</span></div>
+    {{ charts.bars(d.subs_months, label_a='전체구독', label_b='신규구독',
+                   color_a='var(--accent-blue)', color_b='var(--accent-green)',
+                   key_a='total', key_b='new') }}
+  </div>
+  <div class="block">
+    <div class="block-head"><h2>최근 12개월 일반매출</h2></div>
+    {{ charts.area(d.one_off_months) }}
+  </div>
+</div>
+
+{# ===== 구독 섹션 ===== #}
+<div class="block-head"><h2>구독</h2></div>
+<div class="grid grid-2">
+  <div class="block">
+    <div class="block-head"><h2>구독 상태</h2>
+      <span class="muted" style="font-size:12px">전체 상태(상태별 비율) · 이번 달 흐름 · 클릭 시 상세</span></div>
+    {{ charts.donut(d.status_breakdown, extra=d.sub_flow) }}
+  </div>
+  <div class="block">
+    <div class="block-head"><h2>최근 30일 구독 추이</h2><span class="muted" style="font-size:12px">전체/신규/취소/만료</span></div>
+    {{ charts.multiline(d.daily_trend,
+        [('total','전체구독','var(--accent-blue)'), ('new','신규','var(--accent-green)'),
+         ('canceled','취소','var(--accent-orange)'), ('expired','만료','var(--accent-red)')]) }}
+  </div>
+</div>
+{% if is_admin and d.service_subs %}
+<div class="block">
+  <div class="block-head"><h2>서비스별 구독</h2></div>
+  <table>
+    <thead><tr><th>서비스</th><th>현재구독</th><th>신규</th><th>취소</th><th>만료</th><th>구독매출</th></tr></thead>
+    <tbody>
+    {% for r in d.service_subs %}
+      <tr style="cursor:pointer" onclick="location.href='/admin/services/{{ r.id }}'">
+        <td><a href="/admin/services/{{ r.id }}">{{ r.name }}</a></td>
+        <td>{{ "{:,}".format(r.open) }}</td>
+        <td class="muted">{{ "{:,}".format(r.new) }}</td>
+        <td class="muted">{{ "{:,}".format(r.canceled) }}</td>
+        <td class="muted">{{ "{:,}".format(r.expired) }}</td>
+        <td style="font-weight:600">{{ "{:,}".format(r.revenue) }}원</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block rail %}
+<aside class="sidebar" style="width:300px;border-right:none;border-left:1px solid var(--border)">
+  {# ===== 최근 구독(요청 015 1.1.1) — 레일 최상단 ===== #}
+  <h3 style="font:var(--t-h2);margin:4px 8px 14px">최근 구독</h3>
+  {% for s in d.recent_subs %}
+  <a href="/admin/subscriptions/{{ s.id }}"
+     style="display:flex;justify-content:space-between;gap:8px;padding:8px;border-radius:12px;transition:background .12s"
+     onmouseover="this.style.background='var(--black-4)'" onmouseout="this.style.background='transparent'">
+    <span style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.external_user_id }}</span>
+    <span style="display:flex;align-items:center;gap:6px;flex:none">
+      <span class="badge badge-{{ s.status }}" style="padding:1px 8px;font-size:11px">{{ s.status }}</span>
+      <span style="font-size:12px;color:var(--black-40)">{{ s.created_at|kst('%m-%d') }}</span>
+    </span>
+  </a>
+  {% else %}
+  <p class="muted" style="padding:8px;font-size:13px">구독 내역이 없습니다</p>
+  {% endfor %}
+
+  {# ===== 최근 결제(트라이얼·0원 포함, 0원 표시) ===== #}
+  <h3 style="font:var(--t-h2);margin:18px 8px 14px">최근 결제</h3>
+  {% for r in d.recent %}
+  <a href="/admin/subscriptions/{{ r.sub_id }}"
+     style="display:flex;gap:10px;align-items:flex-start;padding:8px;border-radius:12px;transition:background .12s"
+     onmouseover="this.style.background='var(--black-4)'" onmouseout="this.style.background='transparent'">
+    <span style="flex:none;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+                 background:{{ 'var(--accent-mint)' if r.status=='DONE' else 'var(--accent-red)' if r.status=='FAILED' else 'var(--accent-purple)' if r.status=='TRIAL' else 'var(--accent-orange)' }}">
+      <span data-lucide="credit-card" style="width:16px;height:16px"></span>
+    </span>
+    <span style="min-width:0;flex:1">
+      <span style="display:block;font-size:13px">{{ r.external_user_id }} · {{ "{:,}".format(r.amount) }}원</span>
+      <span style="display:flex;align-items:center;gap:6px;margin-top:2px">
+        <span class="badge badge-{{ r.status }}" style="padding:1px 8px;font-size:11px">{{ r.status_ko }}</span>
+        <span style="font-size:12px;color:var(--black-40)">{{ r.when|kst('%m-%d %H:%M') }}</span>
+      </span>
+    </span>
+  </a>
+  {% else %}
+  <p class="muted" style="padding:8px;font-size:13px">결제 내역이 없습니다</p>
+  {% endfor %}
+
+  <h3 style="font:var(--t-h2);margin:18px 8px 14px">미수 구독</h3>
+  {% for s in d.past_due %}
+  <a href="/admin/subscriptions/{{ s.id }}" style="display:flex;justify-content:space-between;gap:8px;padding:8px;border-radius:12px;transition:background .12s"
+     onmouseover="this.style.background='var(--black-4)'" onmouseout="this.style.background='transparent'">
+    <span style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.external_user_id }}</span>
+    <span style="display:flex;align-items:center;gap:6px;flex:none">
+      <span class="badge badge-{{ s.status }}" style="padding:1px 8px;font-size:11px">{{ s.status }}</span>
+      <span style="font-size:12px;color:var(--black-40)">{{ s.next_billing_at|kst('%m-%d') }}</span>
+    </span>
+  </a>
+  {% else %}
+  <p class="muted" style="padding:8px;font-size:13px">미수 구독이 없습니다</p>
+  {% endfor %}
+
+  <h3 style="font:var(--t-h2);margin:18px 8px 14px">만료 임박 <span class="muted" style="font-size:12px;font-weight:400">7일 이내</span></h3>
+  {% for s in d.expiring %}
+  <a href="/admin/subscriptions/{{ s.id }}" style="display:flex;justify-content:space-between;gap:8px;padding:8px;border-radius:12px;transition:background .12s"
+     onmouseover="this.style.background='var(--black-4)'" onmouseout="this.style.background='transparent'">
+    <span style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.external_user_id }}</span>
+    <span style="font-size:12px;color:var(--black-40);flex:none">{{ s.current_period_end|kst('%m-%d') }}</span>
+  </a>
+  {% else %}
+  <p class="muted" style="padding:8px;font-size:13px">만료 임박 구독이 없습니다</p>
+  {% endfor %}
+</aside>
+{% endblock %}

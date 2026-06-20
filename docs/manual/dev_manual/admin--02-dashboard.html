@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02. 대시보드 — 개발자 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>개발자 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>🧱</span>기반 (먼저 읽기)</div>
+<a class="nav-link" href="README.html"><span class="n">·</span><span class="tt">개발자 인수인계 매뉴얼 (dev_manual)</span></a>
+<a class="nav-link" href="01-getting-started.html"><span class="n">01</span><span class="tt">01. 시작하기 — 구조·실행·테스트·요청 처리 공통 흐름</span></a>
+<a class="nav-link" href="02-database.html"><span class="n">02</span><span class="tt">02. 데이터베이스 — 테이블·모델·관계·마이그레이션</span></a>
+<a class="nav-link" href="03-auth-and-security.html"><span class="n">03</span><span class="tt">03. 인증과 보안 공통</span></a>
+<div class="nav-group"><span>⚙️</span>기능별 상세</div>
+<a class="nav-link" href="04-subscription-create.html"><span class="n">04</span><span class="tt">04. 구독 생성</span></a>
+<a class="nav-link" href="05-subscription-renewal.html"><span class="n">05</span><span class="tt">05. 구독 갱신·만료·재시도·정합성(스케줄러 배치)</span></a>
+<a class="nav-link" href="06-subscription-manage.html"><span class="n">06</span><span class="tt">06. 구독 취소·재개·수동결제·카드변경</span></a>
+<a class="nav-link" href="07-one-off-payment.html"><span class="n">07</span><span class="tt">07. 단건(일반) 결제 + 취소</span></a>
+<a class="nav-link" href="08-plans.html"><span class="n">08</span><span class="tt">08. 요금제 관리 (생성·수정·금액 계산·자동결제안함·추가정보)</span></a>
+<a class="nav-link" href="09-services-registry.html"><span class="n">09</span><span class="tt">09. 서비스 등록·키 발급/회전·취소정책·담당자</span></a>
+<a class="nav-link" href="10-settlement.html"><span class="n">10</span><span class="tt">10. 정산(어드민 화면)</span></a>
+<a class="nav-link" href="11-dashboard.html"><span class="n">11</span><span class="tt">11. 대시보드 — 어드민 메인 화면</span></a>
+<a class="nav-link" href="12-webhooks.html"><span class="n">12</span><span class="tt">12. 웹훅 처리 (토스페이먼츠 → 서버)</span></a>
+<a class="nav-link" href="13-admin-accounts.html"><span class="n">13</span><span class="tt">13. 어드민 계정·역할·로그인/비밀번호</span></a>
+<a class="nav-link" href="14-global-settings.html"><span class="n">14</span><span class="tt">14. 전체 설정(재시도·어드민 IP·킬스위치)</span></a>
+<a class="nav-link" href="15-external-api-and-sample.html"><span class="n">15</span><span class="tt">15. 외부 API 레퍼런스 + 샘플 서비스 연동</span></a>
+<a class="nav-link" href="16-card-vault.html"><span class="n">16</span><span class="tt">16. 카드 보관함(Card Vault) — 카드 등록·교체·조회·삭제</span></a>
+<a class="nav-link" href="17-service-notifications.html"><span class="n">17</span><span class="tt">17. 서비스 알림(아웃고잉 웹훅) — 요청 016</span></a>
+<div class="nav-group"><span>🖥️</span>어드민 화면별 매뉴얼</div>
+<a class="nav-link" href="admin--README.html"><span class="n">·</span><span class="tt">어드민 콘솔 페이지 매뉴얼</span></a>
+<a class="nav-link" href="admin--01-login-and-access.html"><span class="n">01</span><span class="tt">01. 로그인·접근 (로그인 / 비밀번호 설정 / 로그아웃 / IP 제한)</span></a>
+<a class="nav-link active" href="admin--02-dashboard.html"><span class="n">02</span><span class="tt">02. 대시보드</span></a>
+<a class="nav-link" href="admin--03-services.html"><span class="n">03</span><span class="tt">03. 서비스 관리</span></a>
+<a class="nav-link" href="admin--04-plans.html"><span class="n">04</span><span class="tt">04. 요금제 관리 (목록·생성·수정·활성/비활성·삭제)</span></a>
+<a class="nav-link" href="admin--05-subscriptions.html"><span class="n">05</span><span class="tt">05. 구독 관리 — 목록·상세·강제 취소</span></a>
+<a class="nav-link" href="admin--06-payments.html"><span class="n">06</span><span class="tt">06. 결제 — 목록·상세·단건 취소</span></a>
+<a class="nav-link" href="admin--07-settlement.html"><span class="n">07</span><span class="tt">07. 정산 화면</span></a>
+<a class="nav-link" href="admin--08-users.html"><span class="n">08</span><span class="tt">08. 계정 관리</span></a>
+<a class="nav-link" href="admin--09-audit.html"><span class="n">09</span><span class="tt">09. 감사 로그 (조회·검색·정리·엑셀)</span></a>
+<a class="nav-link" href="admin--10-settings.html"><span class="n">10</span><span class="tt">10. 전체 설정 (재시도 정책 · 어드민 IP · 킬스위치)</span></a>
+<div class="nav-group"><span>📋</span>운영 워크플로우</div>
+<a class="nav-link" href="admin--11-onboarding-checklist.html"><span class="n">·</span><span class="tt">신규 서비스 온보딩 체크리스트 (운영자용)</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">개발자 매뉴얼</a> <span>/</span> <em>어드민 화면별 매뉴얼</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">🖥️ 어드민 화면별 매뉴얼</span>
+        <span class="dh-src">docs/dev_manual/admin/02-dashboard.md</span></div>
+      <h1>02. 대시보드</h1>
+      
+    </header>
+    <div class="doc">
+
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>접근 경로</strong>: <code>GET /admin/</code> (로그인 후 첫 화면)
+<strong>권한</strong>: SYSTEM_ADMIN, SERVICE_MANAGER 모두 접근 가능
+<strong>쓰기 없음</strong>: 조회 전용 화면입니다.</p>
+<p>기능 내부 처리 흐름(집계 로직·DB 쿼리·테스트)은 <a href="11-dashboard.html">../11-dashboard.md</a> 참조.
+정산 화면은 <a href="admin--07-settlement.html">07-settlement.md</a> 참조.</p>
+</div></blockquote>
+<hr />
+<h2 id="1">1. 이 화면은 무엇인가 / 접근 경로·권한</h2>
+<p>어드민 콘솔에 로그인하면 가장 먼저 표시되는 <strong>메인 화면</strong>입니다.
+이번 달 매출 요약, 구독 상태 현황, 12개월/30일 추이 차트, 우측 패널(최근 결제·미수 구독·만료 임박)을 한 화면에 보여줍니다.</p>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>값</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>URL</td>
+<td><code>GET /admin/</code></td>
+</tr>
+<tr>
+<td>라우트 함수</td>
+<td><code class="loc">app/admin/routes/dashboard.py:25</code> <code>dashboard()</code></td>
+</tr>
+<tr>
+<td>템플릿</td>
+<td><code>app/admin/templates/dashboard.html</code></td>
+</tr>
+<tr>
+<td>인증 의존성</td>
+<td><code>require_any</code> (<code class="loc">app/admin/deps.py:102</code>) — SYSTEM_ADMIN 또는 SERVICE_MANAGER</td>
+</tr>
+</tbody>
+</table>
+<p><strong>역할별 접근 범위</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>역할</th>
+<th>조회 범위</th>
+<th>서비스별 테이블 표시</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SYSTEM_ADMIN</td>
+<td>전체 서비스 (<code>scope=None</code>)</td>
+<td>표시 (<code>is_admin=True</code>)</td>
+</tr>
+<tr>
+<td>SERVICE_MANAGER</td>
+<td>담당 서비스만 (<code>scope=[uuid, ...]</code>)</td>
+<td>숨김 (<code>is_admin=False</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><code>is_admin</code> 플래그는 <code class="loc">app/admin/routes/dashboard.py:36</code>에서 <code>ctx.user.role == UserRole.SYSTEM_ADMIN</code>으로 결정됩니다.
+스코프 결정은 <code class="loc">app/admin/deps.py:77</code> <code>effective_service_ids()</code> 호출 결과가 <code>AdminContext.service_ids</code>에 저장되어 <code>build_dashboard(db, ctx.service_ids)</code>로 전달됩니다(<code class="loc">app/admin/routes/dashboard.py:34</code>).</p>
+<hr />
+<h2 id="2">2. 화면 구성 — 무엇이 보이나</h2>
+<h3 id="2-1">2-1. 상단: 시계</h3>
+<p><code class="loc">app/admin/templates/dashboard.html:9-23</code></p>
+<p>우측 상단에 <strong>현재 KST 시각</strong>이 표시됩니다.
+서버 초기 렌더(<code>{{ now|kst("%Y-%m-%d %H:%M:%S") }}</code>) 후 JavaScript <code>setInterval(tick, 1000)</code>으로 매초 브라우저 로컬 시각(<code>Asia/Seoul</code>)으로 갱신됩니다.
+요소 ID: <code>dash-clock</code>.</p>
+<hr />
+<h3 id="2-2">2-2. 매출 섹션 (이번 달)</h3>
+<p><code class="loc">app/admin/templates/dashboard.html:26-54</code></p>
+<h4 id="4">매출 카드 4개</h4>
+<p><code>d.revenue_cards</code> — <code class="loc">app/services/dashboard.py:141</code> <code>_revenue_cards()</code> 반환값.
+집계 기준: <code>[이번 달 1일 00:00:00 UTC, 현재]</code> 반개구간.</p>
+<table>
+<thead>
+<tr>
+<th>카드</th>
+<th>집계 기준</th>
+<th>tint</th>
+<th>클릭 이동</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>총매출</td>
+<td><code>Payment.status=DONE</code>, <code>approved_at</code> 기준 전체</td>
+<td>3</td>
+<td><code>/admin/payments?status=DONE&amp;from=...&amp;to=...</code></td>
+</tr>
+<tr>
+<td>구독매출</td>
+<td>위 + <code>kind=SUBSCRIPTION</code></td>
+<td>1</td>
+<td><code>/admin/payments?status=DONE&amp;kind=SUBSCRIPTION&amp;...</code></td>
+</tr>
+<tr>
+<td>일반매출</td>
+<td>위 + <code>kind=ONE_OFF</code></td>
+<td>2</td>
+<td><code>/admin/payments?status=DONE&amp;kind=ONE_OFF&amp;...</code></td>
+</tr>
+<tr>
+<td>환불금액</td>
+<td><code>Payment.status=CANCELED</code>, <code>coalesce(canceled_amount, amount)</code> 합산, <code>requested_at</code> 기준</td>
+<td>4</td>
+<td><code>/admin/payments?status=CANCELED&amp;...</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>환불금액이 0원이면 <code>up=True</code>(긍정 색상)로 표시됩니다 (<code class="loc">app/services/dashboard.py:161</code>).
+부분환불은 <code>canceled_amount</code>를 우선 사용합니다 (<code class="loc">app/services/dashboard.py:126-130</code>).</p>
+</div></blockquote>
+<p>카드를 클릭하면 해당 기간·조건으로 필터된 결제 목록으로 이동합니다.</p>
+<h4 id="system_admin">서비스별 매출 테이블 (SYSTEM_ADMIN 전용)</h4>
+<p><code class="loc">app/admin/templates/dashboard.html:36-54</code> <code>{% if is_admin and d.service_revenue %}</code></p>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>서비스</td>
+<td>서비스 이름 (클릭 시 서비스 상세)</td>
+</tr>
+<tr>
+<td>총매출</td>
+<td>이번 달 DONE 결제 합계</td>
+</tr>
+<tr>
+<td>구독</td>
+<td>이번 달 SUBSCRIPTION DONE 합계</td>
+</tr>
+<tr>
+<td>일반</td>
+<td>이번 달 ONE_OFF DONE 합계</td>
+</tr>
+<tr>
+<td>환불</td>
+<td>이번 달 CANCELED <code>coalesce(canceled_amount, amount)</code> 합계</td>
+</tr>
+</tbody>
+</table>
+<p>총매출 내림차순 정렬. 행 클릭 시 <code>/admin/services/{id}</code> 이동.
+SERVICE_MANAGER로 로그인하면 이 테이블은 완전히 숨겨집니다.</p>
+<hr />
+<h3 id="2-3-12-2-">2-3. 12개월 차트 (2-열 그리드)</h3>
+<p><code class="loc">app/admin/templates/dashboard.html:57-68</code></p>
+<h4 id="12">최근 12개월 구독 (그룹 막대 차트)</h4>
+<p><code>charts.bars(d.subs_months, label_a='전체구독', label_b='신규구독', color_a='var(--accent-indigo)', color_b='var(--accent-mint)', key_a='total', key_b='new')</code></p>
+<p><code>d.subs_months</code> — <code class="loc">app/services/dashboard.py:243</code> <code>_series_12m()</code> 반환의 첫 번째 값.
+현재 월 포함 과거 12개월, 각 항목: <code>{label: "N월", total: 전체구독수, new: 신규구독수}</code>.</p>
+<ul>
+<li><code>total</code>: 해당 월 말 시점 "열린" 구독 수 스냅샷 (Python 버킷 계산, <code>_open_count_at()</code> — <code class="loc">app/services/dashboard.py:200</code>)</li>
+<li><code>new</code>: 해당 월에 <code>created_at</code>이 속하는 신규 구독 수</li>
+</ul>
+<h4 id="12_1">최근 12개월 일반매출 (영역 차트)</h4>
+<p><code>charts.area(d.one_off_months)</code></p>
+<p><code>d.one_off_months</code> — 같은 <code>_series_12m()</code> 반환의 두 번째 값.
+각 항목: <code>{label: "N월", value: ONE_OFF DONE 합산액}</code>.</p>
+<hr />
+<h3 id="2-4-2-">2-4. 구독 섹션 (2-열 그리드)</h3>
+<p><code class="loc">app/admin/templates/dashboard.html:71-84</code></p>
+<h4 id="_1">구독 상태 도넛 + 흐름 지표</h4>
+<p><code>charts.donut(d.status_breakdown, extra=d.sub_flow)</code></p>
+<p><strong>도넛</strong> (<code>d.status_breakdown</code>): 전체 구독의 상태별 비율 — <strong>EXPIRED(만료) 포함</strong> (<code class="loc">app/services/dashboard.py:392-409</code>).
+데이터 없으면 "데이터 없음" 회색 도넛이 표시됩니다 (<code class="loc">app/services/dashboard.py:408-409</code>).</p>
+<table>
+<thead>
+<tr>
+<th>상태</th>
+<th>한글</th>
+<th>색상 CSS 변수</th>
+<th>클릭 이동</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TRIAL</td>
+<td>체험</td>
+<td><code>--accent-purple</code></td>
+<td><code>/admin/subscriptions?status=TRIAL</code></td>
+</tr>
+<tr>
+<td>ACTIVE</td>
+<td>활성</td>
+<td><code>--accent-blue</code></td>
+<td><code>/admin/subscriptions?status=ACTIVE</code></td>
+</tr>
+<tr>
+<td>PAST_DUE</td>
+<td>미수</td>
+<td><code>--accent-yellow</code></td>
+<td><code>/admin/subscriptions?status=PAST_DUE</code></td>
+</tr>
+<tr>
+<td>SUSPENDED</td>
+<td>정지</td>
+<td><code>--accent-orange</code></td>
+<td><code>/admin/subscriptions?status=SUSPENDED</code></td>
+</tr>
+<tr>
+<td>CANCELED</td>
+<td>취소</td>
+<td><code>--accent-cyan</code></td>
+<td><code>/admin/subscriptions?status=CANCELED</code></td>
+</tr>
+<tr>
+<td>EXTENDED</td>
+<td>연장처리</td>
+<td><code>--accent-mint</code></td>
+<td><code>/admin/subscriptions?status=EXTENDED</code></td>
+</tr>
+<tr>
+<td>EXPIRED</td>
+<td>만료</td>
+<td><code>--accent-red</code></td>
+<td><code>/admin/subscriptions?status=EXPIRED</code></td>
+</tr>
+</tbody>
+</table>
+<p>도넛 중앙에 전체 구독 수가 표시됩니다. 각 항목을 클릭하면 해당 상태로 필터된 구독 목록으로 이동합니다.</p>
+<p><strong>도넛 옆 흐름 지표</strong> (<code>d.sub_flow</code>): 이번 달 구독 변동 현황.
+<code class="loc">app/services/dashboard.py:166</code> <code>_sub_flow()</code> 반환값.</p>
+<table>
+<thead>
+<tr>
+<th>지표</th>
+<th>집계 기준</th>
+<th>클릭 이동</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>신규 구독</td>
+<td><code>Subscription.created_at</code> ∈ [월초, 현재]</td>
+<td><code>/admin/subscriptions?sort=created_at&amp;dir=desc</code></td>
+</tr>
+<tr>
+<td>구독 취소</td>
+<td>감사 액션 <code>subscription.cancel</code> + <code>subscription.force_cancel</code> + <code>subscription.suspended</code> 건수 합산</td>
+<td><code>/admin/subscriptions?status=CANCELED</code></td>
+</tr>
+<tr>
+<td>구독 만료</td>
+<td>감사 액션 <code>subscription.expired</code> 건수</td>
+<td><code>/admin/subscriptions?status=EXPIRED</code></td>
+</tr>
+<tr>
+<td>미결제</td>
+<td><code>Payment.status=FAILED</code> · <code>requested_at</code> ∈ [월초, 현재] 건수</td>
+<td><code>/admin/payments?status=FAILED&amp;...</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>취소 집계는 사용자 직접 취소(<code>subscription.cancel</code>, <code>subscription.force_cancel</code>)와 결제 실패로 인한 강제 정지(<code>subscription.suspended</code>)를 합산합니다.</p>
+</div></blockquote>
+<h4 id="30">최근 30일 구독 추이 (멀티라인 차트)</h4>
+<p><code>charts.multiline(d.daily_trend, [('total','전체구독','var(--accent-indigo)'), ('new','신규','var(--accent-mint)'), ('canceled','취소','var(--accent-orange)'), ('expired','만료','var(--accent-red)')])</code></p>
+<p><code>d.daily_trend</code> — <code class="loc">app/services/dashboard.py:262</code> <code>_daily_trend()</code> 반환값.
+30개 항목(<code>M/D</code> 레이블), 각 항목: <code>{label, total, new, canceled, expired}</code>.
+X축 레이블은 5개 간격 + 마지막 날만 표시됩니다(<code class="loc">_charts.html:125</code>).</p>
+<h4 id="system_admin_1">서비스별 구독 테이블 (SYSTEM_ADMIN 전용)</h4>
+<p><code class="loc">app/admin/templates/dashboard.html:85-104</code> <code>{% if is_admin and d.service_subs %}</code></p>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>서비스</td>
+<td>서비스 이름 (클릭 시 서비스 상세)</td>
+</tr>
+<tr>
+<td>현재구독</td>
+<td>현재 시점 "열린" 구독 수</td>
+</tr>
+<tr>
+<td>신규</td>
+<td>이번 달 신규 생성 구독 수</td>
+</tr>
+<tr>
+<td>취소</td>
+<td>이번 달 취소 감사 이벤트 건수</td>
+</tr>
+<tr>
+<td>만료</td>
+<td>이번 달 만료 감사 이벤트 건수</td>
+</tr>
+<tr>
+<td>구독매출</td>
+<td>이번 달 SUBSCRIPTION DONE 합계</td>
+</tr>
+</tbody>
+</table>
+<p>현재구독 수 내림차순 정렬. 행 클릭 시 <code>/admin/services/{id}</code> 이동.
+SERVICE_MANAGER로 로그인하면 이 테이블도 완전히 숨겨집니다.</p>
+<hr />
+<h3 id="2-5-rail">2-5. 우측 패널 (rail)</h3>
+<p><code class="loc">app/admin/templates/dashboard.html:107-155</code> <code>{% block rail %}</code></p>
+<p>페이지 우측에 항상 표시되는 사이드 패널입니다. <code>_rails()</code> 반환값(요청 015로 패널 4개).</p>
+<h4 id="8-015-111">최근 구독 (최대 8건) — 요청 015 1.1.1, 레일 최상단</h4>
+<p><code>d.recent_subs</code> — <code>Subscription</code>, <code>created_at DESC</code>. 각 항목: 사용자 ID, 상태 뱃지, 생성일(KST). 클릭 시 구독 상세.</p>
+<h4 id="8-0-015-112">최근 결제 (최대 8건) — 트라이얼·0원 포함(요청 015 1.1.2)</h4>
+<p><code>d.recent</code>(dict 목록) — 실제 <code>Payment</code> + <strong>트라이얼/0원 첫결제 구독</strong>(Payment 없음)을 0원으로 합쳐 시간순 정렬한 상위 8건.</p>
+<p>각 항목: 사용자 ID, 금액(트라이얼/0원은 <code>0원</code>), 상태 뱃지(한글: 완료/실패/대기/체험), 시각(KST). 클릭 시 구독 상세.
+아이콘 배경색: DONE=mint, FAILED=red, TRIAL=purple, 그 외=orange.</p>
+<h4 id="5">미수 구독 (최대 5건)</h4>
+<p><code>d.past_due</code> — <code>status IN (PAST_DUE, SUSPENDED)</code>, <code>next_billing_at ASC</code>.</p>
+<p>각 항목: 사용자 ID, 상태 뱃지, 다음 청구일(KST). 클릭 시 구독 상세.</p>
+<h4 id="7-5">만료 임박 — 7일 이내 (최대 5건)</h4>
+<p><code>d.expiring</code> — <code>current_period_end ∈ [now, now+7일)</code>, 열린 상태(TRIAL/ACTIVE/PAST_DUE/SUSPENDED/CANCELED 기간 내), <code>current_period_end ASC</code>.</p>
+<p>각 항목: 사용자 ID, 만료 예정일(KST). 클릭 시 구독 상세.</p>
+<hr />
+<h2 id="3">3. 할 수 있는 동작</h2>
+<p>대시보드는 <strong>조회 전용</strong> 화면입니다. 쓰기(POST/PUT/DELETE) 동작이 없습니다.</p>
+<table>
+<thead>
+<tr>
+<th>동작</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>매출 카드 클릭</td>
+<td>해당 기간·조건으로 필터된 결제 목록으로 이동</td>
+</tr>
+<tr>
+<td>구독 상태 도넛 항목 클릭</td>
+<td>해당 상태로 필터된 구독 목록으로 이동</td>
+</tr>
+<tr>
+<td>도넛 옆 흐름 지표 클릭</td>
+<td>해당 조건 구독/결제 목록으로 이동</td>
+</tr>
+<tr>
+<td>서비스별 매출 행 클릭</td>
+<td>해당 서비스 상세 페이지로 이동</td>
+</tr>
+<tr>
+<td>서비스별 구독 행 클릭</td>
+<td>해당 서비스 상세 페이지로 이동</td>
+</tr>
+<tr>
+<td>최근 결제 항목 클릭</td>
+<td>해당 구독 상세 페이지로 이동</td>
+</tr>
+<tr>
+<td>미수 구독 항목 클릭</td>
+<td>해당 구독 상세 페이지로 이동</td>
+</tr>
+<tr>
+<td>만료 임박 항목 클릭</td>
+<td>해당 구독 상세 페이지로 이동</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4_1">4. 개발 참조</h2>
+<h3 id="4-1">4-1. 라우트 함수</h3>
+<p><code class="loc">app/admin/routes/dashboard.py:25-36</code></p>
+<pre><code class="language-python">@router.get(&quot;&quot;)
+async def dashboard(request: Request,
+                    ctx: AdminContext = Depends(require_any),
+                    db: AsyncSession = Depends(get_db)):
+    data = await build_dashboard(db, ctx.service_ids)
+    return render(request, &quot;dashboard.html&quot;, ctx=ctx, d=data, now=utcnow(),
+                  is_admin=ctx.user.role == UserRole.SYSTEM_ADMIN)
+</code></pre>
+<ul>
+<li><code>require_any</code> = <code>require_role(SYSTEM_ADMIN, SERVICE_MANAGER)</code> (<code class="loc">app/admin/deps.py:102</code>)</li>
+<li><code>ctx.service_ids</code>: SYSTEM_ADMIN이면 <code>None</code>, SERVICE_MANAGER이면 <code>[uuid, ...]</code> (<code class="loc">app/admin/deps.py:57</code>)</li>
+<li><code>is_admin</code>: 템플릿에서 서비스별 테이블 두 곳의 조건부 렌더에 사용</li>
+</ul>
+<h3 id="4-2-_scoped">4-2. 스코프 처리 — <code>_scoped()</code></h3>
+<p><code class="loc">app/services/dashboard.py:76-77</code></p>
+<pre><code class="language-python">def _scoped(query, scope: list[uuid.UUID] | None, col):
+    return query.where(col.in_(scope)) if scope is not None else query
+</code></pre>
+<p><code>scope=None</code>(SYSTEM_ADMIN)이면 조건을 추가하지 않아 전체 데이터를 조회합니다.
+<code>scope=[...]</code>이면 <code>WHERE {col} IN (...)</code> 조건을 붙여 해당 서비스 데이터만 조회합니다.
+<code>scope=[]</code>(담당 서비스 없는 SERVICE_MANAGER)이면 <code>WHERE ... IN ()</code> → 결과 0으로 처리됩니다.</p>
+<h3 id="4-3-build_dashboard">4-3. <code>build_dashboard()</code> 집계 순서</h3>
+<p><code class="loc">app/services/dashboard.py:374-415</code></p>
+<table>
+<thead>
+<tr>
+<th>단계</th>
+<th>함수</th>
+<th>위치</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td><code>GROUP BY status</code> 인라인 쿼리</td>
+<td><code>:392-398</code></td>
+<td>도넛용 상태별 구독 수 집계</td>
+</tr>
+<tr>
+<td>B</td>
+<td><code>_fetch_sub_states()</code></td>
+<td><code>:400</code> / <code>:189</code></td>
+<td>구독 전체 1회 조회 — C·E·F가 공유(N+1 제거)</td>
+</tr>
+<tr>
+<td>C</td>
+<td><code>_revenue_cards()</code></td>
+<td><code>:401</code> / <code>:141</code></td>
+<td>매출 카드 4개</td>
+</tr>
+<tr>
+<td>D</td>
+<td><code>_sub_flow()</code></td>
+<td><code>:402</code> / <code>:166</code></td>
+<td>도넛 옆 흐름 지표 4개</td>
+</tr>
+<tr>
+<td>E</td>
+<td><code>_series_12m()</code></td>
+<td><code>:403</code> / <code>:243</code></td>
+<td>12개월 구독 수·일반매출 시리즈</td>
+</tr>
+<tr>
+<td>F</td>
+<td><code>_daily_trend()</code></td>
+<td><code>:404</code> / <code>:262</code></td>
+<td>30일 일별 추이</td>
+</tr>
+<tr>
+<td>G</td>
+<td><code>status_breakdown</code> 조립</td>
+<td><code>:405-409</code></td>
+<td>도넛 데이터 (색상·링크 포함)</td>
+</tr>
+<tr>
+<td>H</td>
+<td><code>_service_revenue()</code> / <code>_service_subs()</code></td>
+<td><code>:411-413</code></td>
+<td><strong>scope=None일 때만</strong> (SYSTEM_ADMIN 전용)</td>
+</tr>
+<tr>
+<td>I</td>
+<td><code>_rails()</code></td>
+<td><code>:414</code> / <code>:347</code></td>
+<td>우측 패널 3개</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><code>_fetch_sub_states()</code>가 <code>(status, created_at, current_period_end)</code> 전 행을 Python 메모리에 로드합니다(<code class="loc">app/services/dashboard.py:193</code> 주석).
+12개월 시리즈와 30일 추이 모두 이 데이터를 Python 버킷 연산으로 재활용해 N+1 쿼리를 제거합니다.</p>
+</div></blockquote>
+<h3 id="4-4-_chartshtml">4-4. 차트 매크로 — <code>_charts.html</code></h3>
+<p><code>app/admin/templates/_charts.html</code> — 서버 사이드 SVG 렌더. 외부 JS 라이브러리 없음.</p>
+<table>
+<thead>
+<tr>
+<th>매크로</th>
+<th>위치</th>
+<th>차트 종류</th>
+<th>대시보드 사용처</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>area(series)</code></td>
+<td><code>:4</code></td>
+<td>영역 차트 (단일 값)</td>
+<td>12개월 일반매출</td>
+</tr>
+<tr>
+<td><code>bars(series, key_a, key_b, ...)</code></td>
+<td><code>:79</code></td>
+<td>그룹 막대</td>
+<td>12개월 구독 (전체/신규)</td>
+</tr>
+<tr>
+<td><code>donut(items, extra)</code></td>
+<td><code>:34</code></td>
+<td>도넛 + 범례 + extra 섹션</td>
+<td>구독 상태 비율 + 흐름 지표</td>
+</tr>
+<tr>
+<td><code>multiline(series, lines)</code></td>
+<td><code>:103</code></td>
+<td>멀티라인</td>
+<td>30일 추이 (전체/신규/취소/만료)</td>
+</tr>
+<tr>
+<td><code>hbar(items)</code></td>
+<td><code>:137</code></td>
+<td>수평 막대 랭킹</td>
+<td>(현재 대시보드에서 미사용)</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>donut(items, extra)</code></strong>: <code>extra</code> 파라미터에 <code>d.sub_flow</code>를 전달하면 도넛 범례 아래 구분선 이후 흐름 지표(<code class="loc">_charts.html:64-73</code>)가 렌더됩니다.</p>
+<h3 id="4-5-is_admin">4-5. <code>is_admin</code> 전용 섹션</h3>
+<p><code class="loc">app/admin/templates/dashboard.html:36</code> 서비스별 매출: <code>{% if is_admin and d.service_revenue %}</code>
+<code class="loc">app/admin/templates/dashboard.html:85</code> 서비스별 구독: <code>{% if is_admin and d.service_subs %}</code></p>
+<p><code>d.service_revenue</code>와 <code>d.service_subs</code>는 <code>build_dashboard</code>에서 <code>scope is None</code>일 때만 채워집니다(<code class="loc">app/services/dashboard.py:411-413</code>).
+<code>is_admin=False</code>이거나 리스트가 비어 있으면 두 테이블 모두 DOM에 출력되지 않습니다.</p>
+<h3 id="4-6">4-6. 기간 기본값 (고정)</h3>
+<p><code class="loc">app/services/dashboard.py:390</code></p>
+<pre><code class="language-python">now = utcnow()
+month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+</code></pre>
+<ul>
+<li>매출 카드·흐름 지표: <code>[month_start, now + 1초)</code> (이번 달 전체)</li>
+<li>12개월 시리즈: <code>month_start - 11개월</code> ~ <code>now</code></li>
+<li>30일 추이: <code>today - 29일</code> ~ <code>today</code></li>
+</ul>
+<p>반개구간 <code>[start, end)</code>. <code>end = now + relativedelta(seconds=1)</code> 으로 <code>now</code>를 포함시킵니다(<code class="loc">app/services/dashboard.py:148</code>).</p>
+<h3 id="4-7">4-7. 기능 상세 문서</h3>
+<p>집계 로직 전체, DB 테이블 목록, N+1 최적화 설명, 테스트, 유지보수 팁은 <a href="11-dashboard.html">../11-dashboard.md</a> 참조.
+정산 화면은 <a href="admin--07-settlement.html">07-settlement.md</a> 참조.</p>
+<hr />
+<h2 id="5_1">5. 주의사항 / 자주 하는 실수</h2>
+<table>
+<thead>
+<tr>
+<th>증상</th>
+<th>원인 및 확인 위치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>매출 카드가 0원으로 표시됨</td>
+<td>집계 기준은 <code>approved_at</code>(구독매출·일반매출·총매출). <code>requested_at</code>과 혼동하지 말 것 (<code class="loc">app/services/dashboard.py:112</code>)</td>
+</tr>
+<tr>
+<td>환불이 집계 안 됨</td>
+<td>환불 기준일은 <code>approved_at</code>이 아닌 <code>requested_at</code> (<code class="loc">app/services/dashboard.py:128</code>). <code>approved_at</code>이 NULL인 경우 있음</td>
+</tr>
+<tr>
+<td>취소 건수가 예상과 다름</td>
+<td>세 가지 감사 액션 합산: <code>subscription.cancel</code> + <code>subscription.force_cancel</code> + <code>subscription.suspended</code> (<code>app/services/dashboard.py:71,173</code>)</td>
+</tr>
+<tr>
+<td>SERVICE_MANAGER가 전체 데이터를 봄</td>
+<td><code>effective_service_ids()</code> 반환값 확인 — SYSTEM_ADMIN은 <code>None</code> 반환, SERVICE_MANAGER는 <code>[uuid, ...]</code></td>
+</tr>
+<tr>
+<td>도넛이 "데이터 없음"으로 표시됨</td>
+<td>스코프 내 구독이 없는 정상 케이스 (<code class="loc">app/services/dashboard.py:408-409</code>). 오류 아님</td>
+</tr>
+<tr>
+<td>서비스별 테이블이 안 보임</td>
+<td>SERVICE_MANAGER로 로그인 시 정상. <code>is_admin</code> 플래그(<code class="loc">app/admin/routes/dashboard.py:36</code>)와 <code>scope=None</code> 조건(<code class="loc">app/services/dashboard.py:411</code>) 확인</td>
+</tr>
+<tr>
+<td>시계가 멈춤</td>
+<td><code>id="dash-clock"</code> 엘리먼트 누락 또는 JavaScript 오류. <code class="loc">dashboard.html:13-22</code> 확인</td>
+</tr>
+<tr>
+<td>담당 서비스 없는 계정에 오류 발생</td>
+<td><code>scope=[]</code>이면 <code>WHERE ... IN ()</code> 처리 → 전 지표 0 반환. 오류 없음</td>
+</tr>
+</tbody>
+</table>
+    </div>
+    <div class="pager"><a class="pg prev" href="admin--01-login-and-access.html"><small>← 이전</small><b>01. 로그인·접근 (로그인 / 비밀번호 설정 / 로그아웃 / IP 제한)</b></a><a class="pg next" href="admin--03-services.html"><small>다음 →</small><b>03. 서비스 관리</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#1">1. 이 화면은 무엇인가 / 접근 경로·권한</a>
+<a class="toc-h2" href="#2">2. 화면 구성 — 무엇이 보이나</a>
+<a class="toc-h3" href="#2-1">2-1. 상단: 시계</a>
+<a class="toc-h3" href="#2-2">2-2. 매출 섹션 (이번 달)</a>
+<a class="toc-h3" href="#2-3-12-2-">2-3. 12개월 차트 (2-열 그리드)</a>
+<a class="toc-h3" href="#2-4-2-">2-4. 구독 섹션 (2-열 그리드)</a>
+<a class="toc-h3" href="#2-5-rail">2-5. 우측 패널 (rail)</a>
+<a class="toc-h2" href="#3">3. 할 수 있는 동작</a>
+<a class="toc-h2" href="#4_1">4. 개발 참조</a>
+<a class="toc-h3" href="#4-1">4-1. 라우트 함수</a>
+<a class="toc-h3" href="#4-2-_scoped">4-2. 스코프 처리 — _scoped()</a>
+<a class="toc-h3" href="#4-3-build_dashboard">4-3. build_dashboard() 집계 순서</a>
+<a class="toc-h3" href="#4-4-_chartshtml">4-4. 차트 매크로 — _charts.html</a>
+<a class="toc-h3" href="#4-5-is_admin">4-5. is_admin 전용 섹션</a>
+<a class="toc-h3" href="#4-6">4-6. 기간 기본값 (고정)</a>
+<a class="toc-h3" href="#4-7">4-7. 기능 상세 문서</a>
+<a class="toc-h2" href="#5_1">5. 주의사항 / 자주 하는 실수</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

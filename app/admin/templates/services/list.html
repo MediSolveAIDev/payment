@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}서비스{% endblock %}
+{% block crumb %}서비스{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>서비스</h1>
+  <span class="spacer"></span>
+  <a class="btn btn-primary" href="/admin/services/new"><span data-lucide="plus"></span>서비스 등록</a>
+</div>
+{% include "services/_table.html" %}
+{% endblock %}

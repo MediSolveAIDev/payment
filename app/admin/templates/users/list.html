@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}계정{% endblock %}
+{% block crumb %}계정{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>계정</h1>
+  <span class="spacer"></span>
+  <a class="btn btn-primary" href="/admin/users/new"><span data-lucide="plus"></span>계정 추가</a>
+</div>
+{% include "users/_table.html" %}
+{% endblock %}

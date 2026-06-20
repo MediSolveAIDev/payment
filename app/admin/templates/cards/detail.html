@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% import "_list.html" as L %}
+{% block title %}카드 상세{% endblock %}
+{% block crumb %}<a href="/admin/services/{{ service.id }}">{{ service.name }}</a> · 카드 상세{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="btn-text" href="/admin/services/{{ service.id }}"><span data-lucide="arrow-left"></span>서비스</a>
+  <h1 style="margin:0">카드 상세</h1>
+  {# 활성/비활성 상태 뱃지 — badge-ACTIVE(녹색)/badge-INACTIVE(회색) #}
+  <span class="badge badge-{{ 'ACTIVE' if card.is_active else 'INACTIVE' }}">{{ '활성' if card.is_active else '비활성' }}</span>
+  <span class="spacer"></span>
+  {# 활성/비활성 토글 — 일반 POST(htmx 아님) → 카드 상세로 리다이렉트 #}
+  <form method="post" action="/admin/cards/{{ card.id }}/toggle" style="margin:0"
+        data-confirm="{% if card.is_active %}비활성화하면 이 카드로의 모든 결제(구독 자동연장·일반결제 등)가 차단됩니다.{% else %}활성화하면 이 카드로 다시 결제할 수 있습니다.{% endif %}"
+        data-confirm-title="{% if card.is_active %}카드를 비활성화할까요?{% else %}카드를 활성화할까요?{% endif %}"
+        data-confirm-ok="{{ '비활성화' if card.is_active else '활성화' }}">
+    <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+    <button class="btn {{ 'btn-danger' if card.is_active else 'btn-primary' }}" type="submit">
+      <span data-lucide="{{ 'ban' if card.is_active else 'check' }}"></span>{{ '비활성화' if card.is_active else '활성화' }}</button>
+  </form>
+</div>
+<div class="card">
+  <div class="block-head"><h2 style="margin:0">카드 정보</h2></div>
+  <div class="kv"><span class="muted">사용자</span><span>{{ card.external_user_id }}</span></div>
+  {# card_info는 토스 응답 JSONB(마스킹 번호·발급사 등). 미등록 키는 '-' #}
+  <div class="kv"><span class="muted">카드번호</span><span style="font-family:ui-monospace,monospace">{{ card.card_info.number if card.card_info and card.card_info.number else '-' }}</span></div>
+  <div class="kv"><span class="muted">발급사코드</span><span>{{ card.card_info.issuerCode if card.card_info and card.card_info.issuerCode else '-' }}</span></div>
+  <div class="kv"><span class="muted">customerKey</span><span style="font-family:ui-monospace,monospace;font-size:12px">{{ card.customer_key }}</span></div>
+  {# 64자 SHA-256 해시는 앞 12자만 표시(전체는 title 툴팁) — 빌링키 암호문은 노출하지 않음 #}
+  <div class="kv"><span class="muted">빌링키 해시</span><span class="muted" style="font-family:ui-monospace,monospace;font-size:12px" title="{{ card.billing_key_hash }}">{{ card.billing_key_hash[:12] }}…</span></div>
+  <div class="kv"><span class="muted">서비스</span><span><a href="/admin/services/{{ service.id }}">{{ service.name }}</a></span></div>
+  <div class="kv"><span class="muted">등록일</span><span>{{ card.created_at|kst("%Y-%m-%d %H:%M") }}</span></div>
+  <div class="kv"><span class="muted">변경일</span><span>{{ card.updated_at|kst("%Y-%m-%d %H:%M") }}</span></div>
+</div>
+{# 이 카드로 결제한 내역 — (service_id, external_user_id) 매칭, 구독+일반 모두 포함 #}
+<div class="card">
+  <div class="block-head"><h2 style="margin:0">이 카드로 결제한 내역</h2></div>
+  {% set base_path = '/admin/cards/' ~ card.id %}
+  <table>
+    <thead><tr>
+      {{ L.sort_th(pp, base_path, 'requested_at', '요청시각') }}
+      <th>주문번호</th>
+      <th>종류</th>
+      {{ L.sort_th(pp, base_path, 'amount', '금액') }}
+      <th>상태</th>
+    </tr></thead>
+    <tbody>
+    {% for p in pay_page.items %}
+      <tr onclick="location.href='/admin/payments/{{ p.id }}'" style="cursor:pointer">
+        <td class="muted">{{ p.requested_at|kst("%Y-%m-%d %H:%M") }}</td>
+        <td style="font-family:ui-monospace,monospace;font-size:12px">{{ p.order_id }}</td>
+        <td><span class="badge badge-{{ p.kind }}">{{ '구독' if p.kind == 'SUBSCRIPTION' else '일반' }}</span></td>
+        <td style="font-weight:600">{{ "{:,}".format(p.amount) }}원</td>
+        <td><span class="badge badge-{{ p.status }}">{{ payment_status_ko(p.status) }}</span></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="muted">이 카드로 결제한 내역이 없습니다</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {{ L.pager(pay_page, base_path, pp) }}
+</div>
+{% endblock %}

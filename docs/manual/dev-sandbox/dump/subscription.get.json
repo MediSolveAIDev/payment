@@ -1,0 +1,13 @@
+{
+  "id": "1a2b3c4d-aaaa-4bbb-8ccc-d0d1d2d3d4d5",
+  "external_user_id": "demo-user-001",
+  "plan_id": "11111111-1111-4111-8111-111111111111",
+  "plan_name": "베이직",
+  "status": "ACTIVE",
+  "access_allowed": true,
+  "current_period_start": "2026-05-16T10:00:00+09:00",
+  "current_period_end": "2026-06-16T10:00:00+09:00",
+  "next_billing_at": "2026-06-16T10:00:00+09:00",
+  "card": { "number": "4321-****-****-1234", "company": "신한", "type": "CREDIT" },
+  "retry_count": 0
+}

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5. 관리자 콘솔 화면별 사용법 — 구독/결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <a class="brand" href="index.html">
+      <span class="logo">결제</span>
+      <span class="t">구독/결제 서버<small>서비스 담당자 매뉴얼</small></span>
+    </a>
+    <div class="nav-cat">시작</div>
+    <nav class="nav">
+      <a href="index.html"><span class="num">★</span> 매뉴얼 홈</a>
+      <a href="09-overview-diagram.html"><span class="num">◆</span> 한눈에 보기(그림)</a>
+      <a href="01-getting-started.html"><span class="num">0</span> 시작하기</a>
+    </nav>
+    <div class="nav-cat">관리자 콘솔</div>
+    <nav class="nav">
+      <a href="02-plans.html"><span class="num">1</span> 요금제 관리</a>
+      <a href="03-subscriptions.html"><span class="num">2</span> 구독 관리</a>
+      <a href="04-payments.html"><span class="num">3</span> 결제·환불</a>
+      <a href="05-settlement.html"><span class="num">4</span> 정산</a>
+      <a href="08-admin-console.html" class="active"><span class="num">5</span> 화면별 가이드(캡처)</a>
+    </nav>
+    <div class="nav-cat">개발 연동</div>
+    <nav class="nav">
+      <a href="00-setup.html"><span class="num">6</span> 설치·설정·배포</a>
+      <a href="06-api-integration.html"><span class="num">7</span> API 연동</a>
+      <a href="10-qa-testcases.html"><span class="num">8</span> QA 테스트케이스</a>
+      <a href="11-dev-sandbox.html"><span class="num">9</span> 사전 개발(덤프)</a>
+      <a href="dev_manual/index.html" target="_blank" rel="noopener"><span class="num">10</span> 개발자 매뉴얼 ↗</a>
+    </nav>
+    <div class="nav-cat">참고</div>
+    <nav class="nav">
+      <a href="07-faq.html"><span class="num">11</span> FAQ</a>
+      <a href="13-status-reference.html"><span class="num">12</span> 상태·코드 레퍼런스</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+  <div class="content">
+
+    <div class="page-head">
+      <div class="page-eyebrow">CHAPTER 5 · 실제 화면 캡처</div>
+      <h1>관리자 콘솔 화면별 사용법</h1>
+      <p class="lead">실제 운영 중인 콘솔 화면을 그대로 캡처해 각 화면의 위치와 버튼을 짚어 드립니다. 개념 설명은 2~5장을, 화면 위치는 이 장을 보세요.</p>
+    </div>
+
+    <div class="callout note">
+      <span class="ico">ℹ️</span>
+      <div><p>아래 화면은 <strong>시스템 관리자</strong> 계정으로 캡처한 것입니다. <strong>서비스 담당자</strong>는 좌측 메뉴 중
+      <em>서비스·계정·전체 설정·감사 로그</em>가 보이지 않고, 본인 담당 서비스 데이터만 표시됩니다. 캡처 속 이메일·금액은 테스트(시드) 데이터입니다.</p></div>
+    </div>
+
+    <h2><span class="h-no">5.1</span>로그인과 대시보드</h2>
+    <p>브라우저에서 콘솔 주소(예: <code>http://localhost:8000/admin</code>)로 접속하면 로그인 화면이 뜹니다. 이메일과 비밀번호로 로그인하면
+    가장 먼저 <strong>대시보드</strong>가 표시됩니다. 이번 달 매출·신규 구독·결제 실패·환불 지표와 최근 이벤트, 추세 차트를 한눈에 봅니다.</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-01-dashboard.png" alt="대시보드 화면">
+      <figcaption><span class="shot-badge">대시보드</span> 상단 매출 카드 · 서비스별 매출 · 12개월 추세 · (우측) 최근 구독/결제 레일</figcaption>
+    </figure>
+    <ul class="pinlist">
+      <li><span class="pin">1</span><strong>매출 카드</strong> — 이번 달 총매출·구독매출·일반매출·환불금액</li>
+      <li><span class="pin">2</span><strong>서비스별 매출</strong> — 서비스(상점)별 이번 달 매출·환불 비교(시스템 관리자 전용)</li>
+      <li><span class="pin">3</span><strong>추세 차트</strong> — 최근 12개월 구독/일반매출, 구독 상태 비율, 최근 30일 추이</li>
+      <li><span class="pin">4</span><strong>우측 레일</strong> — 최근 구독·최근 결제(완료=파랑, 실패=빨강)·미수·만료 임박. 항목 클릭 시 상세로 이동</li>
+    </ul>
+
+    <h2><span class="h-no">5.2</span>서비스 등록·관리</h2>
+    <p>좌측 <strong>서비스</strong> 메뉴입니다. 등록된 서비스(상점) 목록과 각 서비스의 담당자·허용 IP·상태를 봅니다.
+    <strong>+ 서비스 등록</strong>으로 새 서비스를 추가합니다. <span class="badge b-blue">시스템 관리자</span> 전용 메뉴입니다.</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-02-services-list.png" alt="서비스 목록 화면">
+      <figcaption><span class="shot-badge">서비스 목록</span> 이름 · 담당자 · 허용 IP · 상태(ACTIVE/INACTIVE) · 상세</figcaption>
+    </figure>
+
+    <div class="easybox">
+      <p>서비스 = <strong>이 결제 인프라를 사용할 사내 앱/상점 하나</strong>입니다. 서비스를 등록하면 그 서비스 전용
+      <strong>API 키·HMAC 시크릿</strong>이 발급되고, 담당자·허용 IP·취소 정책이 함께 관리됩니다.</p>
+    </div>
+
+    <h3>5.2.1 새 서비스 등록</h3>
+    <p><strong>+ 서비스 등록</strong> 버튼을 누르면 아래 등록 폼이 열립니다. 각 항목을 입력하고 <strong>등록</strong>을 누르면
+    곧바로 <em>키 발급 화면</em>으로 이동합니다.</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-14-service-new.png" alt="서비스 등록 폼 (예시 값 입력)">
+      <figcaption><span class="shot-badge">서비스 등록 폼</span> 서비스명 · 담당자 계정 · 대표 계정 · 허용 IP · 일반결제 취소 정책 (※ 예시 값 입력 상태)</figcaption>
+    </figure>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>입력 항목</th><th>설명</th><th>필수</th></tr></thead>
+        <tbody>
+          <tr><td><strong>서비스명</strong></td><td>콘솔과 결제창에 표시될 서비스 이름. <strong>중복 불가</strong>. 예: <code>DEMO-쇼핑몰</code></td><td><span class="badge b-red">필수</span></td></tr>
+          <tr><td><strong>담당자 계정<br>(복수 선택)</strong></td><td>이 서비스를 관리할 담당자를 체크로 선택합니다. <strong>미리 만들어 둔 계정만</strong> 목록에 나타납니다(계정이 없으면 먼저 <em>계정 추가</em>).</td><td><span class="badge b-gray">선택</span></td></tr>
+          <tr><td><strong>대표 계정</strong></td><td>결제 실패·갱신 등 <strong>알림 메일이 발송되는 주 수신처</strong>. 체크 목록에 없어도 자동으로 담당자에 포함됩니다. 실시간 확인 가능한 담당자를 지정하세요.</td><td><span class="badge b-red">필수</span></td></tr>
+          <tr><td><strong>허용 IP</strong></td><td>이 서비스의 API를 <strong>호출할 서버의 공인 IP</strong>(옥텟 4칸·숫자만). <em>IP 추가</em>로 여러 개 등록. 운영/개발 서버 IP를 각각 등록하세요.</td><td><span class="badge b-red">1개 이상</span></td></tr>
+          <tr><td><strong>일반결제 취소 허용</strong></td><td>단건(일반) 결제의 환불을 허용할지 여부(체크박스). 끄면 콘솔·API에서 환불할 수 없습니다.</td><td><span class="badge b-gray">선택</span></td></tr>
+          <tr><td><strong>취소 수수료(%)</strong></td><td>환불 시 차감할 수수료율. <strong>0이면 전액 환불</strong>, 0 초과면 그 비율을 뗀 금액을 환불(예: 10% → 1만 원 중 9천 원 환불).</td><td><span class="badge b-gray">선택</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn">
+      <span class="ico">⚠️</span>
+      <div><p><strong>담당자 계정을 먼저 만들어야 합니다.</strong> 등록 폼은 담당자를 <em>선택</em>하는 방식이라, 계정이 하나도 없으면
+      "먼저 담당자 계정을 만든 뒤 등록하세요"가 표시됩니다. 순서: <strong>① 계정 생성 → ② 서비스 등록</strong>.</p></div>
+    </div>
+
+    <h3>5.2.2 API 키·HMAC 시크릿 발급</h3>
+    <p>등록을 마치면 <strong>발급된 키 화면</strong>이 나타납니다. 이후 서비스 상세의 <strong>키 복사</strong> 버튼으로도 다시 볼 수 있습니다(아래는 키 복사 화면).</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-15-service-keys.png" alt="서비스 키 화면 (값 마스킹)">
+      <figcaption><span class="shot-badge">서비스 키</span> API 키(<code>svc_…</code>) · HMAC Secret · 각 항목 복사 버튼 (※ 보안을 위해 값은 가림 처리)</figcaption>
+    </figure>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>키</th><th>용도</th></tr></thead>
+        <tbody>
+          <tr><td><strong>API 키</strong> (<code>svc_…</code>)</td><td>외부 서비스가 호출 시 본인을 증명하는 아이디. <code>x-service-key</code> 헤더에 사용.</td></tr>
+          <tr><td><strong>HMAC Secret</strong></td><td>요청 위변조를 막는 서명용 비밀키. <code>x-signature</code> 계산에 사용. <strong>절대 외부 노출 금지.</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout danger">
+      <span class="ico">⛔</span>
+      <div>
+        <p>API 키·HMAC 시크릿은 <strong>발급(또는 재발급) 순간 한 번만</strong> 전체가 보입니다. 즉시 복사해 안전한 채널로 담당자에게 전달하세요(메신저·이메일 평문 전송 지양).</p>
+        <p>분실·유출 시 서비스 상세의 <strong>키 재발급(회전)</strong>으로 새로 발급합니다. 재발급 즉시 <strong>기존 키는 무효화</strong>되므로 연동 서비스도 새 키로 갱신해야 합니다.</p>
+      </div>
+    </div>
+
+    <h3>5.2.3 서비스 상세에서 수정·관리</h3>
+    <p>서비스명을 클릭하면 상세 화면이 열립니다. 여기서 <strong>키, 허용 IP, 취소 정책, 담당자, 요금제</strong>를 모두 수정·관리합니다.</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-16-service-edit.png" alt="서비스 상세·관리 화면">
+      <figcaption><span class="shot-badge">서비스 상세</span> (상단) 비활성화·키 복사·키 재발급·삭제 · 개요 · 담당자 · 허용 IP · 취소 정책 · 요금제 관리</figcaption>
+    </figure>
+    <ul class="pinlist">
+      <li><span class="pin">1</span><strong>상단 동작</strong> — <em>비활성화</em>(서비스 일시 중지, API 인증 차단) · <em>키 복사</em> · <em>키 재발급</em> · <em>삭제</em>. (구독이 있는 서비스는 삭제 불가)</li>
+      <li><span class="pin">2</span><strong>허용 IP</strong> — 옥텟 4칸으로 추가/삭제 후 <em>IP 갱신</em>으로 저장. 등록되지 않은 IP의 API 호출은 차단(403)됩니다.</li>
+      <li><span class="pin">3</span><strong>담당자 계정</strong> — <em>담당자 추가</em>로 지정, 행에서 <em>대표 지정/수정/삭제</em>. <span class="badge b-blue">대표</span> 배지가 알림 수신처입니다.</li>
+      <li><span class="pin">4</span><strong>일반결제 취소 정책</strong> — 취소 허용 체크 + 취소 수수료율(%) 입력 후 <em>저장</em>.</li>
+      <li><span class="pin">5</span><strong>요금제 관리</strong> — 이 서비스의 요금제 목록과 동작(<em>수정·비활성화·삭제·사용일추가</em>) 및 <em>요금제 추가</em>. (구독이 있는 요금제는 삭제 대신 비활성화) 보관(비활성)된 요금제 행에는 <em>활성화</em> 버튼이 나타나 다시 ACTIVE로 되돌릴 수 있습니다.</li>
+    </ul>
+    <div class="callout note">
+      <span class="ico">ℹ️</span>
+      <div><p><strong>비활성화 vs 삭제</strong> — 비활성화는 API 인증만 막고 데이터는 보존(다시 활성화 가능), 삭제는 영구 제거입니다.
+      <strong>구독이 남아 있는 서비스·요금제는 삭제할 수 없습니다.</strong></p></div>
+    </div>
+
+    <h3>5.2.4 요금제 "사용일추가" — 구독자 일괄 보너스</h3>
+    <p>요금제 관리 테이블의 각 행에 있는 <strong>사용일추가</strong> 버튼은, <strong>그 요금제를 이용 중인 모든 구독에 한꺼번에
+    무료 이용일을 더해 주는</strong> 보너스 기능입니다. 서비스 장애 보상이나 이벤트처럼 <em>해당 요금제 구독자 전체</em>에게
+    며칠을 더 주고 싶을 때 사용합니다. 버튼을 누르면 추가할 일수를 입력하는 창이 뜹니다.</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-17-plan-bonus-days.png" alt="사용일추가 입력 모달">
+      <figcaption><span class="shot-badge">사용일추가</span> 추가할 일수 입력(1~3650일) 후 <em>추가</em> → 그 요금제의 이용 중 구독에 일괄 적용 (※ 예시로 30 입력)</figcaption>
+    </figure>
+    <div class="easybox">
+      <p>"이 요금제 쓰는 분들 전부 <strong>30일씩 더 드리기</strong>" 버튼이라고 생각하면 됩니다. 한 명씩 일일이 늘려줄 필요 없이,
+      해당 요금제의 <strong>이용 중인 구독 전체</strong>의 만료일이 한 번에 미뤄집니다.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>내용</th></tr></thead>
+        <tbody>
+          <tr><td><strong>적용 대상</strong></td><td>그 요금제의 <strong>이용 중인 구독</strong> — <span class="badge b-green">활성(ACTIVE)</span> · <span class="badge b-purple">연장처리(EXTENDED)</span> · <span class="badge b-orange">미수(PAST_DUE)</span></td></tr>
+          <tr><td><strong>제외 대상</strong></td><td>체험(TRIAL) · 정지(SUSPENDED) · 취소예약(CANCELED) · 만료(EXPIRED) 구독은 적용되지 않음</td></tr>
+          <tr><td><strong>바뀌는 값</strong></td><td><strong>만료일</strong>과 <strong>다음 결제일</strong>이 함께 입력한 일수만큼 미뤄짐 (보너스 기간 중 결제가 앞당겨지지 않도록)</td></tr>
+          <tr><td><strong>상태 변화</strong></td><td><strong>없음</strong> — 날짜만 연장되고 구독 상태는 그대로 유지(예: 활성은 활성 그대로)</td></tr>
+          <tr><td><strong>입력 범위</strong></td><td>1 ~ 3,650일</td></tr>
+          <tr><td><strong>완료 안내</strong></td><td>"N개 구독에 M일이 추가되었습니다" 메시지 표시. 감사 로그에도 기록됨</td></tr>
+          <tr><td><strong>권한</strong></td><td>시스템 관리자 · 서비스 담당자 모두 사용 가능</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn">
+      <span class="ico">⚠️</span>
+      <div><p><strong>한 명만</strong> 연장하려면 이 버튼이 아니라 <a href="03-subscriptions.html">구독 상세의 <strong>만료일 연장</strong></a>(5.4)을 사용하세요.
+      요금제 사용일추가는 <strong>그 요금제 구독자 전원</strong>에게 적용되므로, 누르기 전에 대상 범위를 꼭 확인하세요.</p></div>
+    </div>
+
+    <h2><span class="h-no">5.3</span>요금제 관리</h2>
+    <p>좌측 <strong>요금제</strong> 메뉴는 전체 요금제를 한 표에서 보여줍니다. 정가·체험·첫구독 할인·첫 결제액·상시할인·정기 결제액·주기·상태를 비교할 수 있습니다.</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-04-plans-list.png" alt="요금제 목록 화면">
+      <figcaption><span class="shot-badge">요금제 목록</span> 서비스별 요금제 · 첫 결제액/정기 결제액 · 주기(MONTH/DAY 등) · 상태</figcaption>
+    </figure>
+    <p>요금제 생성·수정은 <strong>서비스 담당자</strong> 권한으로, 서비스 상세의 <em>요금제 추가</em> 또는 요금제 메뉴에서 진행합니다. 입력 폼은 다음과 같습니다.</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-05-plan-create.png" alt="요금제 생성 폼">
+      <figcaption><span class="shot-badge">요금제 생성</span> 이름 · 가격 · 결제 주기 · 첫구독 할인 · 상시 할인 · 체험 · 자동결제 · 추가정보 · 금액 미리보기</figcaption>
+    </figure>
+    <ul class="pinlist">
+      <li><span class="pin">1</span><strong>결제 주기(반복회차)</strong> — 년/월/주/일. <em>일</em> 선택 시 원하는 일수를 입력. <strong>생성 후 변경 불가</strong>.</li>
+      <li><span class="pin">2</span><strong>첫구독 할인</strong> — 없음/무료/할인금액/할인율. 처음 신청 시 1회만 적용.</li>
+      <li><span class="pin">3</span><strong>상시 할인</strong> — 모든 회차 결제에 적용.</li>
+      <li><span class="pin">4</span><strong>체험(Trial) 제공 / 자동결제 안함</strong> — 체험 일수 동안 무료 후 자동결제, 또는 첫 주기 후 자동 종료.</li>
+      <li><span class="pin">5</span><strong>금액 미리보기</strong> — 저장 전 첫 결제액·정기 결제액을 자동 계산해 보여줌.</li>
+    </ul>
+    <div class="callout tip">
+      <span class="ico">💡</span>
+      <div><p>요금제 설정 항목의 의미는 <a href="02-plans.html">1. 요금제 관리</a>에서 더 자세히 설명합니다.</p></div>
+    </div>
+
+    <h2><span class="h-no">5.4</span>구독 관리</h2>
+    <p>좌측 <strong>구독</strong> 메뉴입니다. 사용자별 구독을 상태·서비스·요금제로 필터링하고, 만료일·다음 결제 시각을 확인합니다.</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-06-subscriptions-list.png" alt="구독 목록 화면">
+      <figcaption><span class="shot-badge">구독 목록</span> 서비스 · 사용자 · 요금제 · 상태 · 만료일 · 다음 결제</figcaption>
+    </figure>
+    <p>행의 <strong>상세</strong>를 클릭하면 구독 상세가 열립니다. 운영 개입(즉시 재결제·만료일 연장·강제 취소)과 결제 이력을 한 화면에서 처리합니다.</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-07-subscription-detail.png" alt="구독 상세 화면">
+      <figcaption><span class="shot-badge">구독 상세</span> (좌) 구독 정보 · (우) 관리 액션 · (하) 결제 이력</figcaption>
+    </figure>
+    <ul class="pinlist">
+      <li><span class="pin">1</span><strong>구독 정보</strong> — 구독 ID(KEY), 요금제, 결제 주기·누적 결제 횟수, 만료일, 다음 결제, 재시도 횟수, 마스킹된 카드.</li>
+      <li><span class="pin">2</span><strong>결제 처리</strong> — 미수/정지 구독을 지금 즉시 결제. 성공 시 <span class="badge b-green">활성</span>으로 복구.</li>
+      <li><span class="pin">3</span><strong>만료일 연장</strong> — 날짜를 골라 만료일을 늦춤(연장 기간엔 자동결제 없음, 상태=<span class="badge b-purple">연장처리</span>).</li>
+      <li><span class="pin">4</span><strong>강제 취소</strong> — 즉시 종료(환불은 포함하지 않음).</li>
+      <li><span class="pin">5</span><strong>결제 이력</strong> — 유형(FIRST/RENEWAL/RETRY), 금액, 상태(DONE/FAILED), 실패 사유 코드.</li>
+    </ul>
+
+    <h2><span class="h-no">5.5</span>결제·환불</h2>
+    <p>좌측 <strong>결제</strong> 메뉴는 모든 거래(구독 정기결제+단건)를 보여줍니다. 주문번호·종류·유형·금액·상태·실패 코드로 추적합니다.</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-08-payments-list.png" alt="결제 내역 화면">
+      <figcaption><span class="shot-badge">결제 내역</span> 주문번호 · 종류(구독/일반) · 유형 · 금액 · 상태(완료/실패/취소) · 실패 코드</figcaption>
+    </figure>
+    <p>결제 행을 클릭하면 상세가 열립니다. 토스 결제키, 승인 시각, 원본 응답(Raw)과 함께 단건 결제의 경우 <strong>취소(환불)</strong>를 처리할 수 있습니다.</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-09-payment-detail.png" alt="결제 상세 화면">
+      <figcaption><span class="shot-badge">결제 상세</span> 금액 · 상태 · 실패 코드/메시지 · 토스 결제키 · 원본 응답(JSON)</figcaption>
+    </figure>
+    <ul class="pinlist">
+      <li><span class="pin">1</span><strong>상태</strong> — 완료(DONE)·실패(FAILED)·취소(CANCELED). 취소 건은 환불액·수수료가 함께 기록됩니다.</li>
+      <li><span class="pin">2</span><strong>토스 결제키</strong> — 토스 관리자 페이지에서 같은 거래를 찾을 때 사용.</li>
+      <li><span class="pin">3</span><strong>원본 응답</strong> — PG가 보낸 데이터 전체(평상시 무시, 장애 분석 시 참고).</li>
+    </ul>
+    <div class="callout warn">
+      <span class="ico">⚠️</span>
+      <div><p>환불은 서비스 <strong>취소 정책</strong>(취소 허용·수수료율)에 따릅니다. 이미 취소된 건은 되돌릴 수 없습니다. 자세한 절차는 <a href="04-payments.html">3. 결제·환불</a> 참고.</p></div>
+    </div>
+
+    <h2><span class="h-no">5.6</span>정산</h2>
+    <p>좌측 <strong>정산</strong> 메뉴에서 월/기간을 골라 순매출을 집계합니다. <strong>순매출 = 총 결제액 − 환불액</strong>이 정산 기준이며, 엑셀로 내려받을 수 있습니다.</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-10-settlement.png" alt="정산 화면">
+      <figcaption><span class="shot-badge">정산</span> 기간 선택 · 전체 순매출 요약 · 서비스별 건수/구독/일반/총매출/환불/순매출 · 엑셀</figcaption>
+    </figure>
+    <ul class="pinlist">
+      <li><span class="pin">1</span><strong>기간 선택</strong> — 월 단위 또는 시작·종료일 직접 지정 후 <em>조회</em>.</li>
+      <li><span class="pin">2</span><strong>요약</strong> — 전체 순매출, 총매출, 환불(취소), 구독/일반 매출 분해.</li>
+      <li><span class="pin">3</span><strong>서비스별 표 · 상세보기</strong> — 서비스별 정산 + 개별 결제 내역.</li>
+      <li><span class="pin">4</span><strong>엑셀</strong> — 재무·세무용 상세 데이터 다운로드.</li>
+    </ul>
+
+    <h2><span class="h-no">5.7</span>계정 · 전체 설정 · 감사 로그 <span class="badge b-blue">시스템 관리자</span></h2>
+    <p>아래 세 메뉴는 시스템 관리자 전용입니다.</p>
+
+    <h3>계정 (Users)</h3>
+    <p>콘솔에 접속하는 운영자 계정을 관리합니다. <strong>계정 추가</strong>로 담당자를 만들면 비밀번호 설정 링크가 이메일로 발송됩니다.</p>
+    <p>계정 생성 폼에서 <strong>'계정 생성 + 설정 메일 발송'</strong> 버튼을 누르면, 메일 발송이 끝날 때까지 버튼이 <strong>'설정 메일 발송 중…' 로딩 상태</strong>로 바뀌고 화면 상단에 진행 표시줄이 나타납니다. 발송이 완료되면 자동으로 다음 화면으로 넘어가며, 그 사이 버튼이 비활성화되어 중복 발송을 막습니다.</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-11-users.png" alt="계정 관리 화면">
+      <figcaption><span class="shot-badge">계정</span> 이메일 · 역할(시스템 관리자/서비스 담당자) · 주 서비스 · 상태(ACTIVE/PENDING/LOCKED)</figcaption>
+    </figure>
+
+    <h3>전체 설정 (System Settings)</h3>
+    <p>시스템 전역 정책입니다. 자동결제 재시도, 보안/결제 정책, 어드민 접속 허용 IP, 결제서버 킬스위치를 설정합니다. 모든 값은 <strong>저장 즉시 적용</strong>되며 재배포가 필요 없습니다(DB 전역설정).</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-12-settings.png" alt="전체 설정 화면">
+      <figcaption><span class="shot-badge">전체 설정</span> 자동결제 재시도(횟수·간격·유예) · 보안/결제 정책 · 어드민 허용 IP · 결제서버 킬스위치</figcaption>
+    </figure>
+    <ul class="pinlist">
+      <li><span class="pin">1</span><strong>자동결제 재시도</strong> — 최대 재시도 횟수·간격(시간)·SUSPENDED 만료 유예(일).</li>
+      <li><span class="pin">2</span><strong>보안/결제 정책</strong> — <strong>로그인 실패 잠금 임계치(회)</strong>·<strong>잠금 지속(분)</strong>·<strong>단건결제 1회 최대 금액(원)</strong>. 사고 대응 시 한도를 즉시 조이거나 잠금을 강화할 때 사용합니다(저장 즉시 적용). <code>.env</code>의 동명 값은 부팅 기본값이며, 여기 저장한 값이 런타임에서 우선합니다.</li>
+      <li><span class="pin">3</span><strong>어드민 접속 허용 IP</strong> — 특정 IP에서만 로그인 허용(설정 시 본인 IP 반드시 포함).</li>
+      <li><span class="pin">4</span><strong>킬스위치</strong> — 긴급 시 결제 API만 일시 중단(503). 어드민 화면은 계속 동작. 변경 시 본인 비밀번호 확인 필요.</li>
+    </ul>
+
+    <h3>감사 로그 (Audit Log)</h3>
+    <p>로그인·설정 변경·결제 등 모든 주요 이벤트를 시각·행위자·활동·대상·변경내용(diff)·IP로 기록합니다. 행위자(관리자/외부 서비스/시스템)·활동 유형으로 검색하고 엑셀로 보관할 수 있습니다.</p>
+    <figure class="shot">
+      <img src="assets/admin/admin-13-audit.png" alt="감사 로그 화면">
+      <figcaption><span class="shot-badge">감사 로그</span> 시각 · 행위자 · 활동 · 대상 · 상세(diff) · IP · (하단) 이전 로그 삭제</figcaption>
+    </figure>
+    <div class="callout tip">
+      <span class="ico">💡</span>
+      <div><p>이 세 메뉴의 개념·권한 설명은 서비스 담당자 관점으로 <a href="07-faq.html">11. FAQ</a>과 0장에도 정리돼 있습니다.</p></div>
+    </div>
+
+    <div class="pager">
+      <a href="05-settlement.html"><small>이전</small><span>← 4. 정산</span></a>
+      <a class="next" href="index.html"><small>처음으로</small><span>매뉴얼 홈 →</span></a>
+    </div>
+
+  </div>
+  </main>
+</div>
+<script src="assets/glossary.js"></script>
+</body>
+</html>

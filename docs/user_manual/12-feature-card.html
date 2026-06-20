@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12. 카드 보관함(Card Vault) 기능 — 구독·결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>사용·개발 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>📘</span>사용자 매뉴얼</div>
+<a class="nav-link" href="00-overview.html"><span class="n">0</span><span class="tt">0. 구독·결제 서버 전체 개요</span></a>
+<a class="nav-link" href="01-admin-console.html"><span class="n">1</span><span class="tt">1. 관리자 콘솔 사용하기</span></a>
+<a class="nav-link" href="02-admin-card.html"><span class="n">2</span><span class="tt">2. 카드(결제수단) 관리</span></a>
+<a class="nav-link" href="03-admin-subscription.html"><span class="n">3</span><span class="tt">3. 구독 관리</span></a>
+<a class="nav-link" href="04-admin-plan.html"><span class="n">4</span><span class="tt">4. 요금제 관리</span></a>
+<a class="nav-link" href="05-admin-payment-refund.html"><span class="n">5</span><span class="tt">5. 일반결제와 환불(취소)</span></a>
+<a class="nav-link" href="06-admin-accounts.html"><span class="n">6</span><span class="tt">6. 계정 관리</span></a>
+<a class="nav-link" href="07-admin-settings.html"><span class="n">7</span><span class="tt">7. 전체 설정</span></a>
+<a class="nav-link" href="08-admin-audit.html"><span class="n">8</span><span class="tt">8. 감사 로그</span></a>
+<a class="nav-link" href="09-dashboard.html"><span class="n">9</span><span class="tt">9. 대시보드</span></a>
+<div class="nav-group"><span>🛠️</span>개발자 매뉴얼</div>
+<a class="nav-link" href="10-install-deploy.html"><span class="n">10</span><span class="tt">10. 설치·설정·배포</span></a>
+<a class="nav-link" href="11-service-api.html"><span class="n">11</span><span class="tt">11. 서비스 연동 API</span></a>
+<a class="nav-link active" href="12-feature-card.html"><span class="n">12</span><span class="tt">12. 카드 보관함(Card Vault) 기능</span></a>
+<a class="nav-link" href="13-feature-subscription.html"><span class="n">13</span><span class="tt">13. 구독 기능</span></a>
+<a class="nav-link" href="14-feature-payment.html"><span class="n">14</span><span class="tt">14. 일반결제·취소·정산 기능</span></a>
+<a class="nav-link" href="15-feature-notifications.html"><span class="n">15</span><span class="tt">15. 서비스 알림(아웃고잉 웹훅) 기능</span></a>
+<a class="nav-link" href="16-admin-screens.html"><span class="n">16</span><span class="tt">16. 어드민 화면별 설명</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">매뉴얼 홈</a> <span>/</span> <em>개발자 매뉴얼</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">🛠️ 개발자 매뉴얼</span></div>
+      <h1>12. 카드 보관함(Card Vault) 기능</h1>
+      
+    </header>
+    <div class="doc">
+
+<blockquote class="cal ref"><span class="cal-i">🔗</span><div class="cal-b">
+<p>함께 보기: <a href="13-feature-subscription.html">구독 기능</a></p>
+</div></blockquote>
+<p>이 문서는 카드 보관함 기능을 <strong>호출 진입(라우트)부터 반환까지</strong> 코드 흐름으로 따라갑니다. 카드 등록·교체·삭제·활성/비활성 토글, 빌링키 암호화 보관, 비활성 카드 결제 차단, 카드별 결제내역 표시를 다룹니다.</p>
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p>쉽게 말하면 카드 보관함은 "토스가 발급한 빌링키(자동결제 열쇠)를 서버 금고에 암호화해 넣어 두고, 구독·결제가 필요할 때 꺼내 쓰는 곳"입니다. <code>(서비스, 외부 사용자)</code>당 카드 1장만 보관합니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="1-db">1. 기능 개요·관련 파일·DB 테이블</h2>
+<h3 id="1-1">1-1. 한 줄 정의</h3>
+<p>토스에서 발급한 <strong>빌링키를 AES-GCM으로 암호화</strong>해 <code>cards</code> 테이블에 보관하고, 구독·단건 결제가 이 카드를 참조해 자동결제합니다. <code>(service_id, external_user_id)</code> 쌍당 <strong>1건</strong>만 허용하며, 재등록 시 같은 행을 교체합니다.</p>
+<h3 id="1-2">1-2. 관련 파일</h3>
+<table>
+<thead>
+<tr>
+<th>파일</th>
+<th>역할</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>app/api/v1/cards.py</code></td>
+<td>외부 API 라우터 — <code>POST/GET/DELETE /api/v1/cards</code></td>
+</tr>
+<tr>
+<td><code>app/services/cards.py</code></td>
+<td>서비스 레이어 — 등록/교체·조회·삭제·활성 토글</td>
+</tr>
+<tr>
+<td><code>app/models/card.py</code></td>
+<td><code>Card</code> 모델(cards 테이블)</td>
+</tr>
+<tr>
+<td><code>app/core/crypto.py</code></td>
+<td><code>AesGcmCipher</code> — 빌링키 암호화/복호화</td>
+</tr>
+<tr>
+<td><code>app/core/security.py</code></td>
+<td><code>sha256_hex</code> — 빌링키 해시</td>
+</tr>
+<tr>
+<td><code>app/services/payment_utils.py</code></td>
+<td><code>safe_delete_billing_key</code>, <code>CUSTOMER_KEY_RE</code></td>
+</tr>
+<tr>
+<td><code>app/toss/client.py</code></td>
+<td>토스 빌링키 발급·삭제</td>
+</tr>
+<tr>
+<td><code>app/notifications/service_notify.py</code></td>
+<td>카드 이벤트 서비스 알림 상수</td>
+</tr>
+</tbody>
+</table>
+<h3 id="1-3-db-cards-appmodelscardpy15">1-3. DB 테이블 — <code>cards</code> (<code class="loc">app/models/card.py:15</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID PK</td>
+<td>카드 고유 ID</td>
+</tr>
+<tr>
+<td><code>service_id</code></td>
+<td>UUID FK → services (RESTRICT)</td>
+<td>소속 서비스</td>
+</tr>
+<tr>
+<td><code>external_user_id</code></td>
+<td>VARCHAR(255)</td>
+<td>외부 서비스 사용자 ID</td>
+</tr>
+<tr>
+<td><code>customer_key</code></td>
+<td>VARCHAR(300)</td>
+<td>토스 customerKey</td>
+</tr>
+<tr>
+<td><code>billing_key_encrypted</code></td>
+<td>VARCHAR(1024)</td>
+<td>빌링키 AES-GCM 암호문(평문 저장 안 함)</td>
+</tr>
+<tr>
+<td><code>billing_key_hash</code></td>
+<td>VARCHAR(64)</td>
+<td>빌링키 SHA-256 해시(중복탐지·조회용)</td>
+</tr>
+<tr>
+<td><code>card_info</code></td>
+<td>JSONB</td>
+<td>마스킹 카드번호·발급사 등 토스 응답 일부</td>
+</tr>
+<tr>
+<td><code>is_active</code></td>
+<td>BOOLEAN (기본 true)</td>
+<td><strong>false면 이 카드로의 모든 결제 차단</strong></td>
+</tr>
+<tr>
+<td><code>created_at</code>/<code>updated_at</code></td>
+<td>timestamptz</td>
+<td>등록/교체 시각</td>
+</tr>
+</tbody>
+</table>
+<p>유니크 제약 <code>uq_cards_service_user</code>가 <code>(service_id, external_user_id)</code> 쌍당 1건을 DB 수준에서 강제합니다(<code class="loc">app/models/card.py:25</code>).</p>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 빌링키 원문은 <strong>어디에도 저장하지 않습니다.</strong> 암호문(<code>billing_key_encrypted</code>)만 보관하고, 자동결제 시점에 복호화해서 토스에 전달합니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="2">2. 주요 흐름별 단계 추적</h2>
+<h3 id="2-1-post-apiv1cards">2-1. 카드 등록/교체 — <code>POST /api/v1/cards</code></h3>
+<p>요청 → 라우터 → 서비스 함수 → 토스 → DB → 감사로그 → 알림 → 반환의 전체 경로입니다.</p>
+<p><strong>1) 라우터 진입</strong> (<code class="loc">app/api/v1/cards.py:52</code> <code>register_card</code>)</p>
+<p>빌링키 발급(토스 호출)을 수반하므로 일반 인증이 아닌 <strong>결제 전용 처리율 제한</strong> <code>payment_rate_limit</code>을 통과합니다.</p>
+<pre><code class="language-python">@router.post(&quot;/cards&quot;, status_code=201, response_model=CardResponse, ...)
+async def register_card(
+    payload: CardRegisterRequest,
+    service: Service = Depends(payment_rate_limit),  # 결제 전용 처리율 제한 + 인증
+    db: AsyncSession = Depends(get_db),
+    toss: TossClient = Depends(get_toss),
+    cipher: AesGcmCipher = Depends(get_cipher),
+    notifier=Depends(get_notifier),
+):
+    card = await card_service.register_or_replace_card(
+        db, toss, cipher,
+        service=service,
+        external_user_id=payload.external_user_id,
+        customer_key=payload.customer_key,
+        auth_key=payload.auth_key,
+        notifier=notifier,
+    )
+    return CardResponse.from_model(card)  # 마스킹 정보만 — billingKey 비포함
+</code></pre>
+<p><strong>2) 서비스 함수</strong> (<code class="loc">app/services/cards.py:163</code> <code>register_or_replace_card</code>)</p>
+<p>시그니처와 핵심 흐름:</p>
+<pre><code class="language-python">async def register_or_replace_card(
+    db, toss, cipher, *,
+    service, external_user_id, customer_key, auth_key, notifier=None,
+) -&gt; Card:
+</code></pre>
+<p>단계 추적:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>단계</th>
+<th>코드 위치</th>
+<th>외부호출/DB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>customer_key</code> 형식 검증(<code>CUSTOMER_KEY_RE</code>)</td>
+<td><code class="loc">cards.py:195</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>external_user_id</code> 빈값/255자 초과 검증</td>
+<td><code class="loc">cards.py:198</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>3</td>
+<td>토스 빌링키 발급</td>
+<td><code class="loc">cards.py:202</code></td>
+<td><code>toss.issue_billing_key(auth_key, customer_key)</code> → <code>BillingKeyResult</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>기존 카드 조회로 교체/신규 분기</td>
+<td><code class="loc">cards.py:205</code></td>
+<td><code>SELECT cards</code></td>
+</tr>
+<tr>
+<td>5a</td>
+<td>교체: 기존 행 갱신</td>
+<td><code class="loc">cards.py:208-215</code></td>
+<td>UPDATE(메모리)</td>
+</tr>
+<tr>
+<td>5b</td>
+<td>신규: <code>Card</code> 삽입 + <code>flush</code></td>
+<td><code class="loc">cards.py:218-239</code></td>
+<td>INSERT, 충돌 시 <code>IntegrityError</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>감사 로그 + commit</td>
+<td><code class="loc">cards.py:244-254</code></td>
+<td><code>record_audit</code> + <code>COMMIT</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>교체 시 옛 빌링키 best-effort 삭제</td>
+<td><code class="loc">cards.py:257-264</code></td>
+<td><code>safe_delete_billing_key</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td>서비스 알림(best-effort)</td>
+<td><code class="loc">cards.py:267</code></td>
+<td><code>notifier.send</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>Card</code> 반환</td>
+<td><code class="loc">cards.py:271</code></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>빌링키 발급 후 암호화 저장 부분(신규):</p>
+<pre><code class="language-python">bk = await toss.issue_billing_key(auth_key, customer_key)  # 토스 발급
+...
+card = Card(
+    service_id=service.id,
+    external_user_id=external_user_id,
+    customer_key=customer_key,
+    billing_key_encrypted=cipher.encrypt(bk.billing_key),  # AES-GCM 암호화 저장
+    billing_key_hash=sha256_hex(bk.billing_key),           # 중복탐지용 해시
+    card_info=bk.card,                                     # 마스킹 번호·발급사
+)
+db.add(card)
+</code></pre>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>중요: 신규 등록은 <code>db.add(card)</code> 직후 <code>db.flush()</code>를 실행합니다(<code class="loc">cards.py:234</code>). <code>SELECT</code> 후 <code>INSERT</code> 사이에 동시 요청이 같은 키로 들어오면 <code>uq_cards_service_user</code> 유니크 제약이 위반되어 <code>IntegrityError</code>가 납니다. 이때 <code>rollback</code> → 패자 요청이 발급한 <strong>고아 빌링키를 best-effort 삭제</strong> → <code>ConflictError</code>를 던집니다(<code class="loc">cards.py:235-239</code>).</p>
+</div></blockquote>
+<p><strong>3) 반환</strong> — <code>CardResponse.from_model(card)</code>는 <code>card_info</code>(마스킹 정보)만 담고 <code>billing_key_encrypted</code>는 절대 응답에 넣지 않습니다.</p>
+<h3 id="2-2-get-apiv1cardsexternal_user_id">2-2. 카드 조회 — <code>GET /api/v1/cards/{external_user_id}</code></h3>
+<p><code class="loc">app/api/v1/cards.py:90</code> <code>get_card</code>. 읽기 전용이므로 일반 HMAC 인증 <code>authenticate_service</code>를 사용합니다.</p>
+<pre><code class="language-python">card = await card_service.get_card(
+    db, service_id=service.id, external_user_id=external_user_id)
+if card is None:
+    raise NotFoundError(&quot;등록된 카드가 없습니다&quot;)  # 404
+return CardResponse.from_model(card)
+</code></pre>
+<p>서비스 함수 <code>get_card</code>(<code class="loc">app/services/cards.py:95</code>)는 <code>(service_id, external_user_id)</code>로 단일 카드를 조회하고, 없으면 <strong>예외 없이 <code>None</code></strong>을 반환합니다(라우터에서 404로 변환).</p>
+<h3 id="2-3-delete-apiv1cardsexternal_user_id">2-3. 카드 삭제 — <code>DELETE /api/v1/cards/{external_user_id}</code></h3>
+<p><strong>1) 라우터</strong> (<code class="loc">app/api/v1/cards.py:122</code> <code>delete_card</code>) — 실제 과금은 없으므로 일반 인증 <code>authenticate_service</code>. 응답은 204 No Content.</p>
+<p><strong>2) 서비스 함수</strong> (<code class="loc">app/services/cards.py:274</code> <code>delete_card</code>) 단계 추적:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>단계</th>
+<th>코드 위치</th>
+<th>DB/외부</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>카드 조회 — 없으면 <code>NotFoundError</code></td>
+<td><code class="loc">cards.py:308</code></td>
+<td><code>SELECT cards</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>billing-active 구독이 카드 참조 시 <code>ConflictError</code></td>
+<td><code class="loc">cards.py:314-321</code></td>
+<td><code>SELECT subscriptions</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>CANCELED/EXPIRED 구독의 <code>card_id</code> → NULL</td>
+<td><code class="loc">cards.py:328-334</code></td>
+<td>UPDATE</td>
+</tr>
+<tr>
+<td>4</td>
+<td>빌링키 평문 확보(삭제 전)</td>
+<td><code class="loc">cards.py:337</code></td>
+<td><code>cipher.decrypt</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>카드 삭제 + 감사 로그 + commit</td>
+<td><code class="loc">cards.py:340-350</code></td>
+<td><code>DELETE</code> + <code>record_audit</code> + <code>COMMIT</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>서비스 알림(best-effort)</td>
+<td><code class="loc">cards.py:353</code></td>
+<td><code>notifier.send</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>커밋 후 토스 빌링키 best-effort 삭제</td>
+<td><code class="loc">cards.py:356</code></td>
+<td><code>safe_delete_billing_key</code></td>
+</tr>
+</tbody>
+</table>
+<p>활성 구독 차단 검사 핵심:</p>
+<pre><code class="language-python">blocking_sub = await db.scalar(
+    select(Subscription).where(
+        Subscription.card_id == card.id,
+        Subscription.status.in_(CARD_DELETE_BLOCKING_STATUSES),
+    )
+)
+if blocking_sub is not None:
+    raise ConflictError(&quot;활성 구독이 사용 중인 카드는 삭제할 수 없습니다&quot;)
+</code></pre>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: 빌링키 복호화는 <strong>반드시 <code>db.delete(card)</code> 전에</strong> 합니다(<code class="loc">cards.py:337</code>). 삭제 후에는 암호문에 접근할 수 없어 토스 측 빌링키를 지울 수 없게 됩니다.</p>
+</div></blockquote>
+<h3 id="2-4-set_card_active">2-4. 카드 활성/비활성 토글 — <code>set_card_active</code> (어드민)</h3>
+<p><code class="loc">app/services/cards.py:113</code> <code>set_card_active</code>. 어드민 라우트 <code>POST /admin/cards/{id}/toggle</code>에서 호출됩니다(actor_type=USER).</p>
+<pre><code class="language-python">async def set_card_active(db, *, card_id, is_active, actor_user_id=None, notifier=None) -&gt; Card:
+    card = await db.get(Card, card_id)
+    if card is None:
+        raise NotFoundError(&quot;카드를 찾을 수 없습니다&quot;)
+    if card.is_active == is_active:
+        return card                     # 멱등 — 같은 상태면 감사로그도 안 남김
+    card.is_active = is_active
+    await record_audit(db, actor_type=&quot;USER&quot;, actor_user_id=actor_user_id,
+                       action=&quot;card.activate&quot; if is_active else &quot;card.deactivate&quot;,
+                       target_type=&quot;card&quot;, target_id=str(card.id),
+                       detail=_card_audit_detail(card, is_active=is_active))
+    await db.commit()
+    await _notify_card(db, notifier, card,
+                       event=(EVENT_CARD_ACTIVATED if is_active else EVENT_CARD_DEACTIVATED),
+                       desc=(&quot;카드 활성화&quot; if is_active else &quot;카드 비활성화&quot;))
+    return card
+</code></pre>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 이미 원하는 상태면 아무 것도 하지 않습니다(멱등). 중복 감사로그를 막기 위함입니다(<code class="loc">cards.py:143</code>).</p>
+</div></blockquote>
+<h3 id="2-5">2-5. 카드별 결제내역 (관리자 화면)</h3>
+<p><code>Payment</code> 테이블에는 <code>card_id</code> 컬럼이 없습니다. 대신 카드의 고유키 <code>(service_id, external_user_id)</code>가 Payment에도 동일하게 존재하므로, <strong>같은 <code>(service_id, external_user_id)</code>의 Payment를 그 카드의 결제내역</strong>으로 조회합니다(구독·일반결제 모두 포함). 카드 상세 화면(<code>/admin/cards/{card_id}</code>)이 이 방식을 씁니다(스키마 변경 없음).</p>
+<hr />
+<h2 id="3">3. 상태·제약·에러 처리</h2>
+<h3 id="3-1">3-1. 비활성 카드 결제 차단</h3>
+<p><code>is_active=False</code>이면 모든 결제 경로에서 차단됩니다. 각 경로는 <code>get_card</code> 직후 <code>is_active</code>를 검사합니다.</p>
+<table>
+<thead>
+<tr>
+<th>결제 경로</th>
+<th>위치</th>
+<th>비활성 시 동작</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>구독 자동연장·재시도</td>
+<td><code class="loc">app/services/renewals.py:413</code> <code>_renew_one</code></td>
+<td>토스 호출 없이 합성 <code>TossError("CARD_INACTIVE")</code> → 기존 실패 처리(PAST_DUE/정지)</td>
+</tr>
+<tr>
+<td>구독 생성</td>
+<td><code class="loc">app/services/subscriptions.py:210</code></td>
+<td><code>ConflictError</code>(생성 차단)</td>
+</tr>
+<tr>
+<td>수동 재결제</td>
+<td><code class="loc">app/services/subscriptions.py:387</code> <code>_perform_manual_charge</code></td>
+<td><code>PaymentFailedError(code="CARD_INACTIVE")</code></td>
+</tr>
+<tr>
+<td>일반결제(one-off)</td>
+<td><code>app/services/payments.py</code> <code>create_one_off_payment</code></td>
+<td><code>ConflictError</code></td>
+</tr>
+</tbody>
+</table>
+<p>자동연장 경로의 합성 에러(<code class="loc">renewals.py:413-426</code>):</p>
+<pre><code class="language-python">if card is None or sub.card_id is None or not card.is_active:
+    exc = (TossError(&quot;CARD_INACTIVE&quot;, &quot;비활성화된 카드입니다&quot;)
+           if card is not None and not card.is_active
+           else TossError(&quot;NO_BILLING_KEY&quot;, &quot;등록된 카드가 없습니다&quot;))
+    await db.commit()
+    await db.refresh(payment, with_for_update=True)
+    await db.refresh(sub, with_for_update=True)
+    await _handle_charge_failure(db, toss, email_sender, sub, service, payment,
+                                 billing_key=&quot;&quot;, exc=exc, ...)
+    return
+</code></pre>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>중요: 활성 구독이 있는 카드를 비활성화해도 구독 상태는 <strong>즉시 바뀌지 않습니다.</strong> 다음 자동결제 시도에서 실패 처리되어 PAST_DUE → (재시도 소진 시) SUSPENDED로 이행합니다.</p>
+</div></blockquote>
+<h3 id="3-2">3-2. 활성 구독이 있는 카드 삭제 차단</h3>
+<p>삭제 차단 상태 집합(<code class="loc">app/services/cards.py:47</code>):</p>
+<pre><code class="language-python">CARD_DELETE_BLOCKING_STATUSES = frozenset({
+    SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE,
+    SubscriptionStatus.PAST_DUE, SubscriptionStatus.SUSPENDED,
+    SubscriptionStatus.EXTENDED,
+})
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>구독 상태</th>
+<th>카드 삭제</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TRIAL / ACTIVE / PAST_DUE / SUSPENDED / EXTENDED</td>
+<td><strong>차단</strong> — <code>ConflictError</code></td>
+</tr>
+<tr>
+<td>CANCELED / EXPIRED</td>
+<td><strong>허용</strong> — 삭제 전 해당 구독의 <code>card_id</code>를 NULL로</td>
+</tr>
+<tr>
+<td>구독 없음</td>
+<td><strong>허용</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: <code>subscriptions.card_id</code> FK는 <code>RESTRICT</code>입니다. 그래서 CANCELED/EXPIRED 구독은 카드 삭제 전에 <code>card_id</code>를 NULL로 풀어 FK 위반을 피합니다(<code class="loc">cards.py:328-334</code>).</p>
+</div></blockquote>
+<h3 id="3-3">3-3. 에러 요약</h3>
+<table>
+<thead>
+<tr>
+<th>조건</th>
+<th>예외</th>
+<th>HTTP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>customer_key</code> 형식 오류</td>
+<td><code>InputValidationError</code></td>
+<td>422</td>
+</tr>
+<tr>
+<td><code>external_user_id</code> 빈값/255자 초과</td>
+<td><code>InputValidationError</code></td>
+<td>422</td>
+</tr>
+<tr>
+<td>동시 첫 등록 경쟁(유니크 위반)</td>
+<td><code>ConflictError</code></td>
+<td>409</td>
+</tr>
+<tr>
+<td>토스 빌링키 발급 실패</td>
+<td><code>TossError</code>(전파)</td>
+<td>4xx/5xx</td>
+</tr>
+<tr>
+<td>카드 미등록(조회/삭제)</td>
+<td><code>NotFoundError</code></td>
+<td>404</td>
+</tr>
+<tr>
+<td>billing-active 구독이 카드 참조 중(삭제)</td>
+<td><code>ConflictError</code></td>
+<td>409</td>
+</tr>
+</tbody>
+</table>
+<h3 id="3-4-best-effort">3-4. best-effort 빌링키 삭제</h3>
+<p>교체·삭제 시 옛 빌링키를 <code>safe_delete_billing_key(toss, billing_key)</code>로 지웁니다(<code class="loc">app/services/payment_utils.py:24</code>).</p>
+<pre><code class="language-python">async def safe_delete_billing_key(toss, billing_key) -&gt; bool:
+    try:
+        await toss.delete_billing_key(billing_key)
+        return True
+    except TossError as exc:
+        if exc.http_status == 404:
+            return True   # 이미 삭제됨 → 성공 간주
+        logger.warning(&quot;빌링키 삭제 실패(토스에 키 잔존 가능): ...&quot;)
+        return False
+</code></pre>
+<p>실패해도 <strong>카드 교체·삭제 커밋은 이미 완료</strong>되어 유효합니다. 실패 시 WARNING 로그만 남고 토스에 고아 키가 남을 수 있습니다.</p>
+<hr />
+<h2 id="4">4. 감사 로그 &amp; 알림</h2>
+<table>
+<thead>
+<tr>
+<th>이벤트</th>
+<th><code>action</code></th>
+<th>actor</th>
+<th>알림 상수</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>신규 등록</td>
+<td><code>card.register</code></td>
+<td>SERVICE</td>
+<td><code>EVENT_CARD_REGISTERED</code></td>
+</tr>
+<tr>
+<td>교체</td>
+<td><code>card.replace</code></td>
+<td>SERVICE</td>
+<td><code>EVENT_CARD_REPLACED</code></td>
+</tr>
+<tr>
+<td>삭제</td>
+<td><code>card.delete</code></td>
+<td>SERVICE</td>
+<td><code>EVENT_CARD_DELETED</code></td>
+</tr>
+<tr>
+<td>활성화</td>
+<td><code>card.activate</code></td>
+<td>USER</td>
+<td><code>EVENT_CARD_ACTIVATED</code></td>
+</tr>
+<tr>
+<td>비활성화</td>
+<td><code>card.deactivate</code></td>
+<td>USER</td>
+<td><code>EVENT_CARD_DEACTIVATED</code></td>
+</tr>
+</tbody>
+</table>
+<p>모든 카드 이벤트는 <code>_card_audit_detail</code>(<code class="loc">cards.py:77</code>)로 동일한 상세(<code>external_user_id</code>, <code>service_id</code>, 마스킹 <code>card_number</code>, <code>issuer</code>)를 남깁니다. <strong>빌링키 암호문·해시는 감사로그에 넣지 않습니다.</strong></p>
+<p>알림은 best-effort이며(<code>_notify_card</code>, <code class="loc">cards.py:58</code>), notifier가 없거나 서비스 알림 URL 미등록이면 조용히 건너뜁니다.</p>
+<hr />
+<h2 id="5">5. 유지보수 팁</h2>
+<ul>
+<li><strong>billingKey 노출을 막으려면</strong>: <code>CardResponse.from_model()</code>만 사용하세요. <code>card_info</code>(마스킹)만 반환하고 암호문은 절대 포함하지 않습니다.</li>
+<li><strong>삭제 차단 상태를 바꾸려면</strong>: <code class="loc">app/services/cards.py:47</code> <code>CARD_DELETE_BLOCKING_STATUSES</code>를 수정하세요. 여기에 든 상태의 구독이 카드를 참조하면 삭제가 차단됩니다.</li>
+<li><strong>비활성 카드 차단 동작을 바꾸려면</strong>: 각 결제 경로의 <code>is_active</code> 검사(3-1 표)를 함께 보세요. 자동연장은 <code class="loc">renewals.py:413</code>, 생성은 <code class="loc">subscriptions.py:210</code>, 수동결제는 <code class="loc">subscriptions.py:387</code>입니다.</li>
+<li><strong>빌링키 복호화 실패(<code>InvalidTag</code>)</strong>: <code>ENCRYPTION_KEY</code> 환경변수가 바뀌지 않았는지 확인하세요. 키가 달라지면 기존 암호문을 복호화할 수 없습니다.</li>
+<li><strong>카드 없이 구독 시도</strong>: <code>POST /api/v1/subscriptions</code> 전에 반드시 <code>POST /api/v1/cards</code>로 카드를 먼저 등록해야 합니다. 미등록이면 구독 생성이 404 <code>NOT_FOUND</code>로 거부됩니다(<code class="loc">subscriptions.py:207</code>).</li>
+<li><strong>서비스 삭제 제약</strong>: <code>cards.service_id</code> FK가 <code>RESTRICT</code>라 카드가 있는 서비스는 DB 레벨에서 삭제가 차단됩니다.</li>
+</ul>
+<blockquote class="cal ref"><span class="cal-i">🔗</span><div class="cal-b">
+<p>함께 보기: 카드가 실제로 어떻게 자동결제에 사용되는지는 <a href="13-feature-subscription.html">구독 기능</a>의 자동연장(스케줄러) 절을 보세요.</p>
+</div></blockquote>
+    </div>
+    <div class="pager"><a class="pg prev" href="11-service-api.html"><small>← 이전</small><b>11. 서비스 연동 API</b></a><a class="pg next" href="13-feature-subscription.html"><small>다음 →</small><b>13. 구독 기능</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#1-db">1. 기능 개요·관련 파일·DB 테이블</a>
+<a class="toc-h3" href="#1-1">1-1. 한 줄 정의</a>
+<a class="toc-h3" href="#1-2">1-2. 관련 파일</a>
+<a class="toc-h3" href="#1-3-db-cards-appmodelscardpy15">1-3. DB 테이블 — cards (app/models/card.py:15)</a>
+<a class="toc-h2" href="#2">2. 주요 흐름별 단계 추적</a>
+<a class="toc-h3" href="#2-1-post-apiv1cards">2-1. 카드 등록/교체 — POST /api/v1/cards</a>
+<a class="toc-h3" href="#2-2-get-apiv1cardsexternal_user_id">2-2. 카드 조회 — GET /api/v1/cards/{external_user_id}</a>
+<a class="toc-h3" href="#2-3-delete-apiv1cardsexternal_user_id">2-3. 카드 삭제 — DELETE /api/v1/cards/{external_user_id}</a>
+<a class="toc-h3" href="#2-4-set_card_active">2-4. 카드 활성/비활성 토글 — set_card_active (어드민)</a>
+<a class="toc-h3" href="#2-5">2-5. 카드별 결제내역 (관리자 화면)</a>
+<a class="toc-h2" href="#3">3. 상태·제약·에러 처리</a>
+<a class="toc-h3" href="#3-1">3-1. 비활성 카드 결제 차단</a>
+<a class="toc-h3" href="#3-2">3-2. 활성 구독이 있는 카드 삭제 차단</a>
+<a class="toc-h3" href="#3-3">3-3. 에러 요약</a>
+<a class="toc-h3" href="#3-4-best-effort">3-4. best-effort 빌링키 삭제</a>
+<a class="toc-h2" href="#4">4. 감사 로그 &amp;amp; 알림</a>
+<a class="toc-h2" href="#5">5. 유지보수 팁</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03. 인증과 보안 공통 — 개발자 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>개발자 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>🧱</span>기반 (먼저 읽기)</div>
+<a class="nav-link" href="README.html"><span class="n">·</span><span class="tt">개발자 인수인계 매뉴얼 (dev_manual)</span></a>
+<a class="nav-link" href="01-getting-started.html"><span class="n">01</span><span class="tt">01. 시작하기 — 구조·실행·테스트·요청 처리 공통 흐름</span></a>
+<a class="nav-link" href="02-database.html"><span class="n">02</span><span class="tt">02. 데이터베이스 — 테이블·모델·관계·마이그레이션</span></a>
+<a class="nav-link active" href="03-auth-and-security.html"><span class="n">03</span><span class="tt">03. 인증과 보안 공통</span></a>
+<div class="nav-group"><span>⚙️</span>기능별 상세</div>
+<a class="nav-link" href="04-subscription-create.html"><span class="n">04</span><span class="tt">04. 구독 생성</span></a>
+<a class="nav-link" href="05-subscription-renewal.html"><span class="n">05</span><span class="tt">05. 구독 갱신·만료·재시도·정합성(스케줄러 배치)</span></a>
+<a class="nav-link" href="06-subscription-manage.html"><span class="n">06</span><span class="tt">06. 구독 취소·재개·수동결제·카드변경</span></a>
+<a class="nav-link" href="07-one-off-payment.html"><span class="n">07</span><span class="tt">07. 단건(일반) 결제 + 취소</span></a>
+<a class="nav-link" href="08-plans.html"><span class="n">08</span><span class="tt">08. 요금제 관리 (생성·수정·금액 계산·자동결제안함·추가정보)</span></a>
+<a class="nav-link" href="09-services-registry.html"><span class="n">09</span><span class="tt">09. 서비스 등록·키 발급/회전·취소정책·담당자</span></a>
+<a class="nav-link" href="10-settlement.html"><span class="n">10</span><span class="tt">10. 정산(어드민 화면)</span></a>
+<a class="nav-link" href="11-dashboard.html"><span class="n">11</span><span class="tt">11. 대시보드 — 어드민 메인 화면</span></a>
+<a class="nav-link" href="12-webhooks.html"><span class="n">12</span><span class="tt">12. 웹훅 처리 (토스페이먼츠 → 서버)</span></a>
+<a class="nav-link" href="13-admin-accounts.html"><span class="n">13</span><span class="tt">13. 어드민 계정·역할·로그인/비밀번호</span></a>
+<a class="nav-link" href="14-global-settings.html"><span class="n">14</span><span class="tt">14. 전체 설정(재시도·어드민 IP·킬스위치)</span></a>
+<a class="nav-link" href="15-external-api-and-sample.html"><span class="n">15</span><span class="tt">15. 외부 API 레퍼런스 + 샘플 서비스 연동</span></a>
+<a class="nav-link" href="16-card-vault.html"><span class="n">16</span><span class="tt">16. 카드 보관함(Card Vault) — 카드 등록·교체·조회·삭제</span></a>
+<a class="nav-link" href="17-service-notifications.html"><span class="n">17</span><span class="tt">17. 서비스 알림(아웃고잉 웹훅) — 요청 016</span></a>
+<div class="nav-group"><span>🖥️</span>어드민 화면별 매뉴얼</div>
+<a class="nav-link" href="admin--README.html"><span class="n">·</span><span class="tt">어드민 콘솔 페이지 매뉴얼</span></a>
+<a class="nav-link" href="admin--01-login-and-access.html"><span class="n">01</span><span class="tt">01. 로그인·접근 (로그인 / 비밀번호 설정 / 로그아웃 / IP 제한)</span></a>
+<a class="nav-link" href="admin--02-dashboard.html"><span class="n">02</span><span class="tt">02. 대시보드</span></a>
+<a class="nav-link" href="admin--03-services.html"><span class="n">03</span><span class="tt">03. 서비스 관리</span></a>
+<a class="nav-link" href="admin--04-plans.html"><span class="n">04</span><span class="tt">04. 요금제 관리 (목록·생성·수정·활성/비활성·삭제)</span></a>
+<a class="nav-link" href="admin--05-subscriptions.html"><span class="n">05</span><span class="tt">05. 구독 관리 — 목록·상세·강제 취소</span></a>
+<a class="nav-link" href="admin--06-payments.html"><span class="n">06</span><span class="tt">06. 결제 — 목록·상세·단건 취소</span></a>
+<a class="nav-link" href="admin--07-settlement.html"><span class="n">07</span><span class="tt">07. 정산 화면</span></a>
+<a class="nav-link" href="admin--08-users.html"><span class="n">08</span><span class="tt">08. 계정 관리</span></a>
+<a class="nav-link" href="admin--09-audit.html"><span class="n">09</span><span class="tt">09. 감사 로그 (조회·검색·정리·엑셀)</span></a>
+<a class="nav-link" href="admin--10-settings.html"><span class="n">10</span><span class="tt">10. 전체 설정 (재시도 정책 · 어드민 IP · 킬스위치)</span></a>
+<div class="nav-group"><span>📋</span>운영 워크플로우</div>
+<a class="nav-link" href="admin--11-onboarding-checklist.html"><span class="n">·</span><span class="tt">신규 서비스 온보딩 체크리스트 (운영자용)</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">개발자 매뉴얼</a> <span>/</span> <em>기반 (먼저 읽기)</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">🧱 기반 (먼저 읽기)</span>
+        <span class="dh-src">docs/dev_manual/03-auth-and-security.md</span></div>
+      <h1>03. 인증과 보안 공통</h1>
+      
+    </header>
+    <div class="doc">
+
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p><strong>쉽게 말하면</strong>: 모든 요청은 비즈니스 로직에 닿기 전에 <strong>검문소</strong>를 통과해야 합니다. 외부 API는 신분증 3종(<strong>API 키 + 허용 IP + HMAC 서명</strong>)을 동시에 보여줘야 하고, 위조·재사용을 막기 위해 <strong>타임스탬프와 1회용 nonce</strong>까지 확인합니다. 은행 출입에 사원증·지문·일회용 OTP를 모두 요구하는 것과 비슷합니다.</p>
+<p><strong>모든 기능이 의존하는 공통 레이어.</strong><br />
+외부 API 호출자와 어드민 콘솔 사용자 모두 이 파일에서 설명하는 인증을 통과해야
+비즈니스 로직에 도달한다. 코드를 읽기 전에 이 문서를 먼저 보면 나머지 기능 문서가
+훨씬 쉽게 이해된다.</p>
+</div></blockquote>
+<hr />
+<h2 id="1-api-hmac-3">1. 외부 API 인증 — HMAC 3중 인증</h2>
+<p>외부 서비스(사내 쇼핑몰, 진료 앱 등)가 <code>/api/v1/...</code> 경로로 요청을 보낼 때 거치는
+인증이다. 단순 API 키 하나만 쓰는 것이 아니라 <strong>API 키 + IP 화이트리스트 + HMAC 서명</strong>
+세 가지를 동시에 검사한다.</p>
+<h3 id="1-1">1-1. 어디서 실행되나</h3>
+<p>모든 외부 API 엔드포인트의 <code>Depends</code> 파라미터에 <code>authenticate_service</code>가 붙어 있다.</p>
+<pre><code>app/api/deps.py:77  — authenticate_service()
+</code></pre>
+<p>FastAPI가 요청을 받으면 라우트 함수보다 먼저 이 함수를 자동으로 실행한다.</p>
+<h3 id="1-2-4">1-2. 필수 요청 헤더 4개</h3>
+<p>클라이언트는 반드시 아래 헤더를 모두 보내야 한다. 하나라도 빠지면 즉시 401이 반환된다.
+(<code class="loc">app/api/deps.py:87-92</code>)</p>
+<table>
+<thead>
+<tr>
+<th>헤더 이름</th>
+<th>값 예시</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>x-service-key</code></td>
+<td><code>svc_abc123...</code></td>
+<td>서비스 등록 시 발급받은 API 키 원문</td>
+</tr>
+<tr>
+<td><code>x-timestamp</code></td>
+<td><code>1717123456</code></td>
+<td>요청 시각 (Unix 초, 정수)</td>
+</tr>
+<tr>
+<td><code>x-nonce</code></td>
+<td><code>a1b2c3d4...</code></td>
+<td>요청마다 다른 랜덤 문자열 (UUID hex 추천)</td>
+</tr>
+<tr>
+<td><code>x-signature</code></td>
+<td><code>fa3c7d...</code></td>
+<td>HMAC-SHA256 서명 (아래에서 계산 방법 설명)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="1-3-6">1-3. 검증 6단계 상세</h3>
+<p><code class="loc">app/api/deps.py:77-138</code> 의 <code>authenticate_service</code> 함수가 순서대로 아래를 검사한다.
+하나라도 실패하면 뒤를 보지 않고 즉시 오류를 반환한다.</p>
+<h4 id="0-appapidepspy86">0단계: 킬스위치 확인 (app/api/deps.py:86)</h4>
+<p>가장 먼저 <code>ensure_server_enabled(db)</code> 를 호출한다. 서버가 비활성화 상태면 API 키조차
+읽지 않고 503을 반환한다 (상세 내용은 2절 참고).</p>
+<h4 id="1-api-appapidepspy95-98">1단계: API 키 해시 대조 (app/api/deps.py:95-98)</h4>
+<pre><code class="language-python"># app/api/deps.py:95-98
+service = await db.scalar(select(Service).where(
+    Service.api_key_hash == sha256_hex(api_key)))
+if service is None or service.status != ServiceStatus.ACTIVE:
+    raise AuthenticationError(AUTH_FAILED)
+</code></pre>
+<p>DB에는 API 키 원문이 없고 SHA-256 해시(<code>Service.api_key_hash</code>)만 저장되어 있다.
+클라이언트가 보낸 키를 똑같이 해시해서 비교한다. 해시가 일치하는 서비스가 없거나
+<code>INACTIVE</code> 상태이면 401.</p>
+<p>해시 함수: <code class="loc">app/core/security.py:45-50</code></p>
+<pre><code class="language-python">def sha256_hex(value: str) -&gt; str:
+    return hashlib.sha256(value.encode()).hexdigest()
+</code></pre>
+<h4 id="2-ip-appapidepspy101-103">2단계: IP 화이트리스트 (app/api/deps.py:101-103)</h4>
+<pre><code class="language-python">ip = get_client_ip(request, settings)
+# allowed_ips가 비어 있으면 IP 제한 없음(모든 IP 허용 — HMAC로만 보호).
+if service.allowed_ips and ip not in service.allowed_ips and not is_loopback_ip(ip):
+    raise PermissionDeniedError(&quot;허용되지 않은 IP입니다&quot;)
+</code></pre>
+<p><code>Service.allowed_ips</code>(JSONB 배열)가 <strong>비어 있으면 IP 제한이 없고(모든 IP 허용)</strong>, 목록이 있으면 현재 요청 IP가 없을 때 403.<br />
+<code>get_client_ip</code>는 <code>settings.trust_proxy=True</code> 일 때 <code>X-Forwarded-For</code> 헤더에서
+<strong>오른쪽에서 <code>trust_proxy_hops</code>번째</strong> 값을 사용한다(감사 Phase 1 — 보안 M-5 강화).
+프록시가 없는 직접 연결이거나 XFF 항목 수가 hop 수보다 적으면(위조 의심)
+헤더를 무시하고 TCP 연결 IP를 사용한다. (<code>app/api/deps.py:get_client_ip</code>)</p>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>왜 '오른쪽에서 n번째'인가:</strong> 신뢰 프록시는 자신이 본 피어 IP를 XFF의 오른쪽에
+append한다. 따라서 오른쪽 n개까지가 프록시 체인이 기록한 신뢰 가능한 값이고,
+왼쪽 항목들은 클라이언트가 임의로 위조할 수 있다. 과거처럼 맨 왼쪽(첫 번째)을
+신뢰하면 공격자가 <code>X-Forwarded-For: &lt;화이트리스트IP&gt;</code> 헤더 하나로 IP 검사를
+우회할 수 있었다. <code>TRUST_PROXY_HOPS</code>(기본 1)는 클라이언트와 앱 사이의 신뢰
+프록시 단 수다 — 예) 클라이언트→nginx→앱이면 1, 클라이언트→LB→nginx→앱이면 2.
+단위 테스트: <code>tests/unit/test_client_ip.py</code></p>
+</div></blockquote>
+<h4 id="3-rate-limit-appapidepspy105-112">3단계: 분당 요청 수 제한 Rate Limit (app/api/deps.py:105-112)</h4>
+<p>서명 검사 전에 카운트를 올려 잘못된 요청도 throttle 한다(DoS 방어).</p>
+<pre><code class="language-python">window = int(time.time() // 60)   # 현재 분(minute) 윈도우
+rl_key = f&quot;rl:{service.id}:{window}&quot;
+count = await redis.incr(rl_key)
+if count == 1:
+    await redis.expire(rl_key, 90)  # 만료 90초(1분+여유)
+if count &gt; settings.rate_limit_per_minute:   # 기본 120/분
+    raise RateLimitedError(&quot;요청 한도를 초과했습니다&quot;)
+</code></pre>
+<p><code>settings.rate_limit_per_minute</code> (기본 120) 초과 시 429.
+(<code class="loc">app/core/config.py:47</code>)</p>
+<h4 id="4-appapidepspy115-120">4단계: 타임스탬프 오차 검사 (app/api/deps.py:115-120)</h4>
+<pre><code class="language-python">if abs(time.time() - ts) &gt; settings.hmac_timestamp_tolerance_seconds:
+    raise AuthenticationError(AUTH_FAILED)
+</code></pre>
+<p>현재 서버 시각과 헤더의 <code>x-timestamp</code> 차이가 <code>±300초</code>(기본) 이상이면 거부.
+과거에 캡처한 요청을 그대로 재전송하는 <strong>재전송(replay) 공격</strong> 1차 방어선이다.
+(<code class="loc">app/core/config.py:45</code>)</p>
+<h4 id="5-hmac-appapidepspy123-131">5단계: HMAC 서명 검증 (app/api/deps.py:123-131)</h4>
+<pre><code class="language-python">body = await request.body()
+secret = cipher.decrypt(service.hmac_secret_encrypted)  # AES 복호화
+expected = sign_request(secret, request.method, request.url.path,
+                        timestamp, nonce, body)
+if not constant_time_equals(expected, signature):
+    raise AuthenticationError(AUTH_FAILED)
+</code></pre>
+<p>서버 측에서 서명을 직접 계산해 클라이언트가 보낸 <code>x-signature</code>와 비교한다.<br />
+<code>constant_time_equals</code>(<code class="loc">app/core/security.py:53-59</code>)는 <code>hmac.compare_digest</code>를 써서
+<strong>타이밍 공격</strong>(응답 시간 차로 서명 값을 추측)을 방지한다.</p>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>nonce 소비 순서:</strong> 서명 검증 후에 nonce를 Redis에 기록한다. 순서를 바꾸면(nonce 먼저)
+서명이 잘못된 요청이 Redis nonce 키를 무한정 쌓아 메모리 DoS를 유발할 수 있다.
+(<code class="loc">app/api/deps.py:123-125</code> 주석 참고)</p>
+</div></blockquote>
+<h4 id="6-nonce-1-appapidepspy133-136">6단계: nonce 1회용 검사 (app/api/deps.py:133-136)</h4>
+<pre><code class="language-python">nonce_key = f&quot;nonce:{service.id}:{nonce}&quot;
+if not await redis.set(nonce_key, &quot;1&quot;, nx=True, ex=600):
+    raise AuthenticationError(AUTH_FAILED)
+</code></pre>
+<p><code>nx=True</code> → 키가 이미 있으면 실패(set 반환값 None).<br />
+TTL 600초(10분) — 이 시간 안에 같은 nonce를 재사용하면 거부.<br />
+타임스탬프 오차(±300초)와 함께 재전송 공격 <strong>2중 방어</strong>를 구성한다.</p>
+<h3 id="1-4-signature">1-4. 서명(signature) 계산 방법 — 클라이언트 구현 가이드</h3>
+<p><code class="loc">app/core/security.py:62-75</code> 의 <code>sign_request</code> 를 클라이언트 언어로 그대로 구현하면 된다.
+샘플 서비스(<code class="loc">sample_service/shop/payment_client.py:19-23</code>)가 Python 구현의 완전한 예시다.</p>
+<p><strong>정준 문자열(canonical string) 구성:</strong></p>
+<pre><code>{METHOD 대문자}\n
+{path}\n
+{timestamp}\n
+{nonce}\n
+{sha256_hex(body)}
+</code></pre>
+<p>예시 — <code>POST /api/v1/subscriptions</code> 에 JSON 본문을 보낼 때:</p>
+<pre><code>POST
+/api/v1/subscriptions
+1717123456
+a1b2c3d4e5f6
+e3b0c44298fc...  ← sha256(본문 bytes)
+</code></pre>
+<p>5줄을 개행(<code>\n</code>)으로 이어붙인 뒤, <code>HMAC-SHA256(hmac_secret, 위 문자열)</code> 을 hex 문자열로
+인코딩한 것이 <code>x-signature</code> 값이 된다.</p>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p><strong>주의:</strong> <code>method</code>, <code>path</code>, <code>timestamp</code>, <code>nonce</code> 중 어느 것에도 개행(<code>\n</code>, <code>\r</code>)이
+들어오면 <code>sign_request</code>가 <code>ValueError</code>를 발생시킨다. 필드 간 바이트 이동 공격을
+막기 위한 검증이다. (<code class="loc">app/core/security.py:69-72</code>)</p>
+</div></blockquote>
+<p><strong>Python 구현 전체 (sample_service/shop/payment_client.py:19-56):</strong></p>
+<pre><code class="language-python">import hashlib, hmac, json, time, uuid, requests
+from django.conf import settings as django_settings
+
+def sign_request(secret, method, path, timestamp, nonce, body):
+    body_hash = hashlib.sha256(body).hexdigest()
+    message = &quot;\n&quot;.join([method.upper(), path, timestamp, nonce, body_hash])
+    return hmac.new(secret.encode(), message.encode(), hashlib.sha256).hexdigest()
+
+def _request(method, path, json_body=None, creds=None):
+    api_key, hmac_secret = creds if creds else (
+        django_settings.SERVICE_API_KEY, django_settings.SERVICE_HMAC_SECRET)
+    body = json.dumps(json_body).encode() if json_body else b&quot;&quot;
+    timestamp = str(int(time.time()))
+    nonce = uuid.uuid4().hex
+    headers = {
+        &quot;x-service-key&quot;: api_key,
+        &quot;x-timestamp&quot;: timestamp,
+        &quot;x-nonce&quot;: nonce,
+        &quot;x-signature&quot;: sign_request(hmac_secret, method, path, timestamp, nonce, body),
+    }
+    if json_body:
+        headers[&quot;Content-Type&quot;] = &quot;application/json&quot;
+    resp = requests.request(method, django_settings.PAYMENT_API_BASE + path,
+                            headers=headers, data=body or None, timeout=30)
+    if resp.status_code &gt;= 400:
+        err = resp.json()[&quot;error&quot;]
+        raise Exception(f&quot;{err['code']}: {err['message']}&quot;)
+    return resp.json()
+</code></pre>
+<p><strong>서비스 키와 시크릿 어디서 얻나?</strong><br />
+어드민 콘솔 <code>/admin/services/{id}</code> 화면에서 발급된다.<br />
+- <code>x-service-key</code>: 화면에서 복사 가능한 평문 API 키 (1회 표시, 이후 AES 암호화 저장)<br />
+- HMAC secret: 서비스 등록 시 서버가 생성한 48바이트 랜덤 값, AES 암호화 후 DB 저장
+  (<code class="loc">app/core/security.py:28-34</code>), 복호화된 값을 어드민 화면에서 받는다.</p>
+<h3 id="1-5-payment_rate_limit">1-5. payment_rate_limit — 결제 경로 추가 제한</h3>
+<p>결제 관련 엔드포인트(<code>POST /subscriptions</code>, <code>POST .../pay</code>, <code>POST .../change-card</code> 등)는
+<code>authenticate_service</code> 위에 <code>payment_rate_limit</code>이 추가로 붙는다.
+(<code class="loc">app/api/deps.py:141-155</code>)</p>
+<pre><code class="language-python"># app/api/v1/subscriptions.py:44
+service: Service = Depends(payment_rate_limit)  # 결제 경로
+service: Service = Depends(authenticate_service) # 읽기 경로
+</code></pre>
+<pre><code class="language-python"># app/api/deps.py:141-155
+async def payment_rate_limit(...) -&gt; Service:
+    window = int(time.time() // 60)
+    key = f&quot;rlp:{service.id}:{window}&quot;
+    count = await redis.incr(key)
+    if count == 1:
+        await redis.expire(key, 90)
+    if count &gt; settings.rate_limit_payment_per_minute:  # 기본 20/분
+        raise RateLimitedError(&quot;결제 요청 한도를 초과했습니다&quot;)
+    return service
+</code></pre>
+<p>일반 API 한도(120/분)와 별개로 결제 API는 20/분으로 훨씬 낮다.<br />
+무차별 카드 시도나 빌링키 남용을 방지하기 위한 설계다. (<code class="loc">app/core/config.py:49</code>)</p>
+<hr />
+<h2 id="2-ensure_server_enabled">2. 킬스위치 — ensure_server_enabled</h2>
+<h3 id="2-1">2-1. 어떤 기능인가</h3>
+<p>어드민 콘솔의 <strong>전체 설정 &gt; 결제서버 킬스위치</strong>에서 서버를 즉시 비활성화할 수 있다.
+활성화되어 있으면 모든 외부 API 요청이 503으로 차단된다.
+어드민 콘솔(<code>/admin/...</code>)은 영향받지 않는다.</p>
+<h3 id="2-2">2-2. 코드 흐름</h3>
+<ol>
+<li><code>authenticate_service</code> 가장 첫 줄(<code class="loc">app/api/deps.py:86</code>)에서 호출된다.</li>
+</ol>
+<p><code>python
+   await ensure_server_enabled(db)</code></p>
+<ol start="2">
+<li><code>ensure_server_enabled</code> 구현(<code class="loc">app/services/app_settings.py:93-102</code>):</li>
+</ol>
+<p><code>python
+   async def ensure_server_enabled(db: AsyncSession) -&gt; None:
+       gs = await get_global_settings(db)
+       if gs.server_disabled:
+           raise ServerDisabledError(gs.disabled_reason or "서비스 점검 중입니다")</code></p>
+<ol start="3">
+<li><code>GlobalSettings.server_disabled</code> (<code class="loc">app/models/global_settings.py:26</code>):</li>
+</ol>
+<p><code>python
+   server_disabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+   disabled_reason: Mapped[str | None] = ...  # 비활성화 사유, 클라이언트에게 반환</code></p>
+<ol start="4">
+<li>
+<p><code>ServerDisabledError</code>(<code class="loc">app/core/errors.py:100-109</code>):
+   - <code>code = "SERVER_DISABLED"</code>, <code>http_status = 503</code></p>
+</li>
+<li>
+<p>전역 예외 핸들러(<code class="loc">app/api/errors.py:33-36</code>)가 받아 JSON으로 변환:
+   <code>json
+   {"error": {"code": "SERVER_DISABLED", "message": "서비스 점검 중입니다"}}</code></p>
+</li>
+</ol>
+<h3 id="2-3">2-3. 킬스위치 전환 방법 (어드민 콘솔)</h3>
+<p><code class="loc">app/admin/routes/settings.py:113-146</code><br />
+어드민 전체설정 페이지 <code>POST /admin/settings/server-toggle</code> 에서 처리된다.</p>
+<ul>
+<li>비활성화 시: <strong>사유(reason) 입력 필수 + 본인 비밀번호 재확인</strong> 필요
+  (<code class="loc">app/services/app_settings.py:105-134</code>)</li>
+<li>SYSTEM_ADMIN 역할만 접근 가능 (<code>Depends(require_admin)</code>)</li>
+<li>전환 시 감사 로그(<code>server.disabled</code> / <code>server.enabled</code>) 자동 기록</li>
+</ul>
+<hr />
+<h2 id="3-csrf">3. 어드민 인증 — 세션/CSRF</h2>
+<p>어드민 콘솔(<code>/admin/...</code>)은 외부 API와 완전히 별개의 인증 체계를 사용한다.
+세션 쿠키 기반이며, 상태 변경 요청에는 CSRF 토큰 검증이 추가된다.</p>
+<h3 id="3-1">3-1. 세션 쿠키</h3>
+<p>쿠키 이름: <code>admin_session</code> (<code class="loc">app/admin/deps.py:31</code>)</p>
+<p>속성:
+- <code>httponly=True</code> — JavaScript에서 접근 불가 (XSS 방어)
+- <code>samesite="lax"</code> — 외부 사이트에서 오는 요청에 쿠키 미전송
+- <code>secure=True</code> — HTTPS에서만 전송 (운영 환경)</p>
+<p>쿠키 값은 랜덤 32바이트 <code>session_id</code>이며, 실제 세션 데이터는 모두 Redis에 저장된다.
+쿠키만으로는 사용자 정보를 알 수 없다.</p>
+<h3 id="3-2-redis">3-2. Redis 세션 구조</h3>
+<p>세션 생성: <code class="loc">app/services/auth.py:55-82</code></p>
+<p>Redis에서 키 <code>session:{session_id}</code> 에 Hash로 저장된다:</p>
+<pre><code>session:{session_id}
+  user_id     →  UUID 문자열
+  role        →  SYSTEM_ADMIN 또는 SERVICE_MANAGER
+  service_id  →  주 서비스 UUID (없으면 빈 문자열)
+  csrf_token  →  랜덤 32바이트 CSRF 토큰
+  created_at  →  생성 시각(unix epoch 초) — 절대 수명 판정용
+</code></pre>
+<p>TTL: <code>settings.session_ttl_seconds</code> (기본 1800초 = 30분)<br />
+매 요청마다 TTL을 갱신해 활성 사용자의 세션이 중간에 끊기지 않도록 한다.</p>
+<p><strong>절대 수명(감사 Phase 2 — 보안 L-5)</strong>: 유휴 TTL은 활동 시마다 연장되므로 탈취된
+세션이 계속 쓰이면 영구 유효해진다. <code>get_session</code>이 생성 시각(created_at) 기준
+<code>settings.session_absolute_ttl_seconds</code>(기본 43200초 = 12시간)를 초과한 세션을
+활동과 무관하게 파기한다. created_at이 없는 구버전 세션도 안전 측으로 파기된다.</p>
+<p>추가로 <code>user_sessions:{user_id}</code> Set에 session_id를 모아두어 비밀번호 변경·계정 비활성화 시
+해당 사용자의 모든 세션을 한 번에 파기할 수 있다. (<code class="loc">app/services/auth.py:170-176</code>)</p>
+<h3 id="3-3">3-3. 로그인 흐름과 잠금 정책</h3>
+<p><code class="loc">app/services/auth.py:85-143</code></p>
+<pre><code>클라이언트 → POST /admin/login
+          → [IP rate limit] 분당 10회 초과 시 인증 로직 진입 전 차단
+            (감사 Phase 2 — 보안 M-2; app/admin/routes/auth.py의 _login_rate_limited.
+             존재하지 않는 이메일 무차별 시도와 감사 로그 팽창 DoS를 함께 막는다)
+          → auth_service.login(db, redis, settings, email=, password=, ip=)
+            1. DB에서 User 조회 (email)
+            2. 없으면 verify_password(_DUMMY_HASH) 실행 후 401  ← 타이밍 균등화
+            3. LOCKED 상태:
+               - locked_until &lt; now → 자동 ACTIVE 복구 후 정상 진행
+               - locked_until &gt;= now → 즉시 거부
+            4. DELETED → 없는 것처럼 처리 (계정 열거 방지)
+            5. DISABLED → &quot;비활성화된 계정&quot; 메시지
+            6. PENDING → &quot;비밀번호 설정 필요&quot; 메시지
+            7. verify_password(password, user.password_hash)
+               - 실패: failed_login_count += 1
+               - 5회 이상 실패: status=LOCKED, locked_until=now+15분
+            8. 성공: 감사 로그 → DB commit → Redis 세션 생성
+</code></pre>
+<p>주요 상수 (<code class="loc">app/services/auth.py:43-44</code>):
+- <code>MAX_FAILED_LOGINS = 5</code> — 이 횟수까지 실패하면 잠금
+- <code>LOCK_DURATION = timedelta(minutes=15)</code> — 잠금 지속 시간</p>
+<p><strong>_DUMMY_HASH:</strong> 이메일이 존재하지 않는 경우에도 <code>verify_password</code>를 한 번 실행해 응답 시간을
+똑같이 만든다. 응답 시간 차이로 이메일이 등록되어 있는지 알아내는 타이밍 공격을 방지한다.
+(<code class="loc">app/services/auth.py:52</code>)</p>
+<h3 id="3-4-require_user-depends">3-4. require_user — 세션 검증 Depends</h3>
+<p><code class="loc">app/admin/deps.py:60-83</code></p>
+<p>어드민 라우트에서 <code>Depends(require_user)</code> 를 선언하면 모든 요청에서 자동으로 아래를 검사한다:</p>
+<ol>
+<li><code>admin_session</code> 쿠키 읽기</li>
+<li><code>auth_service.get_session(redis, ...)</code> 호출 — Redis에서 세션 데이터 조회</li>
+<li>세션이 없거나 만료: <code>AdminAuthRequired</code> 예외 → 로그인 페이지로 리다이렉트</li>
+<li>DB에서 User 조회 — <code>user.status != ACTIVE</code>이면 리다이렉트</li>
+<li><code>effective_service_ids(db, user)</code> 호출 — 담당 서비스 ID 목록 계산</li>
+<li>
+<p><strong>어드민 접속 IP 제한 검사</strong> (<code class="loc">app/admin/deps.py:79-81</code>):
+   <code>python
+   gs = await get_global_settings(db)
+   if gs.admin_allowed_ips and get_client_ip(request, settings) not in gs.admin_allowed_ips:
+       raise PermissionDeniedError("허용되지 않은 IP입니다")</code>
+   <code>GlobalSettings.admin_allowed_ips</code> 가 비어 있으면 제한 없음.
+   목록이 있으면 현재 접속 IP가 포함되어야 한다.</p>
+</li>
+<li>
+<p><code>AdminContext(user, session_id, csrf_token, service_ids)</code> 반환</p>
+</li>
+</ol>
+<h3 id="3-5-require_role-require_admin-require_any">3-5. 역할 검사 — require_role / require_admin / require_any</h3>
+<p><code class="loc">app/admin/deps.py:86-102</code></p>
+<pre><code class="language-python">def require_role(*roles: str):
+    async def checker(ctx: AdminContext = Depends(require_user)) -&gt; AdminContext:
+        if ctx.user.role not in roles:
+            raise PermissionDeniedError(&quot;접근 권한이 없습니다&quot;)
+        return ctx
+    return checker
+
+require_admin = require_role(UserRole.SYSTEM_ADMIN)
+require_any   = require_role(UserRole.SYSTEM_ADMIN, UserRole.SERVICE_MANAGER)
+</code></pre>
+<p>라우트 함수의 Depends에서 이렇게 사용한다:</p>
+<pre><code class="language-python"># SYSTEM_ADMIN만 접근 가능
+ctx: AdminContext = Depends(require_admin)
+
+# 두 역할 모두 접근 가능
+ctx: AdminContext = Depends(require_any)
+</code></pre>
+<h3 id="3-6-csrf">3-6. CSRF 검증</h3>
+<p><code class="loc">app/admin/deps.py:105-110</code></p>
+<p>모든 어드민 POST 핸들러는 <code>await validate_csrf(request, ctx)</code> 를 반드시 호출해야 한다.</p>
+<pre><code class="language-python">async def validate_csrf(request: Request, ctx: AdminContext) -&gt; None:
+    form = await request.form()
+    token = str(form.get(&quot;csrf_token&quot;, &quot;&quot;)) or request.headers.get(&quot;x-csrf-token&quot;, &quot;&quot;)
+    if not token or not constant_time_equals(token, ctx.csrf_token):
+        raise PermissionDeniedError(&quot;CSRF 토큰이 유효하지 않습니다&quot;)
+</code></pre>
+<ul>
+<li>폼(HTML form): <code>&lt;input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}"&gt;</code></li>
+<li>htmx AJAX: <code>X-CSRF-Token: {토큰}</code> 헤더</li>
+</ul>
+<p>CSRF 토큰은 세션 생성 시 랜덤으로 만들어져 Redis에 저장된다.
+(<code class="loc">app/services/auth.py:76</code> — <code>"csrf_token": secrets.token_urlsafe(32)</code>)</p>
+<p><code>constant_time_equals</code> 로 비교해 타이밍 공격을 막는다.</p>
+<h3 id="3-7-htmx">3-7. htmx 요청의 인증 실패 처리</h3>
+<p><code class="loc">app/admin/deps.py:118-130</code></p>
+<p><code>AdminAuthRequired</code> 예외 발생 시:
+- 일반 요청 → <code>303 See Other</code> <code>/admin/login</code> 으로 리다이렉트
+- htmx 요청(<code>HX-Request</code> 헤더 존재) → <code>204 No Content</code> + <code>HX-Redirect: /admin/login</code> 헤더<br />
+  htmx가 이 헤더를 받아 클라이언트 측에서 전체 페이지 이동을 처리한다.</p>
+<hr />
+<h2 id="4-system_admin-vs-service_manager">4. 권한 스코프 — SYSTEM_ADMIN vs SERVICE_MANAGER</h2>
+<p>두 역할의 핵심 차이는 <strong>어떤 서비스 데이터에 접근할 수 있는가</strong>다.</p>
+<h3 id="4-1">4-1. 역할 정의</h3>
+<p><code class="loc">app/models/enums.py:18-21</code></p>
+<table>
+<thead>
+<tr>
+<th>역할</th>
+<th>의미</th>
+<th>service_ids</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SYSTEM_ADMIN</code></td>
+<td>전체 관리자 — 모든 서비스 접근</td>
+<td><code>None</code> (전체)</td>
+</tr>
+<tr>
+<td><code>SERVICE_MANAGER</code></td>
+<td>서비스 담당자 — 담당 서비스만 접근</td>
+<td><code>[uuid, ...]</code> (목록)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="4-2-effective_service_ids">4-2. effective_service_ids</h3>
+<p><code class="loc">app/services/accounts.py:33-49</code></p>
+<pre><code class="language-python">async def effective_service_ids(db: AsyncSession, user: User) -&gt; list[uuid.UUID] | None:
+    if user.role == UserRole.SYSTEM_ADMIN:
+        return None  # None = 전체 접근
+    ids: set[uuid.UUID] = set()
+    if user.service_id is not None:
+        ids.add(user.service_id)      # 주 서비스 (User.service_id)
+    extra = (await db.scalars(select(UserService.service_id).where(
+        UserService.user_id == user.id))).all()
+    ids.update(extra)                 # + UserService 다대다 추가 서비스
+    return list(ids)
+</code></pre>
+<p>SERVICE_MANAGER의 유효 스코프 = <code>User.service_id</code> (주 서비스) + <code>user_services</code> 테이블의
+추가 서비스를 합집합으로 계산한다.</p>
+<p><strong>왜 세션에 캐시하지 않나?</strong><br />
+권한 변경이 즉시 반영되어야 하기 때문에 매 요청마다 DB를 조회한다.
+(<code class="loc">app/services/auth.py:63-65</code> 주석 참고)</p>
+<h3 id="4-3-service_scope">4-3. service_scope 헬퍼</h3>
+<p><code class="loc">app/admin/deps.py:113-115</code></p>
+<pre><code class="language-python">def service_scope(ctx: AdminContext) -&gt; list[uuid.UUID] | None:
+    &quot;&quot;&quot;담당 서비스 ID 목록. SYSTEM_ADMIN이면 None(전체).&quot;&quot;&quot;
+    return ctx.service_ids
+</code></pre>
+<p>라우트 함수에서 조회 쿼리에 <code>.where(Service.id.in_(service_ids))</code> 를 붙일 때 사용한다.
+<code>None</code>이면 조건을 붙이지 않아 전체 조회가 된다.</p>
+<h3 id="4-4-404">4-4. 타 서비스 접근 시 404 반환 이유</h3>
+<p>SERVICE_MANAGER가 담당하지 않는 서비스의 데이터를 요청했을 때 403(권한 없음) 대신
+<strong>404(없음)</strong>을 반환하는 라우트가 있다.</p>
+<p>이유: 403을 반환하면 "해당 리소스가 존재한다"는 사실이 노출된다 (존재 열거 공격).
+404를 반환하면 존재 여부 자체를 숨길 수 있다.</p>
+<p>예시 패턴:</p>
+<pre><code class="language-python"># 서비스를 조회했는데 스코프 밖이면 404 처리
+service = await db.get(Service, service_id)
+if service is None or (scope is not None and service.id not in scope):
+    raise NotFoundError(&quot;서비스를 찾을 수 없습니다&quot;)
+</code></pre>
+<hr />
+<h2 id="5">5. 암호화와 시크릿 관리</h2>
+<h3 id="5-1-aes-256-gcm">5-1. AES-256-GCM 암호화</h3>
+<p><code>app/core/crypto.py</code></p>
+<p>빌링키(토스페이먼츠 자동결제용)와 서비스별 HMAC 시크릿은 DB에 평문으로 저장하지 않는다.
+<code>AesGcmCipher</code>가 AES-256-GCM으로 암호화한다.</p>
+<pre><code class="language-python"># app/core/crypto.py:32-50
+def encrypt(self, plaintext: str) -&gt; str:
+    nonce = os.urandom(12)  # 매번 새 12바이트 nonce
+    ct = self._aesgcm.encrypt(nonce, plaintext.encode(), None)
+    return base64.b64encode(nonce + ct).decode()
+    # 반환: base64(nonce[12] + ciphertext + GCM_tag[16])
+
+def decrypt(self, token: str) -&gt; str:
+    raw = base64.b64decode(token)
+    return self._aesgcm.decrypt(raw[:12], raw[12:], None).decode()
+    # 앞 12바이트=nonce, 나머지=암호문+인증태그
+</code></pre>
+<p>GCM 모드는 암호화와 함께 <strong>무결성 인증 태그</strong>를 생성한다. 복호화 시 태그가 맞지 않으면
+자동으로 예외가 발생해 변조된 데이터를 탐지한다 (AEAD).</p>
+<p>암호화 키: <code>settings.encryption_key</code> — base64 인코딩된 32바이트, <code>.env</code>에만 보관.
+앱 시작 시 <code>AesGcmCipher(settings.encryption_key)</code> 로 초기화되며 키 길이가 32바이트가
+아니면 즉시 <code>ValueError</code>로 실패한다. (<code class="loc">app/core/crypto.py:26-30</code>, <code class="loc">app/main.py:48</code>)</p>
+<p>어디에 저장되나:
+- <code>Service.hmac_secret_encrypted</code> (<code class="loc">app/models/service.py:26</code>) — HMAC 시크릿
+- <code>Service.api_key_encrypted</code> (<code class="loc">app/models/service.py:28</code>) — 표시용 평문 키(AES 암호화)
+- 구독 빌링키 — <code>Subscription</code> 모델에 암호화 저장</p>
+<h3 id="5-2-api-sha-256">5-2. API 키 — SHA-256 해시 비교</h3>
+<p><code class="loc">app/models/service.py:25</code>:</p>
+<pre><code class="language-python">api_key_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+# SHA-256 해시(인증 검증용, 평문 저장 안 함)
+</code></pre>
+<p>DB에는 SHA-256 해시만 저장한다. API 키 원문이 DB에서 유출되어도 해시에서 원문을 역산할 수 없다.<br />
+키를 비교할 때 매번 해시해서 대조한다 (<code class="loc">app/api/deps.py:96</code>).</p>
+<h3 id="5-3-api-1">5-3. API 키 1회 표시 정책</h3>
+<p>서비스 등록 또는 키 재발급 시 평문 키를 <strong>딱 1회</strong> 화면에 표시하고, 이후에는 AES 암호화
+상태로만 저장한다. 관리자가 나중에 어드민 화면에서 다시 볼 수 있도록 AES로 보관하지만,
+인증 자체는 항상 해시 비교로만 한다.</p>
+<h3 id="5-4-argon2id">5-4. 비밀번호 — Argon2id</h3>
+<p><code class="loc">app/core/security.py:78-96</code></p>
+<pre><code class="language-python">_ph = PasswordHasher()  # 기본: time_cost=3, memory_cost=65536
+
+def hash_password(password: str) -&gt; str:
+    return _ph.hash(password)      # 솔트 자동 생성
+
+def verify_password(password: str, password_hash: str) -&gt; bool:
+    try:
+        return _ph.verify(password_hash, password)
+    except (VerifyMismatchError, VerificationError, InvalidHashError):
+        return False  # 손상된 해시도 False (500 방지)
+</code></pre>
+<p>Argon2id: 사이드채널 공격 + GPU 병렬 공격에 강한 최신 KDF (OWASP 권장).<br />
+솔트는 라이브러리가 자동 생성한다.</p>
+<p>최소 길이: 10자 (<code class="loc">app/services/auth.py:48</code> MIN_PASSWORD_LENGTH, <code class="loc">app/services/auth.py:179-182</code>)</p>
+<h3 id="5-5-swagger-http-basic">5-5. Swagger 문서 보호 — HTTP Basic</h3>
+<p>API 문서(<code>/docs</code>, <code>/openapi.json</code>)는 <code>SWAGGER_ID</code>/<code>SWAGGER_PW</code>(환경별 <code>.env</code>) 기반 HTTP Basic 인증으로 보호한다. <code>app/main.py</code>의 <code>_register_protected_docs()</code>가 두 값이 모두 설정된 경우에만 라우트를 등록하고, <code>secrets.compare_digest</code>로 타이밍 안전 비교한다. 하나라도 비면 라우트가 없어 404 — 운영에서 자격증명을 비워 두면 문서가 자연히 비공개된다.</p>
+<pre><code class="language-python">def verify(credentials=Depends(_swagger_security)):
+    id_ok = credentials and secrets.compare_digest(credentials.username, swagger_id)
+    pw_ok = credentials and secrets.compare_digest(credentials.password, swagger_pw)
+    if not (id_ok and pw_ok):
+        raise HTTPException(401, headers={&quot;WWW-Authenticate&quot;: &quot;Basic&quot;})
+</code></pre>
+<hr />
+<h2 id="6">6. 초보자 디버깅 가이드</h2>
+<h3 id="6-1-api-401">6-1. 외부 API에서 401 났을 때</h3>
+<table>
+<thead>
+<tr>
+<th>증상</th>
+<th>원인</th>
+<th>확인 포인트</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>UNAUTHORIZED</code> 401</td>
+<td>API 키 불일치</td>
+<td><code>x-service-key</code> 값과 DB의 <code>sha256_hex(api_key)</code> == <code>Service.api_key_hash</code> 확인</td>
+</tr>
+<tr>
+<td><code>UNAUTHORIZED</code> 401</td>
+<td>타임스탬프 오차</td>
+<td>서버와 클라이언트 시각 동기화 확인 (NTP). <code>abs(server_time - x-timestamp) &lt;= 300</code></td>
+</tr>
+<tr>
+<td><code>UNAUTHORIZED</code> 401</td>
+<td>nonce 재사용</td>
+<td>매 요청마다 새 UUID를 생성했는지 확인. 요청 재시도 시에도 새 nonce 사용 필수</td>
+</tr>
+<tr>
+<td><code>UNAUTHORIZED</code> 401</td>
+<td>서명 불일치</td>
+<td>정준 문자열 5줄 순서 확인 (METHOD\npath\ntimestamp\nnonce\nsha256(body)). 본문 bytes가 동일한지 확인</td>
+</tr>
+<tr>
+<td><code>FORBIDDEN</code> 403</td>
+<td>IP 화이트리스트</td>
+<td><code>Service.allowed_ips</code> 에 요청 IP가 등록되어 있는지 확인. 리버스 프록시 환경이면 <code>trust_proxy</code> 설정 확인</td>
+</tr>
+<tr>
+<td><code>SERVER_DISABLED</code> 503</td>
+<td>킬스위치</td>
+<td>어드민 전체설정에서 서버 활성화 여부 확인</td>
+</tr>
+<tr>
+<td><code>RATE_LIMITED</code> 429</td>
+<td>한도 초과</td>
+<td>분당 요청 수 줄이기. 결제 API는 20/분, 일반은 120/분</td>
+</tr>
+</tbody>
+</table>
+<p><strong>서명 디버깅 순서:</strong>
+1. method 대문자인지 확인 (<code>GET</code>, <code>POST</code> 등)
+2. path 앞에 <code>/</code> 있는지, 쿼리 파라미터 없는지 확인 (<code>/api/v1/subscriptions</code>)
+3. 본문 bytes를 그대로 sha256 했는지 확인 (Content-Type: application/json 이면 <code>json.dumps(...).encode()</code>)
+4. timestamp가 Unix 초(정수)인지 확인
+5. 계산한 서명을 서버 쪽 <code>sign_request</code>와 동일 입력으로 대조</p>
+<h3 id="6-2-401">6-2. 어드민 로그인에서 401/잠금 났을 때</h3>
+<table>
+<thead>
+<tr>
+<th>증상</th>
+<th>원인</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>"이메일 또는 비밀번호가 올바르지 않습니다"</td>
+<td>이메일/비밀번호 불일치</td>
+</tr>
+<tr>
+<td>"계정이 잠겼습니다"</td>
+<td>5회 실패로 잠김 → 15분 후 자동 해제. 또는 어드민에서 복구</td>
+</tr>
+<tr>
+<td>"비활성화된 계정입니다"</td>
+<td>SYSTEM_ADMIN이 계정을 비활성화함</td>
+</tr>
+<tr>
+<td>"비밀번호 설정이 필요합니다"</td>
+<td>최초 가입 후 비밀번호를 아직 설정 안 함 → 이메일 링크 확인</td>
+</tr>
+</tbody>
+</table>
+<h3 id="6-3-csrf">6-3. CSRF 오류 났을 때</h3>
+<p><code>PermissionDeniedError: CSRF 토큰이 유효하지 않습니다</code> 가 나오면:</p>
+<ol>
+<li>폼에 <code>&lt;input type="hidden" name="csrf_token" value="..."&gt;</code> 가 있는지 확인</li>
+<li>세션이 만료되어 새 CSRF 토큰이 발급되었는지 확인 → 페이지 새로고침 후 재시도</li>
+<li>htmx AJAX 요청이면 <code>X-CSRF-Token</code> 헤더를 보내는지 확인</li>
+</ol>
+<h3 id="6-4">6-4. 서비스 매니저가 다른 서비스에 접근하려 할 때</h3>
+<p><code>NotFoundError</code> 404 가 반환된다 (403이 아님).<br />
+<code>effective_service_ids</code>가 반환한 목록에 해당 서비스 ID가 없으면 없는 리소스로 처리된다.<br />
+어드민 화면에서 해당 계정에 서비스를 할당하면 해결된다.</p>
+<h3 id="6-5">6-5. 인증 우회 금지 규칙</h3>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>절대 하지 말아야 할 것들</p>
+</div></blockquote>
+<ul>
+<li><strong><code>authenticate_service</code> 를 Depends에서 제거하는 것</strong> — 인증 없이 외부에 API가 노출된다.</li>
+<li><strong><code>validate_csrf</code> 호출을 생략하는 것</strong> — 어드민 POST가 CSRF 공격에 노출된다.</li>
+<li><strong><code>require_admin</code> 대신 <code>require_any</code> 를 쓰는 것</strong> (SYSTEM_ADMIN 전용 기능에) — SERVICE_MANAGER가 전체 설정에 접근하게 된다.</li>
+<li><strong>nonce 없이 타임스탬프만 사용하는 것</strong> — 5분 이내 재전송 공격이 가능해진다.</li>
+<li><strong>API 키 원문을 DB에 저장하는 것</strong> — 해시만 저장해야 유출 시 원문 노출을 막는다.</li>
+<li><strong><code>constant_time_equals</code> 대신 <code>==</code> 로 서명 비교하는 것</strong> — 타이밍 공격에 취약해진다.</li>
+</ul>
+<hr />
+<h2 id="_1">참고 — 관련 파일 빠른 찾기</h2>
+<table>
+<thead>
+<tr>
+<th>역할</th>
+<th>파일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>외부 API 인증 (3중)</td>
+<td><code>app/api/deps.py</code></td>
+</tr>
+<tr>
+<td>HMAC 서명 계산</td>
+<td><code>app/core/security.py</code></td>
+</tr>
+<tr>
+<td>클라이언트 구현 예시</td>
+<td><code>sample_service/shop/payment_client.py</code></td>
+</tr>
+<tr>
+<td>어드민 세션/역할/CSRF</td>
+<td><code>app/admin/deps.py</code></td>
+</tr>
+<tr>
+<td>로그인·세션 생성·잠금</td>
+<td><code>app/services/auth.py</code></td>
+</tr>
+<tr>
+<td>스코프 계산 (담당 서비스)</td>
+<td><code>app/services/accounts.py</code></td>
+</tr>
+<tr>
+<td>AES-256-GCM 암호화</td>
+<td><code>app/core/crypto.py</code></td>
+</tr>
+<tr>
+<td>킬스위치·어드민 IP</td>
+<td><code>app/services/app_settings.py</code></td>
+</tr>
+<tr>
+<td>GlobalSettings 모델</td>
+<td><code>app/models/global_settings.py</code></td>
+</tr>
+<tr>
+<td>도메인 예외 (에러 코드)</td>
+<td><code>app/core/errors.py</code></td>
+</tr>
+<tr>
+<td>환경변수 설정</td>
+<td><code>app/core/config.py</code></td>
+</tr>
+</tbody>
+</table>
+<p>상호 참조:
+- 외부 API 엔드포인트 목록과 각 라우트의 Depends 선택 이유 → <strong>15. 외부 API 레퍼런스</strong>
+- <code>GlobalSettings</code> 변경 방법과 킬스위치 UI → <strong>14. 전체 설정</strong>
+- 계정 생성·서비스 할당·비밀번호 재설정 상세 → <strong>13. 어드민 계정</strong></p>
+    </div>
+    <div class="pager"><a class="pg prev" href="02-database.html"><small>← 이전</small><b>02. 데이터베이스 — 테이블·모델·관계·마이그레이션</b></a><a class="pg next" href="04-subscription-create.html"><small>다음 →</small><b>04. 구독 생성</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#1-api-hmac-3">1. 외부 API 인증 — HMAC 3중 인증</a>
+<a class="toc-h3" href="#1-1">1-1. 어디서 실행되나</a>
+<a class="toc-h3" href="#1-2-4">1-2. 필수 요청 헤더 4개</a>
+<a class="toc-h3" href="#1-3-6">1-3. 검증 6단계 상세</a>
+<a class="toc-h3" href="#1-4-signature">1-4. 서명(signature) 계산 방법 — 클라이언트 구현 가이드</a>
+<a class="toc-h3" href="#1-5-payment_rate_limit">1-5. payment_rate_limit — 결제 경로 추가 제한</a>
+<a class="toc-h2" href="#2-ensure_server_enabled">2. 킬스위치 — ensure_server_enabled</a>
+<a class="toc-h3" href="#2-1">2-1. 어떤 기능인가</a>
+<a class="toc-h3" href="#2-2">2-2. 코드 흐름</a>
+<a class="toc-h3" href="#2-3">2-3. 킬스위치 전환 방법 (어드민 콘솔)</a>
+<a class="toc-h2" href="#3-csrf">3. 어드민 인증 — 세션/CSRF</a>
+<a class="toc-h3" href="#3-1">3-1. 세션 쿠키</a>
+<a class="toc-h3" href="#3-2-redis">3-2. Redis 세션 구조</a>
+<a class="toc-h3" href="#3-3">3-3. 로그인 흐름과 잠금 정책</a>
+<a class="toc-h3" href="#3-4-require_user-depends">3-4. require_user — 세션 검증 Depends</a>
+<a class="toc-h3" href="#3-5-require_role-require_admin-require_any">3-5. 역할 검사 — require_role / require_admin / require_any</a>
+<a class="toc-h3" href="#3-6-csrf">3-6. CSRF 검증</a>
+<a class="toc-h3" href="#3-7-htmx">3-7. htmx 요청의 인증 실패 처리</a>
+<a class="toc-h2" href="#4-system_admin-vs-service_manager">4. 권한 스코프 — SYSTEM_ADMIN vs SERVICE_MANAGER</a>
+<a class="toc-h3" href="#4-1">4-1. 역할 정의</a>
+<a class="toc-h3" href="#4-2-effective_service_ids">4-2. effective_service_ids</a>
+<a class="toc-h3" href="#4-3-service_scope">4-3. service_scope 헬퍼</a>
+<a class="toc-h3" href="#4-4-404">4-4. 타 서비스 접근 시 404 반환 이유</a>
+<a class="toc-h2" href="#5">5. 암호화와 시크릿 관리</a>
+<a class="toc-h3" href="#5-1-aes-256-gcm">5-1. AES-256-GCM 암호화</a>
+<a class="toc-h3" href="#5-2-api-sha-256">5-2. API 키 — SHA-256 해시 비교</a>
+<a class="toc-h3" href="#5-3-api-1">5-3. API 키 1회 표시 정책</a>
+<a class="toc-h3" href="#5-4-argon2id">5-4. 비밀번호 — Argon2id</a>
+<a class="toc-h3" href="#5-5-swagger-http-basic">5-5. Swagger 문서 보호 — HTTP Basic</a>
+<a class="toc-h2" href="#6">6. 초보자 디버깅 가이드</a>
+<a class="toc-h3" href="#6-1-api-401">6-1. 외부 API에서 401 났을 때</a>
+<a class="toc-h3" href="#6-2-401">6-2. 어드민 로그인에서 401/잠금 났을 때</a>
+<a class="toc-h3" href="#6-3-csrf">6-3. CSRF 오류 났을 때</a>
+<a class="toc-h3" href="#6-4">6-4. 서비스 매니저가 다른 서비스에 접근하려 할 때</a>
+<a class="toc-h3" href="#6-5">6-5. 인증 우회 금지 규칙</a>
+<a class="toc-h2" href="#_1">참고 — 관련 파일 빠른 찾기</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

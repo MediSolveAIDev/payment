@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}계정 추가{% endblock %}
+{% block crumb %}계정 추가{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="btn-text" href="/admin/users"><span data-lucide="arrow-left"></span>계정</a>
+  <h1 style="margin:0">계정 추가</h1>
+</div>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<div class="card" style="max-width:560px">
+<form method="post" action="/admin/users" data-loading data-loading-text="설정 메일 발송 중…">
+  <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+  <label for="email">이메일</label>
+  <input id="email" name="email" type="email" required autofocus>
+  <label for="phone">전화번호 <span class="muted" style="font-weight:400">(선택)</span></label>
+  <input id="phone" name="phone" type="tel" placeholder="010-1234-5678">
+  <label for="role">역할</label>
+  <select id="role" name="role" onchange="document.getElementById('svc-block').style.display = this.value==='SERVICE_MANAGER' ? 'block':'none'">
+    <option value="SERVICE_MANAGER">서비스 담당자</option>
+    <option value="SYSTEM_ADMIN">시스템 관리자 (전체 관리)</option>
+  </select>
+  <div id="svc-block">
+    <label>담당 서비스 (서비스 담당자만, 복수 선택 가능 — 비워두면 서비스 등록 시 할당)</label>
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:440px;max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:12px">
+      {% for s in services %}
+      <label style="display:flex;align-items:center;gap:8px;margin:0;font-weight:400">
+        <input type="checkbox" name="service_ids" value="{{ s.id }}" style="width:auto;height:auto">
+        {{ s.name }} <span class="muted" style="font-size:12px">{{ s.manager_email }}</span>
+      </label>
+      {% else %}
+      <span class="muted" style="font-size:13px">등록된 서비스가 없습니다 — 서비스 등록 시 이 계정을 담당자로 선택할 수 있습니다.</span>
+      {% endfor %}
+    </div>
+    <p class="muted" style="font-size:12px;margin-top:6px">한 담당자가 여러 서비스를 관리할 수 있습니다.</p>
+  </div>
+  <div class="actions"><button class="btn btn-primary" type="submit">계정 생성 + 설정 메일 발송</button></div>
+</form>
+</div>
+{% endblock %}

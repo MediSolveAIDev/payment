@@ -1,0 +1,37 @@
+{# 서비스 상세 — 구독 리스트 partial (htmx 부분 갱신 대상) #}
+{% import "_list.html" as L %}
+<div id="list-svc-subs">
+<div class="card">
+  <div class="block-head"><h2 style="margin:0">구독</h2>
+    <a class="btn btn-sm btn-ghost" href="/admin/services/{{ service.id }}/subs.xlsx{% if spp.query_without('page') %}?{{ spp.query_without('page') }}{% endif %}"><span data-lucide="download"></span>엑셀</a>
+  </div>
+  {% set base_path = '/admin/services/' ~ service.id %}
+  {{ L.toolbar(base_path, spp, '사용자 ID 검색',
+     [('status', [('','전체 상태'),('TRIAL','체험'),('ACTIVE','활성'),('PAST_DUE','미수'),('SUSPENDED','정지'),('CANCELED','취소'),('EXTENDED','연장처리'),('EXPIRED','만료')], sub_status_filter)], target='list-svc-subs') }}
+  <table>
+    <thead><tr>
+      {{ L.sort_th(spp, base_path, 'external_user_id', '사용자', target='list-svc-subs') }}
+      <th>요금제</th>
+      {{ L.sort_th(spp, base_path, 'status', '상태', target='list-svc-subs') }}
+      {{ L.sort_th(spp, base_path, 'current_period_end', '만료일', target='list-svc-subs') }}
+      {{ L.sort_th(spp, base_path, 'next_billing_at', '다음 결제', target='list-svc-subs') }}
+      <th></th>
+    </tr></thead>
+    <tbody>
+    {% for sub, splan, _svc in sub_page.items %}{# 공유 빌더가 Service까지 JOIN — S2 #}
+      <tr onclick="location.href='/admin/subscriptions/{{ sub.id }}'" style="cursor:pointer">
+        <td>{{ sub.external_user_id }}</td>
+        <td>{{ splan.name }}</td>
+        <td><span class="badge badge-{{ sub.status }}">{{ sub.status }}</span></td>
+        <td>{{ sub.current_period_end|kst("%Y-%m-%d") }}</td>
+        <td>{{ sub.next_billing_at|kst("%Y-%m-%d %H:%M") }}</td>
+        <td><span class="muted" style="font-size:12px">상세 ›</span></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="muted">구독이 없습니다</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {{ L.pager(sub_page, base_path, spp, target='list-svc-subs') }}
+</div>
+</div>

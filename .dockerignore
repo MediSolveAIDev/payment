@@ -1,0 +1,47 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# 이미지 빌드 컨텍스트에서 제외할 목록
+# ─────────────────────────────────────────────────────────────────────────────
+# 효과: ① 비밀값이 이미지에 굽히지 않게 막고  ② 대용량/불필요 파일을 빼서 빌드를
+#       빠르고 가볍게 만든다. (.gitignore와 별개로 "도커 빌드"에만 적용된다)
+
+# ── 버전관리 · 로컬 가상환경 · 캐시 · 테스트 산출물(이미지에 불필요) ──────────────
+.git
+.gitignore
+.venv
+**/.venv
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov
+
+# ── 비밀값: 이미지에 굽지 않고 런타임에 compose env_file 로 주입 ─────────────────
+# (주의: .dockerignore는 줄 끝 인라인 주석을 지원하지 않는다 — 주석은 반드시 독립 줄에)
+.env
+.env.*
+# 예시 템플릿만 예외로 포함(비밀값 아님)
+!.env.example
+
+# ── 앱 운영에 불필요한 디렉터리(슬림화) ──────────────────────────────────────
+tests
+docs
+# 단, 로그인 페이지에서 /manual 로 서빙하는 "서비스 담당자 매뉴얼"은 이미지에 포함한다
+# (앱이 docs/manual 디렉터리를 정적으로 서빙하므로 — app/main.py 의 /manual 마운트).
+!docs/manual
+!docs/manual/**
+# 새 사용·개발 매뉴얼(/user-manual 로 서빙 — app/main.py)도 이미지에 포함.
+!docs/user_manual
+!docs/user_manual/**
+backups
+sample_service
+scripts
+
+# ── 도커/문서 메타: 이미지 안에 둘 필요 없음 ─────────────────────────────────
+Dockerfile
+docker-compose*.yml
+docker/*
+# 단, 엔트리포인트는 이미지가 직접 쓰므로 반드시 포함(예외)
+!docker/entrypoint.sh
+README.md

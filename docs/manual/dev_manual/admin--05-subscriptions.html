@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05. 구독 관리 — 목록·상세·강제 취소 — 개발자 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>개발자 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>🧱</span>기반 (먼저 읽기)</div>
+<a class="nav-link" href="README.html"><span class="n">·</span><span class="tt">개발자 인수인계 매뉴얼 (dev_manual)</span></a>
+<a class="nav-link" href="01-getting-started.html"><span class="n">01</span><span class="tt">01. 시작하기 — 구조·실행·테스트·요청 처리 공통 흐름</span></a>
+<a class="nav-link" href="02-database.html"><span class="n">02</span><span class="tt">02. 데이터베이스 — 테이블·모델·관계·마이그레이션</span></a>
+<a class="nav-link" href="03-auth-and-security.html"><span class="n">03</span><span class="tt">03. 인증과 보안 공통</span></a>
+<div class="nav-group"><span>⚙️</span>기능별 상세</div>
+<a class="nav-link" href="04-subscription-create.html"><span class="n">04</span><span class="tt">04. 구독 생성</span></a>
+<a class="nav-link" href="05-subscription-renewal.html"><span class="n">05</span><span class="tt">05. 구독 갱신·만료·재시도·정합성(스케줄러 배치)</span></a>
+<a class="nav-link" href="06-subscription-manage.html"><span class="n">06</span><span class="tt">06. 구독 취소·재개·수동결제·카드변경</span></a>
+<a class="nav-link" href="07-one-off-payment.html"><span class="n">07</span><span class="tt">07. 단건(일반) 결제 + 취소</span></a>
+<a class="nav-link" href="08-plans.html"><span class="n">08</span><span class="tt">08. 요금제 관리 (생성·수정·금액 계산·자동결제안함·추가정보)</span></a>
+<a class="nav-link" href="09-services-registry.html"><span class="n">09</span><span class="tt">09. 서비스 등록·키 발급/회전·취소정책·담당자</span></a>
+<a class="nav-link" href="10-settlement.html"><span class="n">10</span><span class="tt">10. 정산(어드민 화면)</span></a>
+<a class="nav-link" href="11-dashboard.html"><span class="n">11</span><span class="tt">11. 대시보드 — 어드민 메인 화면</span></a>
+<a class="nav-link" href="12-webhooks.html"><span class="n">12</span><span class="tt">12. 웹훅 처리 (토스페이먼츠 → 서버)</span></a>
+<a class="nav-link" href="13-admin-accounts.html"><span class="n">13</span><span class="tt">13. 어드민 계정·역할·로그인/비밀번호</span></a>
+<a class="nav-link" href="14-global-settings.html"><span class="n">14</span><span class="tt">14. 전체 설정(재시도·어드민 IP·킬스위치)</span></a>
+<a class="nav-link" href="15-external-api-and-sample.html"><span class="n">15</span><span class="tt">15. 외부 API 레퍼런스 + 샘플 서비스 연동</span></a>
+<a class="nav-link" href="16-card-vault.html"><span class="n">16</span><span class="tt">16. 카드 보관함(Card Vault) — 카드 등록·교체·조회·삭제</span></a>
+<a class="nav-link" href="17-service-notifications.html"><span class="n">17</span><span class="tt">17. 서비스 알림(아웃고잉 웹훅) — 요청 016</span></a>
+<div class="nav-group"><span>🖥️</span>어드민 화면별 매뉴얼</div>
+<a class="nav-link" href="admin--README.html"><span class="n">·</span><span class="tt">어드민 콘솔 페이지 매뉴얼</span></a>
+<a class="nav-link" href="admin--01-login-and-access.html"><span class="n">01</span><span class="tt">01. 로그인·접근 (로그인 / 비밀번호 설정 / 로그아웃 / IP 제한)</span></a>
+<a class="nav-link" href="admin--02-dashboard.html"><span class="n">02</span><span class="tt">02. 대시보드</span></a>
+<a class="nav-link" href="admin--03-services.html"><span class="n">03</span><span class="tt">03. 서비스 관리</span></a>
+<a class="nav-link" href="admin--04-plans.html"><span class="n">04</span><span class="tt">04. 요금제 관리 (목록·생성·수정·활성/비활성·삭제)</span></a>
+<a class="nav-link active" href="admin--05-subscriptions.html"><span class="n">05</span><span class="tt">05. 구독 관리 — 목록·상세·강제 취소</span></a>
+<a class="nav-link" href="admin--06-payments.html"><span class="n">06</span><span class="tt">06. 결제 — 목록·상세·단건 취소</span></a>
+<a class="nav-link" href="admin--07-settlement.html"><span class="n">07</span><span class="tt">07. 정산 화면</span></a>
+<a class="nav-link" href="admin--08-users.html"><span class="n">08</span><span class="tt">08. 계정 관리</span></a>
+<a class="nav-link" href="admin--09-audit.html"><span class="n">09</span><span class="tt">09. 감사 로그 (조회·검색·정리·엑셀)</span></a>
+<a class="nav-link" href="admin--10-settings.html"><span class="n">10</span><span class="tt">10. 전체 설정 (재시도 정책 · 어드민 IP · 킬스위치)</span></a>
+<div class="nav-group"><span>📋</span>운영 워크플로우</div>
+<a class="nav-link" href="admin--11-onboarding-checklist.html"><span class="n">·</span><span class="tt">신규 서비스 온보딩 체크리스트 (운영자용)</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">개발자 매뉴얼</a> <span>/</span> <em>어드민 화면별 매뉴얼</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">🖥️ 어드민 화면별 매뉴얼</span>
+        <span class="dh-src">docs/dev_manual/admin/05-subscriptions.md</span></div>
+      <h1>05. 구독 관리 — 목록·상세·강제 취소</h1>
+      
+    </header>
+    <div class="doc">
+
+<blockquote class="cal who"><span class="cal-i">👤</span><div class="cal-b">
+<p><strong>대상</strong>: 운영자 + 개발자 하이브리드.
+외부 API를 통한 구독 시작·재개·카드 변경 등의 흐름은 <a href="06-subscription-manage.html">../06-subscription-manage.md</a>를 참고하세요.</p>
+</div></blockquote>
+<hr />
+<h2 id="1">1. 이 화면은 무엇인가 / 접근 경로·권한</h2>
+<p>어드민 콘솔에서 <strong>모든 구독 레코드를 조회·검색·필터링</strong>하고, 필요한 경우 <strong>운영자가 직접 구독을 강제 취소</strong>하는 화면입니다.</p>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /admin/subscriptions</code></td>
+<td>구독 목록</td>
+</tr>
+<tr>
+<td><code>GET /admin/subscriptions/{id}</code></td>
+<td>구독 상세</td>
+</tr>
+<tr>
+<td><code>POST /admin/subscriptions/{id}/force-cancel</code></td>
+<td>강제 취소 처리</td>
+</tr>
+<tr>
+<td><code>POST /admin/subscriptions/{id}/retry-payment</code></td>
+<td><strong>결제 처리(재결제)</strong> — 실패/정지 구독을 등록 카드로 즉시 청구</td>
+</tr>
+<tr>
+<td><code>POST /admin/subscriptions/{id}/extend</code></td>
+<td><strong>만료일 연장</strong> — 입력 날짜로 만료일·다음결제 변경, 상태=연장처리(EXTENDED)</td>
+</tr>
+<tr>
+<td><code>GET /admin/subscriptions/export.xlsx</code></td>
+<td>목록 엑셀 다운로드</td>
+</tr>
+</tbody>
+</table>
+<p><strong>접근 권한</strong>: <code>require_any</code> — SYSTEM_ADMIN과 SERVICE_MANAGER 모두 접근할 수 있습니다.</p>
+<p><strong>스코프(중요)</strong>:
+- <strong>SYSTEM_ADMIN</strong>: 전체 서비스의 모든 구독에 접근합니다.
+- <strong>SERVICE_MANAGER</strong>: <code>service_scope(ctx)</code>가 반환하는 <strong>담당 서비스의 구독에만</strong> 접근합니다. 담당 범위 밖 구독은 목록에서 보이지 않고, 직접 URL로 접근해도 404로 응답합니다(존재 여부 노출 방지).</p>
+<hr />
+<h2 id="2">2. 화면 구성</h2>
+<h3 id="2-1">2-1. 구독 목록</h3>
+<p><strong>파일</strong>: <code>app/admin/templates/subscriptions/list.html</code> (L1–7), <code>app/admin/templates/subscriptions/_table.html</code> (L1–39)</p>
+<p>목록 화면은 <code>list.html</code>이 셸을 담당하고, 검색·테이블·페이지네이션은 <code>_table.html</code> partial이 렌더합니다. htmx 요청 시에는 partial만 교체됩니다(<code>render_list</code> — <code>app/admin/routes/subscriptions.py</code> L126).</p>
+<h4 id="_1">툴바 (검색·필터)</h4>
+<p><code>_table.html</code> L3–9에서 <code>_list.html</code>의 <code>toolbar</code> 매크로를 호출합니다.</p>
+<table>
+<thead>
+<tr>
+<th>컨트롤</th>
+<th>파라미터</th>
+<th>동작</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>검색창</td>
+<td><code>q</code></td>
+<td><code>external_user_id</code> 부분 일치 검색(ilike)</td>
+</tr>
+<tr>
+<td>서비스 드롭다운</td>
+<td><code>service_id</code></td>
+<td>서비스별 필터. SYSTEM_ADMIN은 전체, SERVICE_MANAGER는 담당 서비스만 표시</td>
+</tr>
+<tr>
+<td>요금제 드롭다운</td>
+<td><code>plan_name</code></td>
+<td>요금제명 정확 일치. 서비스 선택 시 해당 서비스 요금제만 표시</td>
+</tr>
+<tr>
+<td>상태 드롭다운</td>
+<td><code>status</code></td>
+<td>TRIAL / ACTIVE / PAST_DUE / SUSPENDED / CANCELED / EXPIRED / 전체</td>
+</tr>
+<tr>
+<td>날짜 범위</td>
+<td><code>from</code>, <code>to</code></td>
+<td><code>created_at</code> 범위(YYYY-MM-DD). <code>to</code>는 익일 00:00(반개구간)으로 변환</td>
+</tr>
+<tr>
+<td>엑셀 버튼</td>
+<td>—</td>
+<td>현재 필터 유지한 채 <code>/admin/subscriptions/export.xlsx</code> 다운로드</td>
+</tr>
+<tr>
+<td>초기화 링크</td>
+<td>—</td>
+<td>검색어나 필터가 하나라도 있을 때 표시. 전체 초기화</td>
+</tr>
+</tbody>
+</table>
+<p>서비스 드롭다운 변경 시 요금제 필터(<code>plan_name</code>)가 자동으로 빈 값으로 초기화됩니다(<code>_table.html</code> L12, <code>onchange</code> JS).</p>
+<h4 id="_2">테이블 컬럼</h4>
+<p><code>_table.html</code> L11–36</p>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>데이터 출처</th>
+<th>정렬 가능</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>서비스</td>
+<td><code>Service.name</code></td>
+<td>불가</td>
+</tr>
+<tr>
+<td>사용자</td>
+<td><code>Subscription.external_user_id</code></td>
+<td>가능(<code>external_user_id</code>)</td>
+</tr>
+<tr>
+<td>요금제</td>
+<td><code>Plan.name</code></td>
+<td>불가</td>
+</tr>
+<tr>
+<td>상태</td>
+<td><code>Subscription.status</code> (배지)</td>
+<td>가능(<code>status</code>)</td>
+</tr>
+<tr>
+<td>만료일</td>
+<td><code>Subscription.current_period_end</code> (KST YYYY-MM-DD)</td>
+<td>가능(<code>current_period_end</code>)</td>
+</tr>
+<tr>
+<td>다음 결제</td>
+<td><code>Subscription.next_billing_at</code> (KST YYYY-MM-DD HH:MM)</td>
+<td>가능(<code>next_billing_at</code>)</td>
+</tr>
+<tr>
+<td>(액션)</td>
+<td>—</td>
+<td>불가</td>
+</tr>
+</tbody>
+</table>
+<p>기본 정렬은 <code>created_at</code> 내림차순입니다(<code>app/admin/routes/subscriptions.py</code> L113).</p>
+<p>행 전체 클릭 시 해당 구독의 상세 페이지로 이동합니다(<code>_table.html</code> L23).</p>
+<h4 id="_3">페이지네이션</h4>
+<p>한 페이지 15건(<code>PER_PAGE_DEFAULT = 15</code>, <code>app/admin/pagination.py</code> L18). <code>총 N건 중 start–end</code>, 이전/숫자/다음 버튼. htmx partial 갱신(<code>target='list-subs'</code>).</p>
+<hr />
+<h3 id="2-2">2-2. 구독 상세</h3>
+<p><strong>파일</strong>: <code>app/admin/templates/subscriptions/detail.html</code> (L1–61)</p>
+<p>상단에 외부 사용자 ID와 현재 상태 배지, 뒤로 가기 링크(<code>← 구독</code>)가 표시됩니다(L5–9).</p>
+<p>오류가 있을 때(<code>?error=</code> 쿼리스트링)는 에러 메시지 박스가 표시됩니다(L10).</p>
+<p>2단 그리드 레이아웃: <strong>구독 정보 카드</strong>(왼쪽) + <strong>관리 카드</strong>(오른쪽), 아래에 <strong>결제 이력 카드</strong>.</p>
+<h4 id="detailhtml-l1225">구독 정보 카드 (<code>detail.html</code> L12–25)</h4>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>데이터</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>구독 ID(KEY)</td>
+<td><code>sub.id</code>(UUID) — 외부 식별·문의 대응용 (요청)</td>
+</tr>
+<tr>
+<td>서비스</td>
+<td><code>service.name</code></td>
+</tr>
+<tr>
+<td>요금제</td>
+<td><code>plan.name</code> · <code>plan.price</code>원</td>
+</tr>
+<tr>
+<td>결제 주기(반복회차)</td>
+<td><code>plan.billing_cycle</code> + <code>plan.cycle_days</code>일(일 주기인 경우) · 지금까지 N회 결제(<code>paid_count</code>)</td>
+</tr>
+<tr>
+<td>구독 시작일</td>
+<td><code>sub.current_period_start</code> (KST YYYY-MM-DD)</td>
+</tr>
+<tr>
+<td>만료일</td>
+<td><code>sub.current_period_end</code> (KST YYYY-MM-DD)</td>
+</tr>
+<tr>
+<td>다음 결제</td>
+<td><code>sub.next_billing_at</code> (KST YYYY-MM-DD HH:MM)</td>
+</tr>
+<tr>
+<td>재시도</td>
+<td><code>sub.retry_count</code>회</td>
+</tr>
+<tr>
+<td>정지 시각</td>
+<td><code>sub.suspended_at</code> (KST) — <strong>SUSPENDED 상태일 때만 표시</strong></td>
+</tr>
+<tr>
+<td>카드</td>
+<td><code>sub.card_info.number</code> 또는 <code>-</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>만료일 연장 이력 카드(요청)</strong>: 이 구독의 <code>subscription.extended</code> 감사 이벤트가 있으면 상세 페이지에
+"만료일 연장 이력" 카드가 표시된다(처리 시각 / 변경 전 만료일 / 변경 후 만료일 / 처리자). 라우트
+<code>subscription_detail</code>이 해당 감사 이벤트를 최신순 조회해 <code>extensions</code>로 전달한다.</p>
+<p><strong>카드 정보 표시 범위</strong>: <code>card_info</code>는 토스페이먼츠에서 반환한 <strong>마스킹된 카드번호</strong>만 JSONB로 보관합니다(<code>app/models/subscription.py</code> L37). 실제 카드번호·CVC 등 민감 정보는 저장하지 않으며, billingKey는 AES 암호화 후 별도 컬럼에 저장되므로 화면에 노출되지 않습니다.</p>
+<p><code>paid_count</code>는 <code>Payment.status == "DONE"</code> 건수를 별도 집계합니다(라우트 L156–158). 결제 이력을 최대 200건만 가져오더라도 <code>paid_count</code>는 정확한 전체 횟수를 보여줍니다.</p>
+<h4 id="detailhtml">관리 카드 — 결제 처리 / 강제 취소 버튼 (<code>detail.html</code> 관리 카드)</h4>
+<p>관리 카드에는 구독 상태에 따라 두 가지 작업 버튼이 표시됩니다.</p>
+<p><strong>① 결제 처리(재결제) — <code>sub.status</code>가 PAST_DUE 또는 SUSPENDED일 때</strong></p>
+<p>자동결제가 실패(PAST_DUE)했거나 재시도 소진으로 정지(SUSPENDED)된 구독을, <strong>운영자가 등록된 카드로 즉시 재청구</strong>하는 버튼입니다. 청구 예정액(상시 할인 적용 후, <code>charge_amount</code> = <code>plan_recurring_amount(plan)</code>)을 안내한 뒤 확인 다이얼로그를 거쳐 실행합니다.</p>
+<ul>
+<li>라우트: <code>POST /admin/subscriptions/{id}/retry-payment</code> → 서비스 <code>subscriptions.admin_retry_payment()</code></li>
+<li>동작: 스코프 검사(담당 서비스만, 아니면 404) → 상태 검증(PAST_DUE/SUSPENDED만, 아니면 <code>ConflictError</code>) → 등록 빌링키로 청구. <strong>성공 시 ACTIVE 복귀 + 결제 기준일 리셋 + <code>retry_count=0</code></strong>. 외부 API의 수동결제와 동일한 코어(<code>_perform_manual_charge</code>)를 공유하며, 감사 로그는 <strong><code>actor_type=USER</code></strong>(작업한 관리자)로 <code>subscription.manual_pay</code>를 남깁니다.</li>
+<li>결과 표시: 성공 → "결제가 완료되었습니다" 완료 모달 / 실패(카드 거절·결제수단 없음 등) → <code>?error=</code>로 상세 페이지에 메시지. 실패해도 상태는 그대로 유지되고 결제 이력에 <code>FAILED</code>로 남습니다.</li>
+<li>등록된 카드(<code>sub.card_info</code>)가 없으면 버튼이 비활성화됩니다(빌링키 없음 안내).</li>
+</ul>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>카드 자체가 만료/한도 초과인 경우 재결제는 계속 실패합니다. 이때 카드 교체는 외부 서비스의 <code>change-card</code> API 경로로 이뤄집니다(어드민 화면에는 카드 교체 기능 없음).</p>
+</div></blockquote>
+<p><strong>② 강제 취소 — <code>sub.status</code>가 ACTIVE·PAST_DUE·EXTENDED일 때</strong></p>
+<p>버튼이 표시됩니다. PAST_DUE 상태에서는 ①결제 처리와 ②강제 취소가 함께 보입니다. 연장처리(EXTENDED) 구독도 강제 취소할 수 있습니다.</p>
+<p><strong>③ 만료일 연장 — <code>sub.status</code>가 EXPIRED가 아닐 때(요청)</strong></p>
+<p>운영자가 만료일을 수동으로 연장하는 기능입니다. 날짜 입력(<code>&lt;input type="date" name="new_end"&gt;</code>) 후 제출하면:
+- 라우트: <code>POST /admin/subscriptions/{id}/extend</code> → 서비스 <code>subscriptions.extend_subscription()</code>. 폼의 날짜(YYYY-MM-DD)를 UTC 자정 datetime으로 변환해 전달(감사 purge 라우트와 동일 정책).
+- 동작: 스코프 검사(404) → 상태 검증(열린 구독 5개만; <strong>EXPIRED는 ConflictError</strong>) → 미래 날짜 검증(과거면 InputValidationError) → <strong>만료일(<code>current_period_end</code>)·다음 결제일(<code>next_billing_at</code>)을 입력일로 설정</strong>, 상태를 <strong>EXTENDED(연장처리)</strong>로 전이(중앙 <code>transition()</code> 경유), <code>retry_count=0</code>·<code>suspended_at=None</code> 정리.
+- 새 만료일(=다음결제일) 도래 시 갱신 배치가 <strong>자동결제로 갱신</strong>(성공 시 ACTIVE)합니다(<code>DUE_STATUSES</code>에 EXTENDED 포함).
+- 결과: 성공 → "만료일이 연장되었습니다" 완료 모달 / 날짜 오류·과거·상태 불가 → <code>?error=</code> 메시지.
+- 감사 로그(<code>subscription.extended</code>)에 상태·만료일·다음결제의 <strong>변경 전 → 후</strong>를 상세히 기록합니다.</p>
+<h4 id="detailhtml-l4159">결제 이력 카드 (<code>detail.html</code> L41–59)</h4>
+<p>이 구독에 연결된 결제 최대 200건을 <code>requested_at</code> 내림차순으로 표시합니다.</p>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>주문번호</td>
+<td><code>p.order_id</code> 앞 24자 + <code>…</code> (등폭 폰트)</td>
+</tr>
+<tr>
+<td>유형</td>
+<td><code>p.payment_type</code> 배지</td>
+</tr>
+<tr>
+<td>금액</td>
+<td><code>p.amount</code>원</td>
+</tr>
+<tr>
+<td>상태</td>
+<td><code>p.status</code> 배지</td>
+</tr>
+<tr>
+<td>실패 사유</td>
+<td><code>p.failure_code</code> 또는 <code>-</code></td>
+</tr>
+<tr>
+<td>요청 시각</td>
+<td><code>p.requested_at</code> (KST YYYY-MM-DD HH:MM)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3">3. 할 수 있는 동작</h2>
+<h3 id="3-1">3-1. 목록 검색·필터</h3>
+<ol>
+<li>검색창에 사용자 ID(외부 서비스 측 식별자)를 입력하고 검색 버튼 클릭 → 부분 일치 검색.</li>
+<li>서비스·요금제·상태 드롭다운에서 선택하면 자동 제출(onchange).</li>
+<li>날짜 범위를 선택하면 자동 제출.</li>
+<li>컬럼 헤더 클릭 → 오름차순/내림차순 전환. 현재 정렬 방향은 화살표 아이콘으로 표시.</li>
+<li>검색/필터 결과는 URL에 반영되어 북마크·공유 가능.</li>
+</ol>
+<h3 id="3-2">3-2. 엑셀 다운로드</h3>
+<p>"엑셀" 버튼 클릭 → 현재 필터가 그대로 적용된 전체 결과를 xlsx로 내려받습니다(페이지네이션 없이 전체 건수).</p>
+<p>파일명: <code>subscriptions-{YYYYmmdd-HHMM(KST)}.xlsx</code></p>
+<p>컬럼: 서비스 / 사용자 / 요금제 / 상태 / 만료일 / 다음 결제 (<code>app/admin/routes/subscriptions.py</code> L91–96).</p>
+<h3 id="3-3">3-3. 강제 취소</h3>
+<p><strong>허용 상태</strong>: ACTIVE, PAST_DUE 두 가지만 허용합니다.</p>
+<p><strong>진행 순서</strong>:
+1. 구독 상세 화면 → "관리" 카드의 <strong>강제 취소</strong> 버튼(빨간색, Ban 아이콘) 클릭.
+2. 확인 모달 표시: "구독을 강제 취소할까요?" / "이 구독을 즉시 취소합니다. 만료일까지 혜택은 유지됩니다." → <strong>강제 취소</strong> 버튼 클릭.
+3. <code>POST /admin/subscriptions/{id}/force-cancel</code> 제출(CSRF 토큰 포함).
+4. 처리 완료 후 상세 페이지로 303 리다이렉트 + "구독이 해지되었습니다" 완료 모달.</p>
+<p><strong>결과</strong>: 상태가 <strong>CANCELED</strong>로 변경되고, <code>next_billing_at</code>이 <code>None</code>으로 설정되어 자동 갱신이 차단됩니다. 이미 결제된 <strong>만료일(<code>current_period_end</code>)까지는 혜택이 유지</strong>되며, 배치가 만료일 이후에 EXPIRED로 전환합니다.</p>
+<p><strong>감사 상세(요청 015)</strong>: 강제 취소·결제 처리 동작은 감사 detail에 상세 정보를 남긴다. 강제 취소(<code>subscription.force_cancel</code>)는 <code>{사용자, 요금제, old_status, new_status}</code>로 "상태 ACTIVE → CANCELED"처럼, 결제 처리(<code>subscription.manual_pay</code>)는 <code>{주문번호, 금액, 사용자, 상태 전/후}</code>로 기록된다.</p>
+<p><strong>만료일 연장 감사</strong>: <code>subscription.extended</code>는 <code>{사용자, old/new_status, old/new_period_end, old/new_next_billing_at}</code>을 남겨 감사로그에 "만료일 2026-06-30 → 2026-09-30 · 다음 결제일 … → … · 상태 ACTIVE → EXTENDED"처럼 표시된다.</p>
+<p><strong>취소 불가 상태</strong>: TRIAL·CANCELED·SUSPENDED·EXPIRED 상태에서는 버튼이 표시되지 않으며, API로 직접 호출해도 <code>ConflictError</code>(충돌 오류)가 반환됩니다.</p>
+<hr />
+<h2 id="4">4. 구독 상태값 의미표</h2>
+<p><code>app/models/enums.py</code> L67–73, <code>app/models/subscription.py</code> L4–6</p>
+<table>
+<thead>
+<tr>
+<th>상태</th>
+<th>의미</th>
+<th>서비스 접근</th>
+<th>자동갱신</th>
+<th>재구독 가능</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TRIAL</code></td>
+<td>체험 기간 — 만료 시 첫 정기 결제 시도</td>
+<td>O</td>
+<td>O</td>
+<td>불가(열린 구독)</td>
+</tr>
+<tr>
+<td><code>ACTIVE</code></td>
+<td>정상 이용 중</td>
+<td>O</td>
+<td>O</td>
+<td>불가(열린 구독)</td>
+</tr>
+<tr>
+<td><code>PAST_DUE</code></td>
+<td>결제 실패/유예 — 접근은 유지, 재시도 중</td>
+<td>O</td>
+<td>재시도 중</td>
+<td>불가(열린 구독)</td>
+</tr>
+<tr>
+<td><code>SUSPENDED</code></td>
+<td>강제 정지 — 접근 차단, 수동 결제 대기</td>
+<td>X</td>
+<td>X</td>
+<td>불가(열린 구독)</td>
+</tr>
+<tr>
+<td><code>CANCELED</code></td>
+<td>해지 예약 — 만료일까지 혜택 유지, 이후 EXPIRED</td>
+<td>O</td>
+<td>X</td>
+<td>불가(열린 구독)</td>
+</tr>
+<tr>
+<td><code>EXTENDED</code></td>
+<td><strong>연장처리 — 운영자가 만료일을 수동 연장. 새 만료일에 자동결제 갱신</strong></td>
+<td>O</td>
+<td>O</td>
+<td>불가(열린 구독)</td>
+</tr>
+<tr>
+<td><code>EXPIRED</code></td>
+<td>완전 종료 — 재구독 가능</td>
+<td>X</td>
+<td>X</td>
+<td><strong>가능</strong></td>
+</tr>
+</tbody>
+</table>
+<p>상태 전환 흐름: <code>TRIAL → ACTIVE → PAST_DUE → SUSPENDED → EXPIRED</code>, <code>→ CANCELED → EXPIRED</code>. 운영자가 만료일을 연장하면 열린 구독은 어디서든 <code>→ EXTENDED</code>로 전이하고, 새 만료일 갱신 성공 시 <code>EXTENDED → ACTIVE</code>로 복귀합니다.</p>
+<p>서비스 접근 허용 상태(<code>ACCESS_ALLOWED_STATUSES</code>): TRIAL·ACTIVE·PAST_DUE·CANCELED·<strong>EXTENDED</strong>.</p>
+<p>"열린 구독" 상태(<code>OPEN_SUBSCRIPTION_STATUSES</code>): EXPIRED를 제외한 <strong>나머지 6개</strong>(EXTENDED 포함). 서비스+사용자 당 이 상태 중 하나만 존재할 수 있고(부분 유니크 인덱스 — EXTENDED 포함하도록 마이그레이션 <code>c1d2e3f4a5b6</code>), EXPIRED가 된 뒤에만 재구독이 가능합니다.</p>
+<hr />
+<h2 id="5">5. 개발 참조</h2>
+<h3 id="_4">라우트 함수</h3>
+<p>모든 구독 라우트: <code>app/admin/routes/subscriptions.py</code></p>
+<table>
+<thead>
+<tr>
+<th>라우트</th>
+<th>함수</th>
+<th>위치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /subscriptions/export.xlsx</code></td>
+<td><code>subscriptions_export</code></td>
+<td>L79–97</td>
+</tr>
+<tr>
+<td><code>GET /subscriptions</code></td>
+<td><code>subscriptions_list</code></td>
+<td>L100–131</td>
+</tr>
+<tr>
+<td><code>GET /subscriptions/{sub_id}</code></td>
+<td><code>subscription_detail</code></td>
+<td>L134–161</td>
+</tr>
+<tr>
+<td><code>POST /subscriptions/{sub_id}/force-cancel</code></td>
+<td><code>subscription_force_cancel</code></td>
+<td>L164–180</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_5">쿼리 빌더</h3>
+<p><code>subscription_query(filters.py)(pp, ctx)</code> (<code>app/admin/routes/subscriptions.py</code> L37–76): 목록과 엑셀이 공유하는 검색/필터 쿼리. <code>Subscription</code>, <code>Plan</code>, <code>Service</code>를 항상 JOIN합니다.</p>
+<p>정렬 가능 컬럼 맵은 <code>SUB_SORT</code> 딕셔너리(<code>L28–34</code>)에 정의됩니다.</p>
+<h3 id="_6">스코프 검사</h3>
+<ul>
+<li>목록: <code>subscription_query(filters.py)</code> 내에서 <code>service_scope(ctx)</code>가 UUID 목록이면 <code>WHERE service_id IN (...)</code> 조건이 추가됩니다(<code>L56–58</code>).</li>
+<li>상세: <code>subscription_detail</code>에서 <code>scope is not None and sub.service_id not in scope</code>이면 404(<code>L149–150</code>).</li>
+<li>강제 취소: <code>force_cancel_subscription</code> 서비스 함수에서 동일하게 검사(<code>app/services/subscriptions.py</code> L470–472).</li>
+</ul>
+<h3 id="_7">강제 취소 서비스 호출</h3>
+<p><code>app/admin/routes/subscriptions.py</code> L175–178:</p>
+<pre><code class="language-python">await validate_csrf(request, ctx)
+await force_cancel_subscription(db, subscription_id=sub_id,
+                                service_scope=service_scope(ctx),
+                                actor_user_id=ctx.user.id)
+</code></pre>
+<p><code>force_cancel_subscription</code> 정의: <code>app/services/subscriptions.py</code> L460–481.</p>
+<p>처리 내용:
+1. 구독 조회 + 스코프 검사 (L470–472).
+2. 상태가 ACTIVE·PAST_DUE가 아니면 <code>ConflictError</code> (L473–474).
+3. <code>status = CANCELED</code>, <code>next_billing_at = None</code> 설정 (L475–476).
+4. 감사 로그 <code>action="subscription.force_cancel"</code> 기록 (L477–479).
+5. <code>db.commit()</code> (L480).</p>
+<h3 id="_8">감사 로그</h3>
+<p>강제 취소 성공 시 감사 로그에 <code>action="subscription.force_cancel"</code>, <code>target_type="subscription"</code>, <code>target_id=str(sub.id)</code>가 기록됩니다(<code>app/services/subscriptions.py</code> L477–479). 감사 로그 조회는 <a href="admin--09-audit.html">09-audit.md</a>를 참고하세요.</p>
+<h3 id="csrf">CSRF</h3>
+<p>폼에 <code>&lt;input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}"&gt;</code> 포함(<code>detail.html</code> L33). <code>validate_csrf</code>가 폼 필드 또는 <code>X-CSRF-Token</code> 헤더와 세션 토큰을 비교합니다(<code>app/admin/deps.py</code> L105–110).</p>
+<h3 id="htmx-partial">htmx partial 갱신</h3>
+<p>목록 화면은 검색·필터·정렬·페이지네이션 모두 htmx로 <code>#list-subs</code> div만 교체합니다. <code>HX-Request</code> 헤더가 있으면 <code>render_list</code>가 <code>_table.html</code>만 렌더하고, 없으면 <code>list.html</code> 전체를 렌더합니다(<code>app/admin/routes/subscriptions.py</code> L126).</p>
+<h3 id="_9">드롭다운 옵션 생성</h3>
+<ul>
+<li>서비스 옵션: <code>app/admin/filters.py</code> <code>service_options()</code> (L10–17) — 스코프 내, 이름순.</li>
+<li>요금제 옵션: <code>app/admin/filters.py</code> <code>plan_name_options()</code> (L20–31) — 스코프 내 distinct 요금제명. 서비스 선택 시 해당 서비스 요금제만.</li>
+</ul>
+<hr />
+<h2 id="_10">주의사항 / 자주 하는 실수</h2>
+<ul>
+<li><strong>강제 취소는 되돌릴 수 없습니다.</strong> 취소 후 만료일까지는 혜택이 유지되지만, 자동갱신이 차단되므로 만료일 이후 EXPIRED로 확정됩니다. 재활성화하려면 사용자가 재구독(외부 API)해야 합니다.</li>
+<li><strong>SUSPENDED 상태는 강제 취소 불가.</strong> 정지 상태 구독을 취소하려면 외부 API를 통해 CANCELED 상태로 변경하거나 별도 처리가 필요합니다.</li>
+<li><strong>SERVICE_MANAGER는 담당 서비스 구독만 표시.</strong> 담당 범위 밖 구독 URL에 직접 접근해도 404로 응답하며, 내부적으로는 존재하지만 노출되지 않습니다.</li>
+<li><strong>카드 정보(<code>card_info</code>)는 마스킹 표시용</strong>이며 실제 billingKey와 별개입니다. 화면에 표시되는 번호로는 결제가 불가능합니다.</li>
+<li><strong>결제 이력은 최대 200건</strong>만 표시됩니다(<code>subscription_detail</code> L153–155). <code>paid_count</code>(성공 결제 횟수)는 별도 집계이므로 200건 이상이어도 정확합니다.</li>
+<li><strong>엑셀 다운로드</strong>는 페이지네이션을 무시하고 현재 필터의 전체 결과를 가져옵니다. 건수가 매우 많을 경우 다운로드에 시간이 걸릴 수 있습니다.</li>
+</ul>
+    </div>
+    <div class="pager"><a class="pg prev" href="admin--04-plans.html"><small>← 이전</small><b>04. 요금제 관리 (목록·생성·수정·활성/비활성·삭제)</b></a><a class="pg next" href="admin--06-payments.html"><small>다음 →</small><b>06. 결제 — 목록·상세·단건 취소</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#1">1. 이 화면은 무엇인가 / 접근 경로·권한</a>
+<a class="toc-h2" href="#2">2. 화면 구성</a>
+<a class="toc-h3" href="#2-1">2-1. 구독 목록</a>
+<a class="toc-h3" href="#2-2">2-2. 구독 상세</a>
+<a class="toc-h2" href="#3">3. 할 수 있는 동작</a>
+<a class="toc-h3" href="#3-1">3-1. 목록 검색·필터</a>
+<a class="toc-h3" href="#3-2">3-2. 엑셀 다운로드</a>
+<a class="toc-h3" href="#3-3">3-3. 강제 취소</a>
+<a class="toc-h2" href="#4">4. 구독 상태값 의미표</a>
+<a class="toc-h2" href="#5">5. 개발 참조</a>
+<a class="toc-h3" href="#_4">라우트 함수</a>
+<a class="toc-h3" href="#_5">쿼리 빌더</a>
+<a class="toc-h3" href="#_6">스코프 검사</a>
+<a class="toc-h3" href="#_7">강제 취소 서비스 호출</a>
+<a class="toc-h3" href="#_8">감사 로그</a>
+<a class="toc-h3" href="#csrf">CSRF</a>
+<a class="toc-h3" href="#htmx-partial">htmx partial 갱신</a>
+<a class="toc-h3" href="#_9">드롭다운 옵션 생성</a>
+<a class="toc-h2" href="#_10">주의사항 / 자주 하는 실수</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

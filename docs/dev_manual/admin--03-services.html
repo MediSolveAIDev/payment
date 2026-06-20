@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03. 서비스 관리 — 개발자 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>개발자 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>🧱</span>기반 (먼저 읽기)</div>
+<a class="nav-link" href="README.html"><span class="n">·</span><span class="tt">개발자 인수인계 매뉴얼 (dev_manual)</span></a>
+<a class="nav-link" href="01-getting-started.html"><span class="n">01</span><span class="tt">01. 시작하기 — 구조·실행·테스트·요청 처리 공통 흐름</span></a>
+<a class="nav-link" href="02-database.html"><span class="n">02</span><span class="tt">02. 데이터베이스 — 테이블·모델·관계·마이그레이션</span></a>
+<a class="nav-link" href="03-auth-and-security.html"><span class="n">03</span><span class="tt">03. 인증과 보안 공통</span></a>
+<div class="nav-group"><span>⚙️</span>기능별 상세</div>
+<a class="nav-link" href="04-subscription-create.html"><span class="n">04</span><span class="tt">04. 구독 생성</span></a>
+<a class="nav-link" href="05-subscription-renewal.html"><span class="n">05</span><span class="tt">05. 구독 갱신·만료·재시도·정합성(스케줄러 배치)</span></a>
+<a class="nav-link" href="06-subscription-manage.html"><span class="n">06</span><span class="tt">06. 구독 취소·재개·수동결제·카드변경</span></a>
+<a class="nav-link" href="07-one-off-payment.html"><span class="n">07</span><span class="tt">07. 단건(일반) 결제 + 취소</span></a>
+<a class="nav-link" href="08-plans.html"><span class="n">08</span><span class="tt">08. 요금제 관리 (생성·수정·금액 계산·자동결제안함·추가정보)</span></a>
+<a class="nav-link" href="09-services-registry.html"><span class="n">09</span><span class="tt">09. 서비스 등록·키 발급/회전·취소정책·담당자</span></a>
+<a class="nav-link" href="10-settlement.html"><span class="n">10</span><span class="tt">10. 정산(어드민 화면)</span></a>
+<a class="nav-link" href="11-dashboard.html"><span class="n">11</span><span class="tt">11. 대시보드 — 어드민 메인 화면</span></a>
+<a class="nav-link" href="12-webhooks.html"><span class="n">12</span><span class="tt">12. 웹훅 처리 (토스페이먼츠 → 서버)</span></a>
+<a class="nav-link" href="13-admin-accounts.html"><span class="n">13</span><span class="tt">13. 어드민 계정·역할·로그인/비밀번호</span></a>
+<a class="nav-link" href="14-global-settings.html"><span class="n">14</span><span class="tt">14. 전체 설정(재시도·어드민 IP·킬스위치)</span></a>
+<a class="nav-link" href="15-external-api-and-sample.html"><span class="n">15</span><span class="tt">15. 외부 API 레퍼런스 + 샘플 서비스 연동</span></a>
+<a class="nav-link" href="16-card-vault.html"><span class="n">16</span><span class="tt">16. 카드 보관함(Card Vault) — 카드 등록·교체·조회·삭제</span></a>
+<a class="nav-link" href="17-service-notifications.html"><span class="n">17</span><span class="tt">17. 서비스 알림(아웃고잉 웹훅) — 요청 016</span></a>
+<div class="nav-group"><span>🖥️</span>어드민 화면별 매뉴얼</div>
+<a class="nav-link" href="admin--README.html"><span class="n">·</span><span class="tt">어드민 콘솔 페이지 매뉴얼</span></a>
+<a class="nav-link" href="admin--01-login-and-access.html"><span class="n">01</span><span class="tt">01. 로그인·접근 (로그인 / 비밀번호 설정 / 로그아웃 / IP 제한)</span></a>
+<a class="nav-link" href="admin--02-dashboard.html"><span class="n">02</span><span class="tt">02. 대시보드</span></a>
+<a class="nav-link active" href="admin--03-services.html"><span class="n">03</span><span class="tt">03. 서비스 관리</span></a>
+<a class="nav-link" href="admin--04-plans.html"><span class="n">04</span><span class="tt">04. 요금제 관리 (목록·생성·수정·활성/비활성·삭제)</span></a>
+<a class="nav-link" href="admin--05-subscriptions.html"><span class="n">05</span><span class="tt">05. 구독 관리 — 목록·상세·강제 취소</span></a>
+<a class="nav-link" href="admin--06-payments.html"><span class="n">06</span><span class="tt">06. 결제 — 목록·상세·단건 취소</span></a>
+<a class="nav-link" href="admin--07-settlement.html"><span class="n">07</span><span class="tt">07. 정산 화면</span></a>
+<a class="nav-link" href="admin--08-users.html"><span class="n">08</span><span class="tt">08. 계정 관리</span></a>
+<a class="nav-link" href="admin--09-audit.html"><span class="n">09</span><span class="tt">09. 감사 로그 (조회·검색·정리·엑셀)</span></a>
+<a class="nav-link" href="admin--10-settings.html"><span class="n">10</span><span class="tt">10. 전체 설정 (재시도 정책 · 어드민 IP · 킬스위치)</span></a>
+<div class="nav-group"><span>📋</span>운영 워크플로우</div>
+<a class="nav-link" href="admin--11-onboarding-checklist.html"><span class="n">·</span><span class="tt">신규 서비스 온보딩 체크리스트 (운영자용)</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">개발자 매뉴얼</a> <span>/</span> <em>어드민 화면별 매뉴얼</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">🖥️ 어드민 화면별 매뉴얼</span>
+        <span class="dh-src">docs/dev_manual/admin/03-services.md</span></div>
+      <h1>03. 서비스 관리</h1>
+      
+    </header>
+    <div class="doc">
+
+<blockquote class="cal who"><span class="cal-i">👤</span><div class="cal-b">
+<p><strong>대상</strong>: SYSTEM_ADMIN 전용 (<code>require_admin</code> — <code class="loc">app/admin/deps.py:100</code>).
+SERVICE_MANAGER 는 이 화면에 <strong>접근 불가</strong> (403 PermissionDeniedError).</p>
+</div></blockquote>
+<hr />
+<h2 id="1">1. 이 화면은 무엇인가 / 접근 경로·권한</h2>
+<p><strong>서비스 관리</strong>는 사내 구독/결제 시스템을 이용하려는 <strong>외부 서비스(클라이언트 앱)</strong>를 등록·관리하는 화면이다.
+운영자는 여기서 서비스를 등록하고 발급된 API 키를 외부 서비스 담당자에게 전달한다.</p>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>접근 경로</td>
+<td>사이드바 → <strong>서비스</strong></td>
+</tr>
+<tr>
+<td>권한</td>
+<td>SYSTEM_ADMIN 전용</td>
+</tr>
+<tr>
+<td>기본 URL</td>
+<td><code>GET /admin/services</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2">2. 화면 구성</h2>
+<h3 id="2-1">2-1. 서비스 목록</h3>
+<p><strong>경로</strong>: <code>GET /admin/services</code>
+<strong>템플릿</strong>: <code>app/admin/templates/services/list.html</code> (전체), <code>services/_table.html</code> (htmx partial)</p>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>설명</th>
+<th>정렬</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>이름</td>
+<td><code>Service.name</code></td>
+<td>가능 (<code>sort=name</code>)</td>
+</tr>
+<tr>
+<td>담당자</td>
+<td><code>Service.manager_email</code> (대표 담당자)</td>
+<td>불가</td>
+</tr>
+<tr>
+<td>허용 IP</td>
+<td><code>Service.allowed_ips</code> 콤마 결합 표시</td>
+<td>불가</td>
+</tr>
+<tr>
+<td>상태</td>
+<td><code>ACTIVE</code> / <code>INACTIVE</code> 뱃지</td>
+<td>가능 (<code>sort=status</code>)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>기본 정렬</strong>: <code>created_at DESC</code></li>
+<li><strong>검색 (<code>q</code>)</strong>: <code>Service.name</code> 또는 <code>manager_email</code> 부분 일치 (<code class="loc">_table.html:3</code>, <code class="loc">services.py:49-50</code>)</li>
+<li><strong>상태 필터</strong>: <code>ACTIVE</code> / <code>INACTIVE</code> / 전체 드롭다운 (<code class="loc">_table.html:4</code>)</li>
+<li><strong>행 클릭</strong> → 해당 서비스 상세로 이동 (<code class="loc">_table.html:16</code>)</li>
+<li><strong>페이지당 기본 15건</strong> (<code class="loc">pagination.py:18</code>)</li>
+</ul>
+<hr />
+<h3 id="2-2">2-2. 서비스 상세</h3>
+<p><strong>경로</strong>: <code>GET /admin/services/{id}</code>
+<strong>템플릿</strong>: <code>app/admin/templates/services/detail.html</code></p>
+<p>상단 헤더: 서비스명 + 상태 뱃지 + 버튼 그룹(활성화/비활성화·키 복사·키 재발급·삭제)</p>
+<p><strong>상단 카드 2열</strong></p>
+<table>
+<thead>
+<tr>
+<th>영역</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>개요 카드 (좌)</td>
+<td>요금제 수 / 구독 건수 / 담당자 목록 (대표 뱃지·수정·대표 지정·삭제 링크) + 담당자 추가 폼</td>
+</tr>
+<tr>
+<td>허용 IP 카드 (우)</td>
+<td>옥텟 입력 UI로 IP 목록 표시·편집</td>
+</tr>
+</tbody>
+</table>
+<p><strong>취소 정책 카드 + 서비스 알림 카드</strong>(나란히 배치): 왼쪽은 일반결제 취소 허용 체크박스 + 수수료율(%), 오른쪽은 <strong>서비스 알림 URL</strong> 입력(요청 016).
+- 알림 URL을 등록하면 구독·결제·카드·요금제 이벤트를 그 URL로 POST한다(비우면 끔). 저장 <code>POST /admin/services/{id}/notification-url</code>(감사 <code>service.notification_url_updated</code>).
+- <strong>‘테스트 알림 전송’ 버튼</strong>: 저장된 URL로 샘플 알림(<code>notification.test</code>)을 동기 전송하고 수신 응답을 토스트로 표시(<code>POST /admin/services/{id}/notification-test</code>). URL 미저장이면 비활성.
+- ‘상세’ 버튼 → 이벤트 설명 모달(<code>services/_notify_help_modal.html</code>). 발송 이벤트·payload·서명은 <code>17-service-notifications</code> 참조.</p>
+<p><strong>하단 탭 4개</strong> (htmx 부분 갱신, 각 partial)</p>
+<table>
+<thead>
+<tr>
+<th>탭</th>
+<th><code>id</code></th>
+<th>부분 템플릿</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>요금제</td>
+<td><code>list-svc-plans</code></td>
+<td><code>services/_plans_table.html</code></td>
+</tr>
+<tr>
+<td>구독</td>
+<td><code>list-svc-subs</code></td>
+<td><code>services/_subs_table.html</code></td>
+</tr>
+<tr>
+<td>등록 카드</td>
+<td><code>list-svc-cards</code></td>
+<td><code>services/_cards_table.html</code></td>
+</tr>
+<tr>
+<td>일반결제</td>
+<td><code>list-svc-oneoff</code></td>
+<td><code>services/_oneoff_table.html</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="_plans_tablehtml14">요금제 탭 컬럼 (<code class="loc">_plans_table.html:14</code>)</h4>
+<p>이름 / 정가 / 체험 / 첫구독 할인 / 첫 결제액 / 상시할인 / 정기 결제액 / 주기(반복회차) / 상태</p>
+<ul>
+<li>각 요금제마다 <strong>수정</strong> / <strong>비활성화|활성화</strong> / <strong>삭제</strong> 버튼</li>
+<li>htmx 폼 (<code>hx-post</code>, <code>hx-target="#list-svc-plans"</code>, <code>hx-swap="outerHTML"</code>) — partial만 교체</li>
+</ul>
+<h4 id="_subs_tablehtml11-18">구독 탭 컬럼 (<code class="loc">_subs_table.html:11-18</code>)</h4>
+<p>사용자(external_user_id) / 요금제 / 상태 / 만료일 / 다음 결제</p>
+<ul>
+<li>검색(<code>q</code>: external_user_id) + 상태 필터(TRIAL/ACTIVE/PAST_DUE/SUSPENDED/CANCELED/EXPIRED)</li>
+<li>행 클릭 → <code>/admin/subscriptions/{id}</code> 상세</li>
+</ul>
+<h4 id="_cards_tablehtml">등록 카드 탭 컬럼 (<code>_cards_table.html</code>)</h4>
+<p>사용자(external_user_id) / 카드번호(마스킹) / 발급사코드 / <strong>상태</strong> / customerKey / 빌링키 해시(앞 12자) / 등록일 / 변경일 / <strong>토글 버튼</strong></p>
+<ul>
+<li>이 서비스에 결제수단(빌링키)을 등록한 <strong>사용자별 1행</strong>(<code>cards</code> 테이블, <code>(service_id, external_user_id)</code>당 1건)을 보여준다(<code>services.py</code> <code>_cards_tab()</code>).</li>
+<li><strong>상태</strong> 컬럼은 활성/비활성 뱃지, 마지막 컬럼의 <strong>활성화/비활성화 버튼</strong>(htmx <code>POST /admin/cards/{id}/toggle</code> → <code>list-svc-cards</code> 갱신)으로 토글한다. <strong>비활성 카드는 모든 결제가 차단</strong>된다(<code>16-card-vault</code> 10-1 참조).</li>
+<li><strong>행 클릭 → 카드 상세</strong>(<code>/admin/cards/{card_id}</code>): 카드 정보 전체 + 토글 + <strong>이 카드로 결제한 내역</strong>(구독+일반).</li>
+<li>검색(<code>q</code>: external_user_id) 지원, 정렬 가능 컬럼: 사용자 / 등록일 / 변경일. 페이징 파라미터는 <code>kpage</code>(10건/페이지)로 다른 탭과 분리된다.</li>
+<li>카드번호·발급사코드는 토스 응답 <code>card_info</code>(JSONB)에서 표시하며, <strong>빌링키 암호문은 노출하지 않는다</strong>(해시 일부만 표시). 카드 등록/삭제는 외부 API(<code>/api/v1/cards</code>) 또는 구독 상세에서 처리한다.</li>
+</ul>
+<h4 id="_oneoff_tablehtml">일반결제 탭 컬럼 (<code>_oneoff_table.html</code>)</h4>
+<p>승인시각 / 사용자 / 주문번호 / 금액 / <strong>환불 / 수수료</strong> / 상태(한글)</p>
+<ul>
+<li><strong>행 클릭 → 결제 상세</strong>(<code>/admin/payments/{id}</code>). 주문번호 셀은 링크색으로 강조된다.</li>
+<li>취소(CANCELED) 건은 환불액(<code>canceled_amount</code>)·취소 수수료(<code>cancel_fee</code>)를 함께 표시(취소 아닌 건은 <code>-</code>), 상태는 <code>payment_status_ko()</code>로 한글 표기.</li>
+<li>엑셀 다운로드(<code>/oneoff.xlsx</code>)도 동일하게 환불·수수료 컬럼을 포함한다.</li>
+</ul>
+<h4 id="015">이벤트 섹션 (요청 015 — 서비스 상세 하단)</h4>
+<p>서비스 상세 맨 아래 <strong>이벤트</strong> 카드가 이 서비스 관련 감사 이력(최근 50건)을 보여준다(<code>_service_events()</code> in <code>services.py</code>). 컬럼: 시각 / 활동(한글) / 상세 / 행위자. 포함 범위:
+- 서비스 자체 동작: <code>target_type='service'</code> (등록·상태변경·키재발급·키복사·IP갱신·취소정책·대표지정)
+- 요금제 CRUD: 이 서비스의 <code>target_type='plan'</code> 이벤트
+- 담당자 추가/해제: <code>account.(un)assign_service</code> 중 <code>detail.service_id</code>가 이 서비스
+- <strong>카드 이벤트</strong>: <code>target_type='card'</code> 중 <code>detail.service_id</code>가 이 서비스 — 카드 등록/교체/삭제/활성화/비활성화. 상세에 사용자·마스킹 카드번호·발급사가 표시된다.</p>
+<p>각 동작은 <strong>변경 전 → 변경 후</strong>(<code>detail_summary()</code>)로 표시된다. 예: "상태 ACTIVE → INACTIVE", "허용 IP 10.0.0.1 → 10.0.0.1, 10.0.0.2", "취소 수수료율(%) 0 → 10". 우상단 "감사로그" 버튼은 서비스명으로 검색된 <code>/admin/audit</code>로 이동.</p>
+<hr />
+<h2 id="3">3. 할 수 있는 동작</h2>
+<h3 id="3-1-ip">3-1. 운영자 흐름: 서비스 등록 → 키 전달 → 담당자 지정 → IP/취소정책 설정</h3>
+<pre><code>① 서비스 등록 (new.html) → ② API 키 / HMAC Secret 1회 표시 (keys.html) → 복사 후 담당자 전달
+→ ③ 상세에서 담당자 추가/대표 지정 → ④ 허용 IP 설정 → ⑤ 취소 정책 설정 → 운영 시작
+</code></pre>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>키는 등록 직후 또는 재발급 직후에만 평문으로 표시된다. 이후 상세 화면에서 <strong>키 복사</strong> 버튼(모달)으로 재확인할 수 있지만, 서버 AES-GCM 복호화가 필요하므로 환경 변수 <code>CIPHER_KEY</code> 설정이 일치해야 한다.</p>
+</div></blockquote>
+<hr />
+<h3 id="3-2">3-2. 서비스 등록</h3>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>경로</td>
+<td><code>GET /admin/services/new</code> → 폼 / <code>POST /admin/services</code> → 생성</td>
+</tr>
+<tr>
+<td>성공 결과</td>
+<td><code>services/keys.html</code> — API 키·HMAC Secret 평문 <strong>1회</strong> 표시</td>
+</tr>
+<tr>
+<td>실패 결과</td>
+<td><code>new.html</code> 상단에 <code>error</code> 메시지 인라인 표시</td>
+</tr>
+</tbody>
+</table>
+<p><strong>입력 항목</strong> (<code class="loc">new.html:13-58</code>)</p>
+<table>
+<thead>
+<tr>
+<th>필드</th>
+<th>형식</th>
+<th>필수</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>서비스명</td>
+<td>텍스트</td>
+<td>필수</td>
+<td>중복 불가</td>
+</tr>
+<tr>
+<td>담당자 계정</td>
+<td>체크박스 복수 선택 (<code>manager_ids</code>)</td>
+<td>—</td>
+<td>SERVICE_MANAGER 중 DELETED 제외 목록</td>
+</tr>
+<tr>
+<td>대표 계정</td>
+<td>셀렉트 (<code>primary_user_id</code>)</td>
+<td>필수</td>
+<td>알림 메일 수신처 — 체크 목록에 없어도 자동 담당자 포함</td>
+</tr>
+<tr>
+<td>허용 IP</td>
+<td>옥텟 입력 UI (숫자만, 줄당 1개)</td>
+<td>선택</td>
+<td>IPv4 전용, IPv6·CIDR 불가. <strong>비우면 IP 제한 없음(모든 IP 허용, HMAC로만 보호)</strong></td>
+</tr>
+<tr>
+<td>일반결제 취소 허용</td>
+<td>체크박스 (<code>cancellation_enabled</code>)</td>
+<td>—</td>
+<td>기본 체크(True)</td>
+</tr>
+<tr>
+<td>취소 수수료(%)</td>
+<td>숫자 0~100 (<code>cancellation_fee_percent</code>)</td>
+<td>—</td>
+<td>기본 0 (전액 환불)</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>담당자 계정이 없는 경우</strong>: <code class="loc">new.html:62-66</code> 에 안내 문구 + "계정 추가" 링크가 표시된다. 먼저 <code>/admin/users/new</code>에서 SERVICE_MANAGER 계정을 만들어야 한다.</p>
+</div></blockquote>
+<hr />
+<h3 id="3-3-api-keyshtml">3-3. API 키 발급 화면 (keys.html) / 키 모달</h3>
+<p><strong>keys.html</strong> (<code>app/admin/templates/services/keys.html</code>)</p>
+<ul>
+<li>등록 직후(<code>POST /admin/services</code>) 또는 키 재발급 후(<code>POST .../rotate-keys</code>) 렌더됨</li>
+<li><strong>서비스 API 키</strong> + <strong>HMAC Secret</strong> 각각 박스 표시 + 복사 버튼</li>
+<li><code>notice</code> 안내: "아래 키는 지금 한 번만 표시됩니다" (<code class="loc">keys.html:6</code>)</li>
+<li>완료 후 "서비스 상세로" 버튼 → <code>/admin/services/{id}</code></li>
+</ul>
+<p><strong>키 복사 모달</strong> (<code>_keys_modal.html</code>)</p>
+<ul>
+<li>트리거: 상세 페이지 상단 <strong>"키 복사"</strong> 버튼 → <code>hx-get="/admin/services/{id}/keys-modal"</code> <code>hx-target="body"</code> <code>hx-swap="beforeend"</code> (<code class="loc">detail.html:15-18</code>)</li>
+<li><code>Cache-Control: no-store</code> 헤더 강제 설정 (<code class="loc">services.py:258</code>)</li>
+<li>복호화 실패 시 <code>decrypt_error=True</code> → 모달 내 오류 안내 (<code class="loc">_keys_modal.html:6-8</code>)</li>
+<li>API 키가 없는 경우(암호화 저장 이전 등록) → 별도 안내 및 재발급 유도 (<code class="loc">_keys_modal.html:17-19</code>)</li>
+<li>감사 로그: <code>service.keys_viewed</code> (<code class="loc">services.py:251-253</code>)</li>
+</ul>
+<hr />
+<h3 id="3-4">3-4. 키 재발급</h3>
+<ul>
+<li>버튼: 상세 상단 <strong>"키 재발급"</strong> — <code>data-confirm</code> 확인 모달 (<code class="loc">detail.html:19-24</code>)</li>
+<li>확인 텍스트: "기존 키는 즉시 무효화되고 새 키가 발급됩니다."</li>
+<li><code>POST /admin/services/{id}/rotate-keys</code> → 새 키·시크릿 생성 → <code>services/keys.html</code> 렌더</li>
+<li><strong>주의</strong>: 재발급 즉시 기존 키는 무효. 외부 서비스에서 새 키로 재설정 필요.</li>
+</ul>
+<hr />
+<h3 id="3-5">3-5. 담당자 추가</h3>
+<ul>
+<li>상세 개요 카드 → <strong>"담당자 추가"</strong> 버튼 → <code>#assign-form</code> 토글 노출</li>
+<li>드롭다운에서 담당 가능 계정 선택 → <strong>추가</strong> 클릭</li>
+<li><code>POST /admin/services/{id}/assign-manager</code> (폼 필드: <code>user_id</code>)</li>
+<li>성공: <code>saved_redirect</code> → "저장되었습니다" 모달</li>
+<li>실패: <code>?error=</code> 쿼리파람으로 상세 페이지 리다이렉트 → 토스트 표시</li>
+</ul>
+<hr />
+<h3 id="3-6">3-6. 대표 담당자 지정</h3>
+<ul>
+<li>담당자 목록에서 비대표 계정의 <strong>"대표 지정"</strong> 버튼 클릭</li>
+<li><code>data-confirm</code> 확인 모달: "알림 메일 수신처가 이 계정으로 변경됩니다."</li>
+<li><code>POST /admin/services/{id}/primary-manager</code> (폼 필드: <code>user_id</code>)</li>
+<li>성공: <code>saved_redirect</code> → "변경되었습니다" 모달</li>
+<li><strong>효과</strong>: <code>Service.manager_email</code> = 선택한 계정 이메일로 갱신</li>
+</ul>
+<hr />
+<h3 id="3-7">3-7. 담당자 해제</h3>
+<ul>
+<li>담당자 목록에서 비대표 계정의 <strong>"삭제"</strong> 버튼 클릭</li>
+<li><code>data-confirm</code> 확인 모달: "계정은 유지되고 이 서비스의 담당에서만 제외됩니다."</li>
+<li><code>POST /admin/services/{id}/managers/{user_id}/remove</code></li>
+<li><strong>대표 담당자는 해제 불가</strong> — 먼저 다른 계정을 대표로 지정한 후 해제 (<code class="loc">services.py:431-435</code>)</li>
+<li>성공: <code>saved_redirect</code> → "해제되었습니다" 모달</li>
+</ul>
+<hr />
+<h3 id="3-8-ip">3-8. 허용 IP 업데이트</h3>
+<ul>
+<li>상세 허용 IP 카드 → 옥텟 UI로 IP 추가/삭제 → <strong>"IP 갱신"</strong> 버튼</li>
+<li><code>POST /admin/services/{id}/ips</code> (폼 필드: <code>allowed_ips</code> — 줄바꿈/콤마 구분 평문)</li>
+<li><code>_parse_ips()</code> 가 줄바꿈과 콤마 모두 처리 (<code class="loc">services.py:57-60</code>)</li>
+<li>IPv4 전용. <strong>빈 목록 허용</strong>(= IP 제한 없음, 모든 IP 허용). 형식 위반 시 오류 → <code>?error=</code> 리다이렉트</li>
+</ul>
+<hr />
+<h3 id="3-9">3-9. 취소 정책 설정</h3>
+<ul>
+<li>상세 취소 정책 카드 → 체크박스·수수료율 입력 → <strong>"저장"</strong> 버튼</li>
+<li><code>POST /admin/services/{id}/cancel-policy</code></li>
+<li><code>cancellation_enabled</code>: 체크 시 <code>"on"</code> / 미체크 시 폼 키 자체 없음 → <code>False</code> 처리</li>
+<li><code>cancellation_fee_percent</code>: 0~100 정수. 비정수 입력은 오류 처리</li>
+<li>성공: <code>saved_redirect</code> → "저장되었습니다" 모달</li>
+</ul>
+<hr />
+<h3 id="3-10">3-10. 상태 변경 (활성화 / 비활성화)</h3>
+<ul>
+<li>상세 헤더 버튼: <code>ACTIVE</code> 상태이면 <strong>"비활성화"</strong>, <code>INACTIVE</code>이면 <strong>"활성화"</strong> 표시</li>
+<li><code>POST /admin/services/{id}/status</code> (폼 필드: <code>status</code> — <code>ACTIVE</code> 또는 <code>INACTIVE</code>)</li>
+<li><code>ACTIVE ↔ INACTIVE</code> 만 허용 (<code class="loc">registry.py:238-239</code>)</li>
+<li>성공: <code>saved_redirect</code> → "변경되었습니다" 모달</li>
+<li><strong>구독 있어 삭제 불가할 때 대신 INACTIVE 사용을 권장</strong></li>
+</ul>
+<hr />
+<h3 id="3-11">3-11. 서비스 삭제</h3>
+<ul>
+<li>상세 헤더 <strong>"삭제"</strong> 버튼 → <code>data-confirm</code> 확인 모달</li>
+<li>확인 텍스트: "구독 이력이 있는 서비스는 삭제할 수 없습니다. 정말 삭제할까요?"</li>
+<li><code>POST /admin/services/{id}/delete</code></li>
+<li><strong>구독 이력이 1건이라도 있으면 삭제 불가</strong> → <code>?error=</code> 리다이렉트</li>
+<li>삭제 성공: 해당 서비스의 요금제도 함께 하드 삭제. 담당자 <code>User</code> 계정은 DB <code>ON DELETE CASCADE</code> 로 함께 삭제 (<code class="loc">registry.py:272-274</code>)</li>
+<li>성공: <code>saved_redirect("/admin/services", "삭제되었습니다")</code></li>
+</ul>
+<hr />
+<h3 id="3-12">3-12. 엑셀 다운로드</h3>
+<table>
+<thead>
+<tr>
+<th>화면</th>
+<th>버튼 위치</th>
+<th>URL</th>
+<th>컬럼</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>목록</td>
+<td>툴바</td>
+<td><code>GET /admin/services/export.xlsx</code></td>
+<td>서비스명 / 담당자 이메일 / 허용 IP / 상태</td>
+</tr>
+<tr>
+<td>상세 요금제 탭</td>
+<td>탭 헤더</td>
+<td><code>GET /admin/services/{id}/plans.xlsx</code></td>
+<td>요금제 / 결제주기 / 정가 / 첫 결제 / 정기 결제 / 상태</td>
+</tr>
+<tr>
+<td>상세 구독 탭</td>
+<td>탭 헤더</td>
+<td><code>GET /admin/services/{id}/subs.xlsx</code></td>
+<td>사용자 / 요금제 / 상태 / 만료일 / 다음 결제</td>
+</tr>
+<tr>
+<td>상세 일반결제 탭</td>
+<td>탭 헤더</td>
+<td><code>GET /admin/services/{id}/oneoff.xlsx</code></td>
+<td>승인시각 / 사용자 / 주문번호 / 금액 / 상태</td>
+</tr>
+</tbody>
+</table>
+<p>현재 검색/필터가 목록·구독 탭 엑셀에 동일하게 적용된다 (<code class="loc">services.py:91-97</code>, <code>108-122</code>).</p>
+<hr />
+<h2 id="4">4. 개발 참조</h2>
+<h3 id="4-1">4-1. 라우트 함수 일람</h3>
+<table>
+<thead>
+<tr>
+<th>메서드</th>
+<th>경로</th>
+<th>함수</th>
+<th>file:line</th>
+<th>호출 서비스</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/admin/services</code></td>
+<td><code>services_list</code></td>
+<td><code class="loc">services.py:63</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/admin/services/export.xlsx</code></td>
+<td><code>services_export</code></td>
+<td><code class="loc">services.py:86</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/admin/services/new</code></td>
+<td><code>services_new</code></td>
+<td><code class="loc">services.py:171</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/admin/services</code></td>
+<td><code>services_create</code></td>
+<td><code class="loc">services.py:179</code></td>
+<td><code>registry.register_service</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/admin/services/{id}</code></td>
+<td><code>services_detail</code></td>
+<td><code class="loc">services.py:301</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/admin/services/{id}/keys-modal</code></td>
+<td><code>services_keys_modal</code></td>
+<td><code class="loc">services.py:225</code></td>
+<td><code>record_audit</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/admin/services/{id}/rotate-keys</code></td>
+<td><code>services_rotate</code></td>
+<td><code class="loc">services.py:442</code></td>
+<td><code>registry.rotate_keys</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/admin/services/{id}/assign-manager</code></td>
+<td><code>services_assign_manager</code></td>
+<td><code class="loc">services.py:379</code></td>
+<td><code>account_service.assign_service</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/admin/services/{id}/primary-manager</code></td>
+<td><code>services_set_primary_manager</code></td>
+<td><code class="loc">services.py:398</code></td>
+<td><code>registry.set_primary_manager</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/admin/services/{id}/managers/{user_id}/remove</code></td>
+<td><code>services_remove_manager</code></td>
+<td><code class="loc">services.py:417</code></td>
+<td><code>account_service.unassign_service</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/admin/services/{id}/ips</code></td>
+<td><code>services_update_ips</code></td>
+<td><code class="loc">services.py:462</code></td>
+<td><code>registry.update_allowed_ips</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/admin/services/{id}/cancel-policy</code></td>
+<td><code>services_cancel_policy</code></td>
+<td><code class="loc">services.py:480</code></td>
+<td><code>registry.update_cancel_policy</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/admin/services/{id}/status</code></td>
+<td><code>services_set_status</code></td>
+<td><code class="loc">services.py:514</code></td>
+<td><code>registry.set_service_status</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/admin/services/{id}/delete</code></td>
+<td><code>services_delete</code></td>
+<td><code class="loc">services.py:527</code></td>
+<td><code>registry.delete_service</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/admin/services/{id}/subs.xlsx</code></td>
+<td><code>service_subs_export</code></td>
+<td><code class="loc">services.py:100</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/admin/services/{id}/oneoff.xlsx</code></td>
+<td><code>service_oneoff_export</code></td>
+<td><code class="loc">services.py:125</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/admin/services/{id}/plans.xlsx</code></td>
+<td><code>service_plans_export</code></td>
+<td><code class="loc">services.py:144</code></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>모든 라우트는 <code>require_admin</code> (<code class="loc">app/admin/deps.py:100</code>) — SYSTEM_ADMIN 전용.</p>
+<hr />
+<h3 id="4-2">4-2. 서비스 레이어</h3>
+<table>
+<thead>
+<tr>
+<th>함수</th>
+<th>파일:line</th>
+<th>동작 요약</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>registry.register_service</code></td>
+<td><code class="loc">app/services/registry.py:94</code></td>
+<td>서비스 생성 + API 키/HMAC 발급 + 담당자 배정 + 감사 로그</td>
+</tr>
+<tr>
+<td><code>registry.rotate_keys</code></td>
+<td><code class="loc">app/services/registry.py:177</code></td>
+<td>API 키/HMAC 재생성, 기존 즉시 무효</td>
+</tr>
+<tr>
+<td><code>registry.update_allowed_ips</code></td>
+<td><code class="loc">app/services/registry.py:193</code></td>
+<td>IP 목록 전체 교체 (빈 목록 허용 = IP 제한 없음)</td>
+</tr>
+<tr>
+<td><code>registry.update_cancel_policy</code></td>
+<td><code class="loc">app/services/registry.py:205</code></td>
+<td>취소 허용 여부·수수료율 갱신</td>
+</tr>
+<tr>
+<td><code>registry.set_service_status</code></td>
+<td><code class="loc">app/services/registry.py:231</code></td>
+<td>ACTIVE/INACTIVE 상태 전환</td>
+</tr>
+<tr>
+<td><code>registry.set_primary_manager</code></td>
+<td><code class="loc">app/services/registry.py:288</code></td>
+<td>manager_email 갱신</td>
+</tr>
+<tr>
+<td><code>registry.delete_service</code></td>
+<td><code class="loc">app/services/registry.py:249</code></td>
+<td>구독 있으면 ConflictError, 요금제 선삭제 후 서비스 삭제</td>
+</tr>
+<tr>
+<td><code>account_service.assign_service</code></td>
+<td><code class="loc">app/services/accounts.py:269</code></td>
+<td>담당자 추가 (주 없으면 주, 있으면 UserService 다대다)</td>
+</tr>
+<tr>
+<td><code>account_service.unassign_service</code></td>
+<td><code class="loc">app/services/accounts.py:294</code></td>
+<td>담당자 해제 (주 해제 시 다른 서비스가 주로 승격)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="4-3">4-3. 템플릿 구조</h3>
+<pre><code>app/admin/templates/services/
+├── list.html           — 목록 전체 페이지 (base.html 확장)
+├── _table.html         — 목록 htmx partial (id=&quot;list-services&quot;)
+├── new.html            — 등록 폼
+├── keys.html           — 키 발급 1회 표시 화면
+├── detail.html         — 상세 전체 페이지
+├── _keys_modal.html    — 키 복사 모달 fragment
+├── _plans_table.html   — 요금제 탭 partial (id=&quot;list-svc-plans&quot;)
+├── _subs_table.html    — 구독 탭 partial (id=&quot;list-svc-subs&quot;)
+└── _oneoff_table.html  — 일반결제 탭 partial (id=&quot;list-svc-oneoff&quot;)
+</code></pre>
+<hr />
+<h3 id="4-4-htmx">4-4. htmx 동작 상세</h3>
+<p><strong>목록 partial 갱신</strong> (<code class="loc">_table.html:2-30</code>)
+- 검색·필터·정렬·페이지네이션: htmx가 <code>HX-Request</code> 헤더를 포함해 요청 → <code>render_list()</code>가 partial만 반환 → <code>#list-services</code> 교체</p>
+<p><strong>상세 탭 partial 갱신</strong> (<code class="loc">services.py:339-343</code>)</p>
+<pre><code class="language-python"># HX-Target 값에 따라 3개 partial 중 하나만 반환
+template = {
+    &quot;list-svc-plans&quot;:  &quot;services/_plans_table.html&quot;,
+    &quot;list-svc-subs&quot;:   &quot;services/_subs_table.html&quot;,
+    &quot;list-svc-oneoff&quot;: &quot;services/_oneoff_table.html&quot;,
+}.get(hx_target, &quot;services/detail.html&quot;)
+</code></pre>
+<p><strong>요금제 탭 내 변이(비활성화/활성화/삭제)</strong> (<code class="loc">_plans_table.html:41-66</code>)
+- <code>hx-post</code> + <code>hx-target="#list-svc-plans"</code> + <code>hx-swap="outerHTML"</code> — 탭 partial만 교체
+- 라우트는 <code>/admin/plans/{id}/archive</code>, <code>/admin/plans/{id}/activate</code>, <code>/admin/plans/{id}/delete</code>
+  - <code>next</code> 폼 필드로 현재 서비스 상세 URL 전달 → 303 리다이렉트 후 htmx가 HX-Target 분기로 partial만 수신</p>
+<p><strong>키 모달</strong> (<code class="loc">detail.html:15-18</code>)
+- <code>hx-get</code> + <code>hx-target="body"</code> + <code>hx-swap="beforeend"</code> — body 끝에 모달 fragment 삽입
+- 응답에 <code>Cache-Control: no-store</code> 설정 (<code class="loc">services.py:258</code>)</p>
+<hr />
+<h3 id="4-5">4-5. 담당자 데이터 구조</h3>
+<p><code>_service_managers()</code> (<code class="loc">services.py:353-376</code>) 가 두 경로를 합산:
+- <code>User.service_id == service_id</code> → 주 담당자 계정
+- <code>UserService.service_id == service_id</code> → 추가 담당 다대다</p>
+<p>대표 담당자 식별: <code>m.email == service.manager_email</code> (detail.html:44)</p>
+<hr />
+<h3 id="4-6">4-6. 정렬 가능 컬럼 맵</h3>
+<pre><code class="language-python"># services.py:36-38
+_SVC_SORT = {&quot;name&quot;: Service.name, &quot;status&quot;: Service.status, &quot;created_at&quot;: Service.created_at}
+ONEOFF_SORT = {&quot;requested_at&quot;: Payment.requested_at}
+</code></pre>
+<p>구독 탭 정렬은 <code>/admin/routes/subscriptions.py</code>의 <code>SUB_SORT</code> 를 임포트해 공유 (<code class="loc">services.py:19</code>).</p>
+<hr />
+<h3 id="4-7">4-7. 관련 기능 문서</h3>
+<ul>
+<li>서비스 등록·키 관리·IP 검증 내부: <a href="09-services-registry.html">../09-services-registry.md</a></li>
+<li>요금제 생성·수정·상태: <a href="admin--04-plans.html">04-plans.md</a></li>
+<li>구독 조회·강제취소: <a href="admin--05-subscriptions.html">05-subscriptions.md</a></li>
+<li>담당자 계정 생성·수정: <a href="admin--08-users.html">08-users.md</a></li>
+<li>감사 로그 확인: <a href="admin--09-audit.html">09-audit.md</a></li>
+</ul>
+<hr />
+<h2 id="5">5. 주의사항 / 자주 하는 실수</h2>
+<h3 id="_1">키 관련</h3>
+<ul>
+<li><strong>API 키·HMAC Secret은 발급 직후만 평문으로 표시된다.</strong> 등록 완료 화면(keys.html) 또는 재발급 직후 반드시 복사해 담당자에게 전달할 것.</li>
+<li>이후 <strong>"키 복사"</strong> 모달은 서버 AES-GCM 복호화를 수행하므로 <code>CIPHER_KEY</code> 환경변수가 일치하지 않으면 오류가 나타난다. 운영 환경 키 분실 시 재발급 필수.</li>
+<li>키 재발급 즉시 기존 키는 무효. <strong>외부 서비스에서 새 키로 재설정하기 전에 재발급하면 서비스 장애가 발생한다.</strong></li>
+</ul>
+<h3 id="_2">담당자 관련</h3>
+<ul>
+<li>담당자 계정이 없으면 서비스를 등록할 수 없다 (<code class="loc">new.html:62-64</code>). 먼저 <code>/admin/users/new</code>에서 SERVICE_MANAGER 계정을 만들어야 한다.</li>
+<li><strong>대표 담당자는 담당자 해제 불가</strong>. 다른 계정을 먼저 대표로 지정한 후 해제한다 (<code class="loc">services.py:431-435</code>).</li>
+<li>대표 담당자(<code>service.manager_email</code>)는 결제 실패·구독 갱신 등 알림 메일 수신처다.</li>
+</ul>
+<h3 id="_3">삭제 관련</h3>
+<ul>
+<li><strong>구독 이력이 1건이라도 있으면 삭제 불가</strong>. 운영 중단 시에는 삭제 대신 <code>INACTIVE</code> 상태로 전환할 것.</li>
+<li>서비스 삭제 시 담당자 User 계정이 DB <code>ON DELETE CASCADE</code>로 함께 삭제된다. 담당자 계정이 다른 서비스에도 배정된 경우에도 계정 자체가 사라지므로 <strong>주의</strong>.</li>
+</ul>
+<h3 id="ip">IP 관련</h3>
+<ul>
+<li>허용 IP는 <strong>선택</strong>이다. <strong>빈 목록 = IP 제한 없음(모든 IP 허용)</strong> — 이 경우 API는 HMAC 서명으로만 보호된다 (<code>api/deps.py</code>).</li>
+<li>값이 있으면 IPv4 형식만 허용(IPv6·CIDR 불가) — <code>_validate_ips()</code> (<code>registry.py</code>).</li>
+</ul>
+<h3 id="_4">취소 정책</h3>
+<ul>
+<li><code>cancellation_enabled</code> 체크박스는 미체크 시 폼 데이터에 키 자체가 없다(HTML 표준). 서버가 <code>"on"</code> 값 유무로 처리하므로 JavaScript 없이도 정상 동작한다.</li>
+<li>수수료율 0%는 전액 환불, 0% 초과는 해당 비율 차감 후 환불.</li>
+</ul>
+<h3 id="htmx">htmx</h3>
+<ul>
+<li>요금제 탭의 비활성화/활성화/삭제 동작은 <code>hx-push-url</code> 를 <strong>사용하지 않는다</strong> (<code class="loc">_plans_table.html:38-39</code>). 변이 요청이 URL 히스토리를 오염시키지 않도록 의도된 설계.</li>
+<li>키 모달 응답에는 항상 <code>Cache-Control: no-store</code> 가 붙는다. 브라우저 history 복원이나 캐시로 평문 키가 노출되지 않도록 하기 위함.</li>
+</ul>
+    </div>
+    <div class="pager"><a class="pg prev" href="admin--02-dashboard.html"><small>← 이전</small><b>02. 대시보드</b></a><a class="pg next" href="admin--04-plans.html"><small>다음 →</small><b>04. 요금제 관리 (목록·생성·수정·활성/비활성·삭제)</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#1">1. 이 화면은 무엇인가 / 접근 경로·권한</a>
+<a class="toc-h2" href="#2">2. 화면 구성</a>
+<a class="toc-h3" href="#2-1">2-1. 서비스 목록</a>
+<a class="toc-h3" href="#2-2">2-2. 서비스 상세</a>
+<a class="toc-h2" href="#3">3. 할 수 있는 동작</a>
+<a class="toc-h3" href="#3-1-ip">3-1. 운영자 흐름: 서비스 등록 → 키 전달 → 담당자 지정 → IP/취소정책 설정</a>
+<a class="toc-h3" href="#3-2">3-2. 서비스 등록</a>
+<a class="toc-h3" href="#3-3-api-keyshtml">3-3. API 키 발급 화면 (keys.html) / 키 모달</a>
+<a class="toc-h3" href="#3-4">3-4. 키 재발급</a>
+<a class="toc-h3" href="#3-5">3-5. 담당자 추가</a>
+<a class="toc-h3" href="#3-6">3-6. 대표 담당자 지정</a>
+<a class="toc-h3" href="#3-7">3-7. 담당자 해제</a>
+<a class="toc-h3" href="#3-8-ip">3-8. 허용 IP 업데이트</a>
+<a class="toc-h3" href="#3-9">3-9. 취소 정책 설정</a>
+<a class="toc-h3" href="#3-10">3-10. 상태 변경 (활성화 / 비활성화)</a>
+<a class="toc-h3" href="#3-11">3-11. 서비스 삭제</a>
+<a class="toc-h3" href="#3-12">3-12. 엑셀 다운로드</a>
+<a class="toc-h2" href="#4">4. 개발 참조</a>
+<a class="toc-h3" href="#4-1">4-1. 라우트 함수 일람</a>
+<a class="toc-h3" href="#4-2">4-2. 서비스 레이어</a>
+<a class="toc-h3" href="#4-3">4-3. 템플릿 구조</a>
+<a class="toc-h3" href="#4-4-htmx">4-4. htmx 동작 상세</a>
+<a class="toc-h3" href="#4-5">4-5. 담당자 데이터 구조</a>
+<a class="toc-h3" href="#4-6">4-6. 정렬 가능 컬럼 맵</a>
+<a class="toc-h3" href="#4-7">4-7. 관련 기능 문서</a>
+<a class="toc-h2" href="#5">5. 주의사항 / 자주 하는 실수</a>
+<a class="toc-h3" href="#_1">키 관련</a>
+<a class="toc-h3" href="#_2">담당자 관련</a>
+<a class="toc-h3" href="#_3">삭제 관련</a>
+<a class="toc-h3" href="#ip">IP 관련</a>
+<a class="toc-h3" href="#_4">취소 정책</a>
+<a class="toc-h3" href="#htmx">htmx</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

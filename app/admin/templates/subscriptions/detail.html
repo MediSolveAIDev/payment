@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}구독 상세{% endblock %}
+{% block crumb %}구독 상세{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="btn-text" href="/admin/subscriptions"><span data-lucide="arrow-left"></span>구독</a>
+  <h1 style="margin:0">{{ sub.external_user_id }}</h1>
+  <span class="badge badge-{{ sub.status }}">{{ sub_status_ko(sub.status) }}</span>
+</div>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="block-head"><h2 style="margin:0">구독 정보</h2></div>
+    {# 구독 ID(KEY) — 외부 식별/문의 대응용 #}
+    <div class="kv"><span class="muted">구독 ID(KEY)</span><span style="font-family:ui-monospace,monospace;font-size:12px">{{ sub.id }}</span></div>
+    <div class="kv"><span class="muted">서비스</span><span>{{ service.name }}</span></div>
+    <div class="kv"><span class="muted">요금제</span><span>{{ plan.name }} · {{ "{:,}".format(plan.price) }}원</span></div>
+    {# 체험(Trial) 사용 정보 — 현재 체험중 / 체험 후 전환 / 미사용 / 미제공 구분 #}
+    <div class="kv"><span class="muted">체험</span><span>
+      {%- if sub.status == 'TRIAL' -%}
+        <span class="badge badge-TRIAL">체험 중</span> {{ plan.trial_days }}일 · 종료 {{ sub.current_period_end|kst("%Y-%m-%d") }}
+      {%- elif trial_used -%}
+        체험 사용함{% if plan.trial_days %} · {{ plan.trial_days }}일{% endif %} (체험 후 전환)
+      {%- elif plan.trial_enabled -%}
+        미사용 <span class="muted">(요금제 체험 {{ plan.trial_days }}일 제공)</span>
+      {%- else -%}
+        체험 미제공 요금제
+      {%- endif -%}
+    </span></div>
+    <div class="kv"><span class="muted">구독 시작일</span><span>{{ sub.current_period_start|kst("%Y-%m-%d") }}</span></div>
+    <div class="kv"><span class="muted">만료일</span><span>{{ sub.current_period_end|kst("%Y-%m-%d") }}</span></div>
+    <div class="kv"><span class="muted">다음 결제</span><span>{{ sub.next_billing_at|kst("%Y-%m-%d %H:%M") }}</span></div>
+    <div class="kv"><span class="muted">재시도</span><span>{{ sub.retry_count }}회</span></div>
+    {% if sub.status == 'SUSPENDED' %}
+    <div class="kv"><span class="muted">정지 시각</span><span>{{ sub.suspended_at|kst("%Y-%m-%d %H:%M") }}</span></div>
+    {% endif %}
+    {# card-vault 리팩터: 카드 정보는 cards 테이블에서 조회한 card 객체로 표시.
+       마스킹 번호 + 발급사코드 + 활성/비활성 상태 뱃지. 카드 클릭 시 카드 상세(결제내역). #}
+    <div class="kv"><span class="muted">카드</span><span>
+      {%- if card -%}
+      <a href="/admin/cards/{{ card.id }}" style="font-family:ui-monospace,monospace">{{ card.card_info.number if card.card_info and card.card_info.number else '카드' }}</a>
+      {%- if card.card_info and card.card_info.issuerCode %} <span class="muted">({{ card.card_info.issuerCode }})</span>{% endif %}
+      <span class="badge badge-{{ 'ACTIVE' if card.is_active else 'INACTIVE' }}" style="margin-left:6px">{{ '활성' if card.is_active else '비활성' }}</span>
+      {%- else -%}-{%- endif -%}
+    </span></div>
+  </div>
+  <div class="card">
+    <div class="block-head"><h2 style="margin:0">관리</h2></div>
+    {# 결제 실패(PAST_DUE)·정지(SUSPENDED) 상태면 담당자가 등록된 카드로 즉시 재결제 #}
+    {% if sub.status in ('PAST_DUE', 'SUSPENDED') %}
+    <p class="muted" style="font-size:13px;margin-bottom:12px">
+      자동결제가 실패{% if sub.status == 'SUSPENDED' %}하여 정지된{% else %}한{% endif %} 구독입니다.
+      등록된 카드로 {{ "{:,}".format(charge_amount) }}원을 즉시 청구하며, 성공 시 이용중(ACTIVE)으로 복귀합니다.
+    </p>
+    <form method="post" action="/admin/subscriptions/{{ sub.id }}/retry-payment"
+          data-confirm="등록된 카드로 지금 결제를 시도합니다. 성공 시 구독이 이용중으로 복귀합니다."
+          data-confirm-title="지금 결제를 시도할까요?" data-confirm-ok="결제 처리"
+          style="margin-bottom:12px">
+      <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+      {# card-vault 리팩터: 등록 카드 없음(card=None) 또는 비활성 카드면 재결제 버튼 비활성화 #}
+      <button class="btn btn-primary" type="submit" {% if not card %}disabled title="등록된 결제수단이 없습니다"{% elif not card.is_active %}disabled title="비활성화된 카드입니다. 카드를 활성화한 뒤 시도하세요"{% endif %}>
+        <span data-lucide="credit-card"></span>결제 처리
+      </button>
+    </form>
+    {% endif %}
+    {# 만료일 연장 — EXPIRED(완전 종료)가 아닐 때만. 입력 날짜로 만료일·다음결제 변경, 상태=연장처리 #}
+    {% if sub.status != 'EXPIRED' %}
+    <p class="muted" style="font-size:13px;margin:4px 0 8px">만료일을 연장하면 입력한 날짜로 만료일·다음 결제일이 바뀌고 상태가 <strong>연장처리</strong>가 됩니다.</p>
+    <form method="post" action="/admin/subscriptions/{{ sub.id }}/extend"
+          style="display:flex;gap:8px;align-items:center;margin-bottom:14px"
+          data-confirm="입력한 날짜로 만료일·다음 결제일을 연장합니다. 상태가 '연장처리'가 됩니다."
+          data-confirm-title="만료일을 연장할까요?" data-confirm-ok="연장">
+      <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+      <input type="date" name="new_end" required value="{{ sub.current_period_end|kst('%Y-%m-%d') }}"
+             style="width:auto">
+      <button class="btn btn-primary" type="submit"><span data-lucide="calendar-plus"></span>만료일 연장</button>
+    </form>
+    {% endif %}
+    {% if sub.status in ('ACTIVE', 'PAST_DUE', 'EXTENDED') %}
+    <p class="muted" style="font-size:13px;margin-bottom:12px">강제 취소 시 만료일까지 혜택은 유지되고 이후 종료됩니다.</p>
+    <form method="post" action="/admin/subscriptions/{{ sub.id }}/force-cancel"
+          data-confirm="이 구독을 즉시 취소합니다. 만료일까지 혜택은 유지됩니다."
+          data-confirm-title="구독을 강제 취소할까요?" data-confirm-ok="강제 취소">
+      <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+      <button class="btn btn-danger" type="submit"><span data-lucide="ban"></span>강제 취소</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{# 만료일 연장 이력(요청) — subscription.extended 감사 이벤트가 있을 때만 표시 #}
+{% if extensions %}
+<div class="card">
+  <div class="block-head"><h2 style="margin:0">만료일 연장 이력</h2>
+    <span class="muted" style="font-size:12px">운영자 수동 연장 내역</span></div>
+  <table>
+    <thead><tr><th>처리 시각</th><th>변경 전 만료일</th><th>변경 후 만료일</th><th>처리자</th></tr></thead>
+    <tbody>
+    {% for e in extensions %}
+      <tr>
+        <td class="muted">{{ e.time|kst("%Y-%m-%d %H:%M") }}</td>
+        <td class="muted">{{ e.old_end[:10] if e.old_end else '-' }}</td>
+        <td style="font-weight:600">{{ e.new_end[:10] if e.new_end else '-' }}</td>
+        <td class="muted">{{ e.actor }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+<div class="card">
+  <div class="block-head"><h2 style="margin:0">결제 이력</h2></div>
+  <table>
+    <thead><tr><th>주문번호</th><th>유형</th><th>금액</th><th>상태</th><th>실패 사유</th><th>요청 시각</th></tr></thead>
+    <tbody>
+    {% for p in payments %}
+      <tr>
+        <td style="font-family:ui-monospace,monospace;font-size:12px">{{ p.order_id[:24] }}…</td>
+        <td><span class="badge badge-{{ p.payment_type }}">{{ p.payment_type }}</span></td>
+        <td style="font-weight:600">{{ "{:,}".format(p.amount) }}원</td>
+        <td><span class="badge badge-{{ p.status }}">{{ p.status }}</span></td>
+        <td class="muted">{{ p.failure_code or '-' }}</td>
+        <td class="muted">{{ p.requested_at|kst("%Y-%m-%d %H:%M") }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="muted">결제 이력이 없습니다</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

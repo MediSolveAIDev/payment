@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02. 데이터베이스 — 테이블·모델·관계·마이그레이션 — 개발자 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>개발자 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>🧱</span>기반 (먼저 읽기)</div>
+<a class="nav-link" href="README.html"><span class="n">·</span><span class="tt">개발자 인수인계 매뉴얼 (dev_manual)</span></a>
+<a class="nav-link" href="01-getting-started.html"><span class="n">01</span><span class="tt">01. 시작하기 — 구조·실행·테스트·요청 처리 공통 흐름</span></a>
+<a class="nav-link active" href="02-database.html"><span class="n">02</span><span class="tt">02. 데이터베이스 — 테이블·모델·관계·마이그레이션</span></a>
+<a class="nav-link" href="03-auth-and-security.html"><span class="n">03</span><span class="tt">03. 인증과 보안 공통</span></a>
+<div class="nav-group"><span>⚙️</span>기능별 상세</div>
+<a class="nav-link" href="04-subscription-create.html"><span class="n">04</span><span class="tt">04. 구독 생성</span></a>
+<a class="nav-link" href="05-subscription-renewal.html"><span class="n">05</span><span class="tt">05. 구독 갱신·만료·재시도·정합성(스케줄러 배치)</span></a>
+<a class="nav-link" href="06-subscription-manage.html"><span class="n">06</span><span class="tt">06. 구독 취소·재개·수동결제·카드변경</span></a>
+<a class="nav-link" href="07-one-off-payment.html"><span class="n">07</span><span class="tt">07. 단건(일반) 결제 + 취소</span></a>
+<a class="nav-link" href="08-plans.html"><span class="n">08</span><span class="tt">08. 요금제 관리 (생성·수정·금액 계산·자동결제안함·추가정보)</span></a>
+<a class="nav-link" href="09-services-registry.html"><span class="n">09</span><span class="tt">09. 서비스 등록·키 발급/회전·취소정책·담당자</span></a>
+<a class="nav-link" href="10-settlement.html"><span class="n">10</span><span class="tt">10. 정산(어드민 화면)</span></a>
+<a class="nav-link" href="11-dashboard.html"><span class="n">11</span><span class="tt">11. 대시보드 — 어드민 메인 화면</span></a>
+<a class="nav-link" href="12-webhooks.html"><span class="n">12</span><span class="tt">12. 웹훅 처리 (토스페이먼츠 → 서버)</span></a>
+<a class="nav-link" href="13-admin-accounts.html"><span class="n">13</span><span class="tt">13. 어드민 계정·역할·로그인/비밀번호</span></a>
+<a class="nav-link" href="14-global-settings.html"><span class="n">14</span><span class="tt">14. 전체 설정(재시도·어드민 IP·킬스위치)</span></a>
+<a class="nav-link" href="15-external-api-and-sample.html"><span class="n">15</span><span class="tt">15. 외부 API 레퍼런스 + 샘플 서비스 연동</span></a>
+<a class="nav-link" href="16-card-vault.html"><span class="n">16</span><span class="tt">16. 카드 보관함(Card Vault) — 카드 등록·교체·조회·삭제</span></a>
+<a class="nav-link" href="17-service-notifications.html"><span class="n">17</span><span class="tt">17. 서비스 알림(아웃고잉 웹훅) — 요청 016</span></a>
+<div class="nav-group"><span>🖥️</span>어드민 화면별 매뉴얼</div>
+<a class="nav-link" href="admin--README.html"><span class="n">·</span><span class="tt">어드민 콘솔 페이지 매뉴얼</span></a>
+<a class="nav-link" href="admin--01-login-and-access.html"><span class="n">01</span><span class="tt">01. 로그인·접근 (로그인 / 비밀번호 설정 / 로그아웃 / IP 제한)</span></a>
+<a class="nav-link" href="admin--02-dashboard.html"><span class="n">02</span><span class="tt">02. 대시보드</span></a>
+<a class="nav-link" href="admin--03-services.html"><span class="n">03</span><span class="tt">03. 서비스 관리</span></a>
+<a class="nav-link" href="admin--04-plans.html"><span class="n">04</span><span class="tt">04. 요금제 관리 (목록·생성·수정·활성/비활성·삭제)</span></a>
+<a class="nav-link" href="admin--05-subscriptions.html"><span class="n">05</span><span class="tt">05. 구독 관리 — 목록·상세·강제 취소</span></a>
+<a class="nav-link" href="admin--06-payments.html"><span class="n">06</span><span class="tt">06. 결제 — 목록·상세·단건 취소</span></a>
+<a class="nav-link" href="admin--07-settlement.html"><span class="n">07</span><span class="tt">07. 정산 화면</span></a>
+<a class="nav-link" href="admin--08-users.html"><span class="n">08</span><span class="tt">08. 계정 관리</span></a>
+<a class="nav-link" href="admin--09-audit.html"><span class="n">09</span><span class="tt">09. 감사 로그 (조회·검색·정리·엑셀)</span></a>
+<a class="nav-link" href="admin--10-settings.html"><span class="n">10</span><span class="tt">10. 전체 설정 (재시도 정책 · 어드민 IP · 킬스위치)</span></a>
+<div class="nav-group"><span>📋</span>운영 워크플로우</div>
+<a class="nav-link" href="admin--11-onboarding-checklist.html"><span class="n">·</span><span class="tt">신규 서비스 온보딩 체크리스트 (운영자용)</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">개발자 매뉴얼</a> <span>/</span> <em>기반 (먼저 읽기)</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">🧱 기반 (먼저 읽기)</span>
+        <span class="dh-src">docs/dev_manual/02-database.md</span></div>
+      <h1>02. 데이터베이스 — 테이블·모델·관계·마이그레이션</h1>
+      
+    </header>
+    <div class="doc">
+
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p><strong>쉽게 말하면</strong>: DB는 시스템의 <strong>장부</strong>입니다. 어떤 서비스가 등록됐는지(<code>services</code>), 누가 무슨 요금제를 구독 중인지(<code>subscriptions</code>), 언제 얼마가 결제됐는지(<code>payments</code>)를 표로 보관합니다. 코드의 <strong>모델 클래스 1개(<code>app/models/*.py</code>)가 DB 표 1개</strong>에 그대로 대응하므로, 표를 알면 코드가 보이고 코드를 알면 표가 보입니다.</p>
+<p><strong>초보자 안내</strong>: 이 문서는 <code>app/models/*.py</code> 파일과 <code>alembic/versions/</code> 마이그레이션 파일을 직접 읽어 작성했습니다. 실제 코드와 1:1 대응하므로 파일·라인 번호를 함께 기재합니다. 관련 API 기능(구독 생성, 결제 처리 등)은 04~15 문서를 참고하세요.</p>
+</div></blockquote>
+<hr />
+<h2 id="1">1. 테이블 목록</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>테이블명</th>
+<th>모델 클래스</th>
+<th>모델 파일</th>
+<th>역할 한 줄 요약</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>services</code></td>
+<td><code>Service</code></td>
+<td><code>app/models/service.py</code></td>
+<td>구독·결제 API를 이용하는 사내 서비스 등록 정보</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>users</code></td>
+<td><code>User</code></td>
+<td><code>app/models/user.py</code></td>
+<td>htmx 관리 화면 로그인 계정(관리자)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>password_setup_tokens</code></td>
+<td><code>PasswordSetupToken</code></td>
+<td><code>app/models/user.py</code></td>
+<td>신규 계정 비밀번호 초기 설정용 일회용 토큰</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>user_services</code></td>
+<td><code>UserService</code></td>
+<td><code>app/models/user_service.py</code></td>
+<td>관리자↔서비스 다대다 연결 (추가 담당 서비스)</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>plans</code></td>
+<td><code>Plan</code></td>
+<td><code>app/models/plan.py</code></td>
+<td>구독 요금제 정의(가격·주기·할인·체험)</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>subscriptions</code></td>
+<td><code>Subscription</code></td>
+<td><code>app/models/subscription.py</code></td>
+<td>외부 사용자의 요금제 구독 상태</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>payments</code></td>
+<td><code>Payment</code></td>
+<td><code>app/models/payment.py</code></td>
+<td>개별 결제 시도 레코드(구독 정기결제·단건 모두)</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>webhook_events</code></td>
+<td><code>WebhookEvent</code></td>
+<td><code>app/models/webhook_event.py</code></td>
+<td>토스페이먼츠로부터 수신한 웹훅 이벤트 기록</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>audit_logs</code></td>
+<td><code>AuditLog</code></td>
+<td><code>app/models/audit_log.py</code></td>
+<td>시스템 내 모든 중요 행위의 불변 이력</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>global_settings</code></td>
+<td><code>GlobalSettings</code></td>
+<td><code>app/models/global_settings.py</code></td>
+<td>자동결제 재시도·어드민IP·킬스위치 전역 설정(단일 행)</td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>cards</code></td>
+<td><code>Card</code></td>
+<td><code>app/models/card.py</code></td>
+<td>결제수단 보관함(vault) — 토스 빌링키 암호화 보관</td>
+</tr>
+</tbody>
+</table>
+<p><strong>총 11개 테이블</strong> (파이썬 클래스 12개 — <code>PasswordSetupToken</code>이 <code>user.py</code>에 함께 있음)</p>
+<hr />
+<h2 id="2">2. 공통 규칙</h2>
+<h3 id="21-timestampmixin-appmodelsbasepy27-37">2.1 TimestampMixin (<code class="loc">app/models/base.py:27-37</code>)</h3>
+<p>모든 주요 모델은 <code>TimestampMixin</code>을 상속받아 두 컬럼을 자동으로 갖습니다.</p>
+<pre><code>created_at  DateTime(timezone=True)  레코드 삽입 시 DB 서버 시각으로 채워짐(UTC)
+updated_at  DateTime(timezone=True)  매 UPDATE마다 DB 서버 시각으로 갱신됨(UTC)
+</code></pre>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>포인트</strong>: 모든 시각은 <strong>UTC</strong>로 저장합니다. 화면에 표시할 때 한국 시간(UTC+9)으로 변환하는 것은 프론트엔드 책임입니다.</p>
+</div></blockquote>
+<p><code>TimestampMixin</code>을 사용하는 테이블: <code>services</code>, <code>users</code>, <code>plans</code>, <code>subscriptions</code>, <code>payments</code>, <code>cards</code>, <code>global_settings</code>
+사용하지 않는 테이블: <code>password_setup_tokens</code>, <code>user_services</code>, <code>webhook_events</code>, <code>audit_logs</code> (이들은 자체적으로 <code>created_at</code>만 갖거나 없음)</p>
+<h3 id="22-krw">2.2 금액은 KRW 정수</h3>
+<p>모든 금액 컬럼(<code>price</code>, <code>amount</code>, <code>canceled_amount</code>, <code>cancel_fee</code> 등)은 <code>BigInteger</code>로 선언되며 <strong>원 단위 정수</strong>를 저장합니다. 소수점 없음.</p>
+<h3 id="23">2.3 민감정보 보안 처리</h3>
+<table>
+<thead>
+<tr>
+<th>정보</th>
+<th>저장 방식</th>
+<th>컬럼 예시</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>API 키</td>
+<td>SHA-256 해시(인증 검증) + AES-GCM 암호문(화면 표시용)</td>
+<td><code>api_key_hash</code>, <code>api_key_encrypted</code></td>
+</tr>
+<tr>
+<td>HMAC 시크릿</td>
+<td>AES-GCM 암호문</td>
+<td><code>hmac_secret_encrypted</code></td>
+</tr>
+<tr>
+<td>빌링키</td>
+<td>AES-GCM 암호문 + SHA-256 해시</td>
+<td><code>billing_key_encrypted</code>, <code>billing_key_hash</code></td>
+</tr>
+<tr>
+<td>비밀번호</td>
+<td>Argon2id 해시</td>
+<td><code>password_hash</code></td>
+</tr>
+<tr>
+<td>토큰</td>
+<td>SHA-256 해시</td>
+<td><code>token_hash</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>평문은 절대 DB에 저장하지 않습니다.</strong></p>
+<h3 id="24-appmodelsbasepy12-18">2.4 명명 규칙 (<code class="loc">app/models/base.py:12-18</code>)</h3>
+<p><code>Base</code> 클래스는 Alembic이 자동 생성하는 인덱스·제약 이름이 일관되도록 고정된 <code>naming_convention</code>을 사용합니다.</p>
+<hr />
+<h2 id="3">3. 테이블 상세</h2>
+<h3 id="31-services">3.1 <code>services</code> — 서비스 등록 정보</h3>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code class="loc">app/models/service.py:12-33</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>Nullable</th>
+<th>기본값</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td><code>uuid4()</code></td>
+<td>PK</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>String(100)</td>
+<td>N</td>
+<td>—</td>
+<td>서비스명, <strong>전체 고유(UNIQUE)</strong></td>
+</tr>
+<tr>
+<td><code>allowed_ips</code></td>
+<td>JSONB</td>
+<td>N</td>
+<td><code>[]</code></td>
+<td>API 호출 허용 IP 목록. <strong>어드민 등록 시 1개 이상 필수</strong>(빈 목록 불가). 비면 외부 인증이 모두 차단됨 — <code>admin_allowed_ips</code>(빈 배열=제한 없음)와 동작이 다름</td>
+</tr>
+<tr>
+<td><code>manager_email</code></td>
+<td>String(255)</td>
+<td>N</td>
+<td>—</td>
+<td>서비스 담당자 이메일</td>
+</tr>
+<tr>
+<td><code>api_key_hash</code></td>
+<td>String(64)</td>
+<td>N</td>
+<td>—</td>
+<td>SHA-256 해시, <strong>UNIQUE + INDEX</strong>, 인증 검증에만 사용</td>
+</tr>
+<tr>
+<td><code>hmac_secret_encrypted</code></td>
+<td>String(512)</td>
+<td>N</td>
+<td>—</td>
+<td>웹훅 서명 검증용 HMAC 시크릿 (AES 암호화)</td>
+</tr>
+<tr>
+<td><code>api_key_encrypted</code></td>
+<td>String(512)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>관리 화면 키 표시용 AES 암호문 (요청 005에서 추가)</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>String(20)</td>
+<td>N</td>
+<td><code>ACTIVE</code></td>
+<td><code>ServiceStatus</code> 값</td>
+</tr>
+<tr>
+<td><code>cancellation_enabled</code></td>
+<td>Boolean</td>
+<td>N</td>
+<td><code>true</code></td>
+<td>단건결제 취소 허용 여부</td>
+</tr>
+<tr>
+<td><code>cancellation_fee_percent</code></td>
+<td>Integer</td>
+<td>N</td>
+<td><code>0</code></td>
+<td>취소 수수료율 (0~100, %)</td>
+</tr>
+<tr>
+<td><code>created_at</code> / <code>updated_at</code></td>
+<td>DateTime(tz)</td>
+<td>N</td>
+<td><code>now()</code></td>
+<td>TimestampMixin</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>FK 받는 곳</strong>: <code>plans.service_id</code>, <code>subscriptions.service_id</code>, <code>payments.service_id</code>, <code>users.service_id</code>, <code>user_services.service_id</code></li>
+</ul>
+<hr />
+<h3 id="32-users">3.2 <code>users</code> — 관리자 계정</h3>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code class="loc">app/models/user.py:19-37</code></p>
+<p><strong>주의</strong>: 이 테이블의 사용자는 <strong>관리 화면 로그인 계정</strong>입니다. 외부 서비스를 실제 이용하는 최종 사용자(end-user)가 아닙니다. 최종 사용자는 <code>subscriptions.external_user_id</code>로만 식별합니다.</p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>Nullable</th>
+<th>기본값</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td><code>uuid4()</code></td>
+<td>PK</td>
+</tr>
+<tr>
+<td><code>email</code></td>
+<td>String(255)</td>
+<td>N</td>
+<td>—</td>
+<td>로그인 ID, <strong>전체 고유(UNIQUE)</strong></td>
+</tr>
+<tr>
+<td><code>phone</code></td>
+<td>String(30)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>연락처 (선택)</td>
+</tr>
+<tr>
+<td><code>password_hash</code></td>
+<td>String(512)</td>
+<td>N</td>
+<td><code>""</code></td>
+<td>Argon2id 해시; PENDING 상태에서는 빈 문자열</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td>String(20)</td>
+<td>N</td>
+<td>—</td>
+<td><code>UserRole</code> 값: <code>SYSTEM_ADMIN</code> 또는 <code>SERVICE_MANAGER</code></td>
+</tr>
+<tr>
+<td><code>service_id</code></td>
+<td>UUID</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>FK → <code>services.id</code> (CASCADE); SYSTEM_ADMIN은 NULL</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>String(20)</td>
+<td>N</td>
+<td><code>PENDING</code></td>
+<td><code>UserStatus</code> 값</td>
+</tr>
+<tr>
+<td><code>failed_login_count</code></td>
+<td>Integer</td>
+<td>N</td>
+<td><code>0</code></td>
+<td>연속 로그인 실패 횟수 (임계 초과 시 LOCKED)</td>
+</tr>
+<tr>
+<td><code>locked_until</code></td>
+<td>DateTime(tz)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>자동 잠금 해제 시각(UTC); NULL = 잠금 없음</td>
+</tr>
+<tr>
+<td><code>created_at</code> / <code>updated_at</code></td>
+<td>DateTime(tz)</td>
+<td>N</td>
+<td><code>now()</code></td>
+<td>TimestampMixin</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong><code>service_id</code> FK</strong>: <code>ondelete="CASCADE"</code> — 서비스 삭제 시 해당 담당자 계정도 자동 삭제</li>
+<li><code>SYSTEM_ADMIN</code>은 <code>service_id = NULL</code>, <code>SERVICE_MANAGER</code>는 담당 서비스의 UUID</li>
+</ul>
+<hr />
+<h3 id="33-password_setup_tokens">3.3 <code>password_setup_tokens</code> — 비밀번호 초기 설정 토큰</h3>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code class="loc">app/models/user.py:40-54</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>Nullable</th>
+<th>기본값</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td><code>uuid4()</code></td>
+<td>PK</td>
+</tr>
+<tr>
+<td><code>user_id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td>—</td>
+<td>FK → <code>users.id</code> (CASCADE)</td>
+</tr>
+<tr>
+<td><code>token_hash</code></td>
+<td>String(64)</td>
+<td>N</td>
+<td>—</td>
+<td>SHA-256 해시, <strong>UNIQUE</strong> (평문은 이메일 링크에만)</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>DateTime(tz)</td>
+<td>N</td>
+<td>—</td>
+<td>링크 유효 기한 (UTC)</td>
+</tr>
+<tr>
+<td><code>used_at</code></td>
+<td>DateTime(tz)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>최초 사용 시각 (UTC); NULL = 미사용 → 재사용 불가</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><code>used_at</code>이 채워진 토큰은 재사용 불가 (코드에서 검사)</li>
+<li>계정 삭제 시 CASCADE로 토큰도 함께 삭제</li>
+</ul>
+<hr />
+<h3 id="34-user_services">3.4 <code>user_services</code> — 관리자↔서비스 다대다 연결</h3>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code class="loc">app/models/user_service.py:11-25</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>Nullable</th>
+<th>기본값</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>user_id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td>—</td>
+<td><strong>PK(복합)</strong>, FK → <code>users.id</code> (CASCADE)</td>
+</tr>
+<tr>
+<td><code>service_id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td>—</td>
+<td><strong>PK(복합)</strong>, FK → <code>services.id</code> (CASCADE)</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>DateTime(tz)</td>
+<td>N</td>
+<td><code>now()</code></td>
+<td>담당 서비스 부여 시각 (UTC)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><code>(user_id, service_id)</code> 복합 기본키 → 동일 조합은 하나만 존재</li>
+<li><code>users.service_id</code>(주 서비스)와 <strong>별개</strong>. 유효 담당 서비스 = <code>users.service_id</code> ∪ 이 테이블의 <code>service_id</code></li>
+<li>관리자나 서비스가 삭제되면 연결 행도 CASCADE 삭제</li>
+</ul>
+<hr />
+<h3 id="35-plans">3.5 <code>plans</code> — 구독 요금제</h3>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code class="loc">app/models/plan.py:16-48</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>Nullable</th>
+<th>기본값</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td><code>uuid4()</code></td>
+<td>PK</td>
+</tr>
+<tr>
+<td><code>service_id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td>—</td>
+<td>FK → <code>services.id</code> (<strong>RESTRICT</strong>); 구독이 있으면 삭제 불가</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>String(100)</td>
+<td>N</td>
+<td>—</td>
+<td>요금제 표시명</td>
+</tr>
+<tr>
+<td><code>price</code></td>
+<td>BigInteger</td>
+<td>N</td>
+<td>—</td>
+<td>정가 (원 단위 KRW 정수)</td>
+</tr>
+<tr>
+<td><code>currency</code></td>
+<td>String(3)</td>
+<td>N</td>
+<td><code>"KRW"</code></td>
+<td>통화 코드 (현재 KRW만 사용)</td>
+</tr>
+<tr>
+<td><code>billing_cycle</code></td>
+<td>String(10)</td>
+<td>N</td>
+<td>—</td>
+<td><code>BillingCycle</code> 값: <code>YEAR</code>/<code>MONTH</code>/<code>WEEK</code>/<code>DAY</code></td>
+</tr>
+<tr>
+<td><code>cycle_days</code></td>
+<td>Integer</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td><code>billing_cycle=DAY</code>일 때 실제 일수; 나머지는 NULL</td>
+</tr>
+<tr>
+<td><code>first_payment_type</code></td>
+<td>String(20)</td>
+<td>N</td>
+<td><code>NONE</code></td>
+<td><code>FirstPaymentType</code> 값 (첫 결제 혜택 유형)</td>
+</tr>
+<tr>
+<td><code>first_payment_value</code></td>
+<td>BigInteger</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>첫 결제 할인 값 (원 또는 %)</td>
+</tr>
+<tr>
+<td><code>recurring_discount_type</code></td>
+<td>String(20)</td>
+<td>N</td>
+<td><code>NONE</code></td>
+<td><code>DiscountType</code> 값 (상시 할인 유형)</td>
+</tr>
+<tr>
+<td><code>recurring_discount_value</code></td>
+<td>BigInteger</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>상시 할인 값 (원 또는 %)</td>
+</tr>
+<tr>
+<td><code>trial_enabled</code></td>
+<td>Boolean</td>
+<td>N</td>
+<td><code>false</code></td>
+<td>체험 기능 활성 여부</td>
+</tr>
+<tr>
+<td><code>trial_days</code></td>
+<td>Integer</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>체험 기간(일수); <code>trial_enabled=True</code>일 때만 유효</td>
+</tr>
+<tr>
+<td><code>auto_renew</code></td>
+<td>Boolean</td>
+<td>N</td>
+<td><code>true</code></td>
+<td><code>False</code>이면 첫 주기 후 자동연장 없음</td>
+</tr>
+<tr>
+<td><code>extra_info</code></td>
+<td>JSONB</td>
+<td>N</td>
+<td><code>{}</code></td>
+<td>서비스 측 요금제 설명용 key/value (외부 API 노출)</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>String(20)</td>
+<td>N</td>
+<td><code>ACTIVE</code></td>
+<td><code>PlanStatus</code> 값</td>
+</tr>
+<tr>
+<td><code>created_at</code> / <code>updated_at</code></td>
+<td>DateTime(tz)</td>
+<td>N</td>
+<td><code>now()</code></td>
+<td>TimestampMixin</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>삭제 규칙</strong>: 연결된 구독(<code>subscriptions.plan_id</code>)이 1개라도 있으면 RESTRICT로 삭제 불가</li>
+<li><code>billing_cycle=DAY</code> + <code>cycle_days=7</code> 이면 7일 주기 결제</li>
+</ul>
+<hr />
+<h3 id="36-subscriptions">3.6 <code>subscriptions</code> — 구독 상태</h3>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code class="loc">app/models/subscription.py:20-56</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>Nullable</th>
+<th>기본값</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td><code>uuid4()</code></td>
+<td>PK</td>
+</tr>
+<tr>
+<td><code>service_id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td>—</td>
+<td>FK → <code>services.id</code> (<strong>RESTRICT</strong>)</td>
+</tr>
+<tr>
+<td><code>plan_id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td>—</td>
+<td>FK → <code>plans.id</code> (<strong>RESTRICT</strong>)</td>
+</tr>
+<tr>
+<td><code>external_user_id</code></td>
+<td>String(255)</td>
+<td>N</td>
+<td>—</td>
+<td>외부 서비스 측 사용자 식별자 (내부 <code>users</code>와 무관)</td>
+</tr>
+<tr>
+<td><code>card_id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td>—</td>
+<td>FK → <code>cards.id</code> (<strong>RESTRICT</strong>), INDEX; 결제에 사용할 등록 카드</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>String(20)</td>
+<td>N</td>
+<td><code>ACTIVE</code></td>
+<td><code>SubscriptionStatus</code> 값</td>
+</tr>
+<tr>
+<td><code>current_period_start</code></td>
+<td>DateTime(tz)</td>
+<td>N</td>
+<td>—</td>
+<td>현재 결제 주기 시작 (UTC)</td>
+</tr>
+<tr>
+<td><code>current_period_end</code></td>
+<td>DateTime(tz)</td>
+<td>N</td>
+<td>—</td>
+<td>현재 결제 주기 종료 = 접근 만료 시각 (UTC)</td>
+</tr>
+<tr>
+<td><code>next_billing_at</code></td>
+<td>DateTime(tz)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>다음 자동결제 예정 시각 (UTC); 스케줄러가 조회</td>
+</tr>
+<tr>
+<td><code>retry_count</code></td>
+<td>Integer</td>
+<td>N</td>
+<td><code>0</code></td>
+<td>PAST_DUE 상태에서 결제 재시도 누적 횟수</td>
+</tr>
+<tr>
+<td><code>suspended_at</code></td>
+<td>DateTime(tz)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>SUSPENDED 진입 시각; 유예일 초과 시 EXPIRED 판정 기준</td>
+</tr>
+<tr>
+<td><code>created_at</code> / <code>updated_at</code></td>
+<td>DateTime(tz)</td>
+<td>N</td>
+<td><code>now()</code></td>
+<td>TimestampMixin</td>
+</tr>
+</tbody>
+</table>
+<h4 id="appmodelssubscriptionpy46-55">특수 인덱스 (<code class="loc">app/models/subscription.py:46-55</code>)</h4>
+<pre><code class="language-python"># 서비스+사용자 당 1개 구독 규칙 — EXPIRED만 제외하여 재구독 허용
+Index(
+    &quot;uq_subscriptions_one_per_user&quot;,
+    &quot;service_id&quot;, &quot;external_user_id&quot;,
+    unique=True,
+    postgresql_where=text(
+        &quot;status IN ('TRIAL','ACTIVE','PAST_DUE','SUSPENDED','CANCELED','EXTENDED')&quot;),
+)
+
+# 스케줄러의 결제 대상 조회 성능용 복합 인덱스
+Index(&quot;ix_subscriptions_due&quot;, &quot;status&quot;, &quot;next_billing_at&quot;)
+
+# 감사 Phase 3(성능 M1) — 어드민 스코프 필터·배치 만료 조회용
+Index(&quot;ix_subscriptions_service_id&quot;, &quot;service_id&quot;)
+Index(&quot;ix_subscriptions_status_period_end&quot;, &quot;status&quot;, &quot;current_period_end&quot;)
+</code></pre>
+<p>payments/audit_logs에도 같은 마이그레이션(b8c9d0e1f2a3)으로 조회 인덱스가 추가되어
+있다: <code>ix_payments_status_requested</code>(정산 스윕·결제목록), <code>ix_payments_service_approved</code>
+(대시보드·정산 집계), <code>ix_audit_logs_created_at</code>(감사 목록·기간 집계),
+<code>ix_audit_logs_target</code>(대상별 이벤트 조회).</p>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>핵심 규칙</strong>: 동일한 <code>(service_id, external_user_id)</code> 조합으로 TRIAL/ACTIVE/PAST_DUE/SUSPENDED/CANCELED 상태 구독이 이미 있으면 신규 구독 시도 시 DB 에러 발생 → 서비스+사용자 당 1개 구독만 가능.
+EXPIRED가 되면 이 인덱스에서 제외되므로 재구독이 가능합니다.</p>
+</div></blockquote>
+<hr />
+<h3 id="37-payments">3.7 <code>payments</code> — 결제 레코드</h3>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code class="loc">app/models/payment.py:19-46</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>Nullable</th>
+<th>기본값</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td><code>uuid4()</code></td>
+<td>PK</td>
+</tr>
+<tr>
+<td><code>subscription_id</code></td>
+<td>UUID</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>FK → <code>subscriptions.id</code> (<strong>RESTRICT</strong>), INDEX; <strong>단건은 NULL</strong></td>
+</tr>
+<tr>
+<td><code>service_id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td>—</td>
+<td>FK → <code>services.id</code> (<strong>RESTRICT</strong>), INDEX</td>
+</tr>
+<tr>
+<td><code>external_user_id</code></td>
+<td>String(255)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>결제 대상 외부 사용자 ID (단건 추적용으로도 사용)</td>
+</tr>
+<tr>
+<td><code>kind</code></td>
+<td>String(20)</td>
+<td>N</td>
+<td><code>SUBSCRIPTION</code></td>
+<td><code>PaymentKind</code> 값, INDEX</td>
+</tr>
+<tr>
+<td><code>order_id</code></td>
+<td>String(64)</td>
+<td>N</td>
+<td>—</td>
+<td>주문 ID, <strong>(service_id, order_id) 복합 유니크</strong> — 서비스 내 고유(감사 Phase 2, 보안 M-1)</td>
+</tr>
+<tr>
+<td><code>toss_order_id</code></td>
+<td>String(64)</td>
+<td>N</td>
+<td>—</td>
+<td>토스 전달용 주문 ID, <strong>전체 고유(UNIQUE)</strong>. 구독 결제는 order_id와 동일, 단건은 서버 생성(<code>t</code>+uuid hex)</td>
+</tr>
+<tr>
+<td><code>toss_payment_key</code></td>
+<td>String(200)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>토스 승인 후 발급 paymentKey (취소·조회에 사용)</td>
+</tr>
+<tr>
+<td><code>order_name</code></td>
+<td>String(255)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>상품명(토스 orderName). 단건=클라이언트 전달값, 구독=요금제명(<code>plan.name</code>). 결제 상세에 표시. 과거 데이터는 NULL (마이그레이션 <code>f2a3b4c5d6e7</code>)</td>
+</tr>
+<tr>
+<td><code>amount</code></td>
+<td>BigInteger</td>
+<td>N</td>
+<td>—</td>
+<td>실제 청구 금액 (원 단위 KRW 정수)</td>
+</tr>
+<tr>
+<td><code>payment_type</code></td>
+<td>String(10)</td>
+<td>N</td>
+<td>—</td>
+<td><code>PaymentType</code> 값: <code>FIRST</code>/<code>RENEWAL</code>/<code>RETRY</code>/<code>ONE_OFF</code></td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>String(10)</td>
+<td>N</td>
+<td><code>PENDING</code></td>
+<td><code>PaymentStatus</code> 값</td>
+</tr>
+<tr>
+<td><code>failure_code</code></td>
+<td>String(100)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>토스 실패 코드 (FAILED 상태일 때 채워짐)</td>
+</tr>
+<tr>
+<td><code>failure_message</code></td>
+<td>String(500)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>토스 실패 메시지 (사용자 표시용)</td>
+</tr>
+<tr>
+<td><code>idempotency_key</code></td>
+<td>String(300)</td>
+<td>N</td>
+<td>—</td>
+<td>토스 API 멱등성 키 (중복 요청 방지)</td>
+</tr>
+<tr>
+<td><code>requested_at</code></td>
+<td>DateTime(tz)</td>
+<td>N</td>
+<td>—</td>
+<td>결제 요청 생성 시각 (UTC)</td>
+</tr>
+<tr>
+<td><code>approved_at</code></td>
+<td>DateTime(tz)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>토스 승인 완료 시각 (UTC); 실패 시 NULL</td>
+</tr>
+<tr>
+<td><code>raw_response</code></td>
+<td>JSONB</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>토스 API 응답 원문 (사후 분석·감사용)</td>
+</tr>
+<tr>
+<td><code>canceled_amount</code></td>
+<td>BigInteger</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>실제 환불액 (금액 - 수수료); 부분취소 시 <code>amount</code>와 다름</td>
+</tr>
+<tr>
+<td><code>cancel_fee</code></td>
+<td>BigInteger</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>차감 수수료 (수수료율 × amount ÷ 100)</td>
+</tr>
+<tr>
+<td><code>canceled_at</code></td>
+<td>DateTime(tz)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>취소 완료 시각 (UTC)</td>
+</tr>
+<tr>
+<td><code>created_at</code> / <code>updated_at</code></td>
+<td>DateTime(tz)</td>
+<td>N</td>
+<td><code>now()</code></td>
+<td>TimestampMixin</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>구독 결제</strong>: <code>kind=SUBSCRIPTION</code>, <code>subscription_id</code> 있음, <code>payment_type</code>=<code>FIRST</code>/<code>RENEWAL</code>/<code>RETRY</code></li>
+<li><strong>단건 결제</strong>: <code>kind=ONE_OFF</code>, <code>subscription_id=NULL</code>, <code>payment_type=ONE_OFF</code></li>
+<li>레코드는 삭제하지 않습니다 — 실패한 시도도 영구 보존</li>
+</ul>
+<hr />
+<h3 id="38-webhook_events">3.8 <code>webhook_events</code> — 웹훅 이벤트</h3>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code class="loc">app/models/webhook_event.py:18-29</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>Nullable</th>
+<th>기본값</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td><code>uuid4()</code></td>
+<td>PK</td>
+</tr>
+<tr>
+<td><code>transmission_id</code></td>
+<td>String(100)</td>
+<td>N</td>
+<td>—</td>
+<td>토스가 부여한 전송 고유 ID, <strong>UNIQUE</strong> (중복 수신 방지)</td>
+</tr>
+<tr>
+<td><code>event_type</code></td>
+<td>String(100)</td>
+<td>N</td>
+<td>—</td>
+<td>이벤트 종류 (예: <code>PAYMENT_STATUS_CHANGED</code>)</td>
+</tr>
+<tr>
+<td><code>payload</code></td>
+<td>JSONB</td>
+<td>N</td>
+<td>—</td>
+<td>토스 웹훅 원문 페이로드</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>String(20)</td>
+<td>N</td>
+<td><code>RECEIVED</code></td>
+<td><code>WebhookStatus</code> 값</td>
+</tr>
+<tr>
+<td><code>received_at</code></td>
+<td>DateTime(tz)</td>
+<td>N</td>
+<td><code>now()</code></td>
+<td>웹훅 수신 시각 (UTC)</td>
+</tr>
+<tr>
+<td><code>processed_at</code></td>
+<td>DateTime(tz)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>처리 완료 시각 (UTC); 미처리 시 NULL</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><code>transmission_id</code> UNIQUE 제약으로 동일 웹훅 중복 처리를 DB 수준에서 방지 (멱등성 보장)</li>
+</ul>
+<hr />
+<h3 id="39-audit_logs">3.9 <code>audit_logs</code> — 감사 로그</h3>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code class="loc">app/models/audit_log.py:17-35</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>Nullable</th>
+<th>기본값</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td><code>uuid4()</code></td>
+<td>PK</td>
+</tr>
+<tr>
+<td><code>actor_user_id</code></td>
+<td>UUID</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>USER 행위자일 때 <code>users.id</code> (FK 없음, 소프트 참조)</td>
+</tr>
+<tr>
+<td><code>actor_service_id</code></td>
+<td>UUID</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>SERVICE 행위자일 때 <code>services.id</code> (소프트 참조)</td>
+</tr>
+<tr>
+<td><code>actor_type</code></td>
+<td>String(10)</td>
+<td>N</td>
+<td>—</td>
+<td><code>USER</code> / <code>SERVICE</code> / <code>SYSTEM</code></td>
+</tr>
+<tr>
+<td><code>action</code></td>
+<td>String(100)</td>
+<td>N</td>
+<td>—</td>
+<td>행위 식별자 (예: <code>subscription.cancel</code>), INDEX</td>
+</tr>
+<tr>
+<td><code>target_type</code></td>
+<td>String(50)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>대상 엔티티 종류 (예: <code>Subscription</code>)</td>
+</tr>
+<tr>
+<td><code>target_id</code></td>
+<td>String(64)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>대상 엔티티 PK (문자열 직렬화)</td>
+</tr>
+<tr>
+<td><code>detail</code></td>
+<td>JSONB</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>변경 전·후 값 등 부가 정보</td>
+</tr>
+<tr>
+<td><code>ip_address</code></td>
+<td>String(45)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>요청 IP (IPv6 포함 최대 45자)</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>DateTime(tz)</td>
+<td>N</td>
+<td><code>now()</code></td>
+<td>이벤트 발생 시각 (UTC)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>삽입만 허용</strong>, 수정·삭제하지 않습니다 (불변 이력)</li>
+<li><code>actor_user_id</code>와 <code>actor_service_id</code>는 FK 제약 없음 — 계정이 삭제된 후에도 이력이 보존됩니다</li>
+<li><code>actor_type</code>에 따라 <code>actor_user_id</code> 또는 <code>actor_service_id</code> 중 하나만 채워짐; SYSTEM은 둘 다 NULL</li>
+</ul>
+<hr />
+<h3 id="310-global_settings">3.10 <code>global_settings</code> — 전역 운영 설정</h3>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code class="loc">app/models/global_settings.py:16-29</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>Nullable</th>
+<th>기본값</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>Integer</td>
+<td>N</td>
+<td><code>1</code></td>
+<td>PK; <strong>항상 1</strong> (싱글톤 행)</td>
+</tr>
+<tr>
+<td><code>retry_limit</code></td>
+<td>Integer</td>
+<td>N</td>
+<td><code>4</code></td>
+<td>자동결제 실패 재시도 최대 횟수</td>
+</tr>
+<tr>
+<td><code>retry_interval_hours</code></td>
+<td>Integer</td>
+<td>N</td>
+<td><code>12</code></td>
+<td>재시도 간격 (시간)</td>
+</tr>
+<tr>
+<td><code>suspended_grace_days</code></td>
+<td>Integer</td>
+<td>N</td>
+<td><code>30</code></td>
+<td>SUSPENDED 상태 유예 기간 (일); 초과 시 EXPIRED</td>
+</tr>
+<tr>
+<td><code>admin_allowed_ips</code></td>
+<td>JSONB</td>
+<td>N</td>
+<td><code>[]</code></td>
+<td>어드민 접속 허용 IP 목록 (빈 배열 = 제한 없음)</td>
+</tr>
+<tr>
+<td><code>server_disabled</code></td>
+<td>Boolean</td>
+<td>N</td>
+<td><code>false</code></td>
+<td>결제서버 킬스위치 (<code>true</code>이면 외부 API 차단)</td>
+</tr>
+<tr>
+<td><code>disabled_reason</code></td>
+<td>String(500)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>비활성화 사유 (서비스 API 응답에 반환)</td>
+</tr>
+<tr>
+<td><code>disabled_at</code></td>
+<td>DateTime(tz)</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>비활성화 시각 (UTC)</td>
+</tr>
+<tr>
+<td><code>disabled_by</code></td>
+<td>UUID</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>비활성화한 관리자 user id</td>
+</tr>
+<tr>
+<td><code>created_at</code> / <code>updated_at</code></td>
+<td>DateTime(tz)</td>
+<td>N</td>
+<td><code>now()</code></td>
+<td>TimestampMixin</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>코드는 항상 <code>id=1</code> 행에 접근하는 <strong>get_or_create</strong> 패턴 사용</li>
+<li>런타임에 변경하면 스케줄러·어드민 IP 검사·외부 API 게이트에 즉시 반영</li>
+</ul>
+<hr />
+<h3 id="311-cards-vault">3.11 <code>cards</code> — 결제수단 보관함(vault)</h3>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code class="loc">app/models/card.py:15-32</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>Nullable</th>
+<th>기본값</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td><code>uuid4()</code></td>
+<td>PK</td>
+</tr>
+<tr>
+<td><code>service_id</code></td>
+<td>UUID</td>
+<td>N</td>
+<td>—</td>
+<td>FK → <code>services.id</code> (<strong>RESTRICT</strong>), INDEX; 서비스 삭제 불가</td>
+</tr>
+<tr>
+<td><code>external_user_id</code></td>
+<td>String(255)</td>
+<td>N</td>
+<td>—</td>
+<td>외부 서비스 측 사용자 식별자. <strong>(service_id, external_user_id) 복합 유니크</strong></td>
+</tr>
+<tr>
+<td><code>customer_key</code></td>
+<td>String(300)</td>
+<td>N</td>
+<td>—</td>
+<td>토스페이먼츠 customerKey (빌링키 발급·관리에 사용)</td>
+</tr>
+<tr>
+<td><code>billing_key_encrypted</code></td>
+<td>String(1024)</td>
+<td>N</td>
+<td>—</td>
+<td>토스 빌링키 — AES-GCM 암호화 보관 (평문 저장 안 함)</td>
+</tr>
+<tr>
+<td><code>billing_key_hash</code></td>
+<td>String(64)</td>
+<td>N</td>
+<td>—</td>
+<td>빌링키 SHA-256 해시 (중복 탐지·조회용), INDEX</td>
+</tr>
+<tr>
+<td><code>card_info</code></td>
+<td>JSONB</td>
+<td><strong>Y</strong></td>
+<td>NULL</td>
+<td>카드 표시 정보 (마스킹된 번호·발급사 등, 토스 응답 부분 저장)</td>
+</tr>
+<tr>
+<td><code>created_at</code> / <code>updated_at</code></td>
+<td>DateTime(tz)</td>
+<td>N</td>
+<td><code>now()</code></td>
+<td>TimestampMixin</td>
+</tr>
+</tbody>
+</table>
+<h4 id="_1">제약</h4>
+<ul>
+<li><code>uq_cards_service_user</code> — <code>(service_id, external_user_id)</code> 복합 유니크: 서비스+사용자 당 카드 1건만 허용</li>
+<li><code>service_id</code> FK는 <code>ondelete=RESTRICT</code> — 카드가 있는 서비스는 삭제 불가</li>
+<li>카드 교체(재등록) 시 기존 레코드를 UPDATE 또는 DELETE 후 INSERT — 동일 (service_id, external_user_id)로 두 행을 동시에 가질 수 없음</li>
+<li><strong>카드 삭제 정책</strong>: soft-delete 없음. 활성 구독(<code>ACTIVE</code> 상태)이 참조 중인 카드는 서비스 레이어에서 삭제를 차단한다. 활성 구독이 없을 때만 하드 삭제(hard-delete) 허용.</li>
+</ul>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>vault 개념</strong>: 빌링키는 카드 번호와 동급의 민감 정보입니다. <code>billing_key_encrypted</code>에 AES-GCM으로만 저장하고, 인증 검증 없이 평문이 노출되는 경로를 만들지 않습니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="4">4. 관계도 (텍스트)</h2>
+<pre><code>services (1)
+  ├─── plans (N)          service_id FK, ondelete=RESTRICT
+  ├─── subscriptions (N)  service_id FK, ondelete=RESTRICT
+  ├─── payments (N)       service_id FK, ondelete=RESTRICT
+  ├─── cards (N)          service_id FK, ondelete=RESTRICT
+  ├─── users (N)          service_id FK, ondelete=CASCADE   ← 주 담당 서비스
+  └─── user_services (N)  service_id FK, ondelete=CASCADE   ← 추가 담당 서비스
+
+users (N) ──── user_services (M) ──── services (N)
+  (다대다: 한 관리자가 여러 서비스 담당 가능)
+
+users (1)
+  └─── password_setup_tokens (N)  user_id FK, ondelete=CASCADE
+
+plans (1)
+  └─── subscriptions (N)  plan_id FK, ondelete=RESTRICT
+
+subscriptions (1)
+  └─── payments (N)       subscription_id FK, ondelete=RESTRICT  ← 단건 결제는 NULL
+</code></pre>
+<h3 id="fk-ondelete">FK + ondelete 요약</h3>
+<table>
+<thead>
+<tr>
+<th>FK 컬럼 (테이블)</th>
+<th>참조</th>
+<th>ondelete</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>plans.service_id</code></td>
+<td><code>services.id</code></td>
+<td>RESTRICT (구독 없을 때만 삭제 가능)</td>
+</tr>
+<tr>
+<td><code>subscriptions.service_id</code></td>
+<td><code>services.id</code></td>
+<td>RESTRICT</td>
+</tr>
+<tr>
+<td><code>subscriptions.plan_id</code></td>
+<td><code>plans.id</code></td>
+<td>RESTRICT</td>
+</tr>
+<tr>
+<td><code>payments.subscription_id</code></td>
+<td><code>subscriptions.id</code></td>
+<td>RESTRICT</td>
+</tr>
+<tr>
+<td><code>payments.service_id</code></td>
+<td><code>services.id</code></td>
+<td>RESTRICT</td>
+</tr>
+<tr>
+<td><code>users.service_id</code></td>
+<td><code>services.id</code></td>
+<td><strong>CASCADE</strong></td>
+</tr>
+<tr>
+<td><code>user_services.user_id</code></td>
+<td><code>users.id</code></td>
+<td><strong>CASCADE</strong></td>
+</tr>
+<tr>
+<td><code>user_services.service_id</code></td>
+<td><code>services.id</code></td>
+<td><strong>CASCADE</strong></td>
+</tr>
+<tr>
+<td><code>password_setup_tokens.user_id</code></td>
+<td><code>users.id</code></td>
+<td><strong>CASCADE</strong></td>
+</tr>
+<tr>
+<td><code>cards.service_id</code></td>
+<td><code>services.id</code></td>
+<td>RESTRICT</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>RESTRICT</strong>: 참조 중인 행이 있으면 삭제 불가 → 안전망<br />
+<strong>CASCADE</strong>: 부모가 삭제되면 자식도 자동 삭제 → 계정·서비스 정리에 사용</p>
+</div></blockquote>
+<hr />
+<h2 id="5-enum">5. Enum 값 상세</h2>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code>app/models/enums.py</code></p>
+</div></blockquote>
+<h3 id="servicestatus-line-13"><code>ServiceStatus</code> (line 13)</h3>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ACTIVE</code></td>
+<td>정상 운영 중인 서비스 (API 키 인증 가능)</td>
+</tr>
+<tr>
+<td><code>INACTIVE</code></td>
+<td>비활성화된 서비스 (API 키 인증 불가)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="userrole-line-18"><code>UserRole</code> (line 18)</h3>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SYSTEM_ADMIN</code></td>
+<td>전체 관리자 — 서비스·관리자 계정 전체 접근</td>
+</tr>
+<tr>
+<td><code>SERVICE_MANAGER</code></td>
+<td>서비스 담당자 — 자신이 담당하는 서비스만 접근</td>
+</tr>
+</tbody>
+</table>
+<h3 id="userstatus-line-23"><code>UserStatus</code> (line 23)</h3>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PENDING</code></td>
+<td>생성됨, 비밀번호 설정 대기</td>
+</tr>
+<tr>
+<td><code>ACTIVE</code></td>
+<td>정상 로그인 가능</td>
+</tr>
+<tr>
+<td><code>LOCKED</code></td>
+<td>로그인 연속 실패로 잠김 (자동 해제 — <code>locked_until</code> 이후)</td>
+</tr>
+<tr>
+<td><code>DISABLED</code></td>
+<td>관리자가 비활성화 (복구 가능)</td>
+</tr>
+<tr>
+<td><code>DELETED</code></td>
+<td>관리자가 삭제 (소프트 삭제, 화면에서 숨김)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="billingcycle-line-31"><code>BillingCycle</code> (line 31)</h3>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>YEAR</code></td>
+<td>연 단위 결제</td>
+</tr>
+<tr>
+<td><code>MONTH</code></td>
+<td>월 단위 결제</td>
+</tr>
+<tr>
+<td><code>WEEK</code></td>
+<td>주 단위 결제</td>
+</tr>
+<tr>
+<td><code>DAY</code></td>
+<td>일 단위 결제 — <code>Plan.cycle_days</code>에 원하는 일수를 함께 지정</td>
+</tr>
+</tbody>
+</table>
+<h3 id="firstpaymenttype-line-40"><code>FirstPaymentType</code> (line 40)</h3>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NONE</code></td>
+<td>첫 결제 혜택 없음 (정상 금액 청구)</td>
+</tr>
+<tr>
+<td><code>FREE</code></td>
+<td>첫 결제 무료 (0원)</td>
+</tr>
+<tr>
+<td><code>DISCOUNT_AMOUNT</code></td>
+<td>첫 결제 정액 할인 — <code>first_payment_value</code>(원) 차감</td>
+</tr>
+<tr>
+<td><code>DISCOUNT_PERCENT</code></td>
+<td>첫 결제 정률 할인 — <code>first_payment_value</code>(%) 비율 할인</td>
+</tr>
+</tbody>
+</table>
+<h3 id="discounttype-line-55"><code>DiscountType</code> (line 55)</h3>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NONE</code></td>
+<td>상시 할인 없음</td>
+</tr>
+<tr>
+<td><code>DISCOUNT_AMOUNT</code></td>
+<td>상시 정액 할인 (원)</td>
+</tr>
+<tr>
+<td><code>DISCOUNT_PERCENT</code></td>
+<td>상시 정률 할인 (%)</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><code>DiscountType</code>은 <code>FirstPaymentType</code>에서 <code>FREE</code>가 빠진 버전입니다. 상시 할인에 "무료" 개념은 없습니다.</p>
+</div></blockquote>
+<h3 id="planstatus-line-62"><code>PlanStatus</code> (line 62)</h3>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ACTIVE</code></td>
+<td>신규 구독 가능한 정상 요금제</td>
+</tr>
+<tr>
+<td><code>ARCHIVED</code></td>
+<td>신규 구독 불가 (기존 구독은 유지됨); 구독이 남아있으면 삭제 불가</td>
+</tr>
+</tbody>
+</table>
+<h3 id="subscriptionstatus-line-67"><code>SubscriptionStatus</code> (line 67)</h3>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>접근 허용?</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TRIAL</code></td>
+<td>O</td>
+<td>체험 중 — 만료 시 첫 정기 결제</td>
+</tr>
+<tr>
+<td><code>ACTIVE</code></td>
+<td>O</td>
+<td>정상 이용</td>
+</tr>
+<tr>
+<td><code>PAST_DUE</code></td>
+<td>O</td>
+<td>결제 실패/유예 (접근은 유지, 재시도 진행 중)</td>
+</tr>
+<tr>
+<td><code>SUSPENDED</code></td>
+<td>X</td>
+<td>강제 정지 — 수동 결제 대기 (접근 차단)</td>
+</tr>
+<tr>
+<td><code>CANCELED</code></td>
+<td>O</td>
+<td>해지 예약 — 만료일까지 이용 가능, 이후 EXPIRED</td>
+</tr>
+<tr>
+<td><code>EXTENDED</code></td>
+<td>O</td>
+<td>연장처리 — 운영자가 만료일 수동 연장, 새 만료일에 자동결제 갱신</td>
+</tr>
+<tr>
+<td><code>EXPIRED</code></td>
+<td>X</td>
+<td>완전 종료 (재구독 시 새 레코드 생성 가능)</td>
+</tr>
+</tbody>
+</table>
+<p><code>ACCESS_ALLOWED_STATUSES = {TRIAL, ACTIVE, PAST_DUE, CANCELED, EXTENDED}</code><br />
+<code>OPEN_SUBSCRIPTION_STATUSES = (TRIAL, ACTIVE, PAST_DUE, SUSPENDED, CANCELED, EXTENDED)</code> — 이 상태에서는 1구독 제한 적용</p>
+<h3 id="paymentstatus-line-93"><code>PaymentStatus</code> (line 93)</h3>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PENDING</code></td>
+<td>결제 요청 생성됨, 토스 승인 응답 대기</td>
+</tr>
+<tr>
+<td><code>DONE</code></td>
+<td>토스 승인 완료</td>
+</tr>
+<tr>
+<td><code>FAILED</code></td>
+<td>토스 거절 또는 네트워크 오류</td>
+</tr>
+<tr>
+<td><code>CANCELED</code></td>
+<td>승인 후 취소 처리됨</td>
+</tr>
+</tbody>
+</table>
+<h3 id="paymenttype-line-102"><code>PaymentType</code> (line 102)</h3>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FIRST</code></td>
+<td>최초 결제 (첫 구독 시 할인 적용 대상)</td>
+</tr>
+<tr>
+<td><code>RENEWAL</code></td>
+<td>정기 자동 갱신 결제</td>
+</tr>
+<tr>
+<td><code>RETRY</code></td>
+<td>PAST_DUE 상태에서 재시도한 결제</td>
+</tr>
+<tr>
+<td><code>ONE_OFF</code></td>
+<td>단건(구독 무관) 결제</td>
+</tr>
+</tbody>
+</table>
+<h3 id="paymentkind-line-111"><code>PaymentKind</code> (line 111)</h3>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SUBSCRIPTION</code></td>
+<td>구독에 묶인 정기(자동) 결제</td>
+</tr>
+<tr>
+<td><code>ONE_OFF</code></td>
+<td>구독과 무관한 단건 즉시 결제</td>
+</tr>
+</tbody>
+</table>
+<h3 id="webhookstatus-line-118"><code>WebhookStatus</code> (line 118)</h3>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>RECEIVED</code></td>
+<td>수신됨, 아직 처리 전</td>
+</tr>
+<tr>
+<td><code>PROCESSED</code></td>
+<td>정상 처리 완료</td>
+</tr>
+<tr>
+<td><code>IGNORED</code></td>
+<td>중복·무관 이벤트로 무시</td>
+</tr>
+<tr>
+<td><code>FAILED</code></td>
+<td>처리 중 오류 발생</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-alembic">6. 마이그레이션 (Alembic)</h2>
+<h3 id="61">6.1 기본 개념</h3>
+<p>Alembic은 SQLAlchemy ORM 모델과 실제 DB 스키마 사이의 변경 이력을 버전으로 관리합니다.<br />
+각 마이그레이션 파일은 <code>revision</code>(현재 버전 ID)과 <code>down_revision</code>(이전 버전 ID)을 체인 형태로 연결합니다.</p>
+<pre><code>[최초 스키마] → [user_services 추가] → [trial/suspended 추가] → ... → [최신]
+</code></pre>
+<h3 id="62">6.2 마이그레이션 리비전 체인</h3>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일 위치: <code>alembic/versions/</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>순서</th>
+<th>Revision ID</th>
+<th>파일명</th>
+<th>변경 내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>8cf5f449fda1</code></td>
+<td><code>8cf5f449fda1_initial_schema.py</code></td>
+<td>초기 스키마: audit_logs, services, webhook_events, plans, users, password_setup_tokens, subscriptions, payments</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>3501c20729e0</code></td>
+<td><code>3501c20729e0_user_services_junction.py</code></td>
+<td><code>user_services</code> 다대다 테이블 추가</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>2234818cce0e</code></td>
+<td><code>2234818cce0e_trial_suspended_states.py</code></td>
+<td>plans에 <code>trial_enabled</code>·<code>trial_days</code>, subscriptions에 <code>suspended_at</code>, 1구독 인덱스 확장(<code>TRIAL</code>·<code>SUSPENDED</code> 포함)</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>2caae01d3691</code></td>
+<td><code>2caae01d3691_user_phone_and_statuses.py</code></td>
+<td>users에 <code>phone</code> 컬럼 추가</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>794d3b3fcf7c</code></td>
+<td><code>794d3b3fcf7c_plan_recurring_discount.py</code></td>
+<td>plans에 <code>recurring_discount_type</code>·<code>recurring_discount_value</code> 추가</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>a1b2c3d4e5f6</code></td>
+<td><code>a1b2c3d4e5f6_service_api_key_encrypted.py</code></td>
+<td>services에 <code>api_key_encrypted</code> 추가 (화면 표시용 AES 암호문)</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>b2c3d4e5f6a7</code></td>
+<td><code>b2c3d4e5f6a7_audit_actor_service_id.py</code></td>
+<td>audit_logs에 <code>actor_service_id</code> 추가</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>c3d4e5f6a7b8</code></td>
+<td><code>c3d4e5f6a7b8_payment_one_off.py</code></td>
+<td>payments에 <code>kind</code>·<code>service_id</code>·<code>external_user_id</code> 추가, <code>subscription_id</code> nullable로 변경 (단건 결제 지원)</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>d4e5f6a7b8c9</code></td>
+<td><code>d4e5f6a7b8c9_cancel_policy_and_fields.py</code></td>
+<td>services에 <code>cancellation_enabled</code>·<code>cancellation_fee_percent</code>, payments에 <code>canceled_amount</code>·<code>cancel_fee</code>·<code>canceled_at</code> 추가</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>e5f6a7b8c9d0</code></td>
+<td><code>e5f6a7b8c9d0_global_settings.py</code></td>
+<td><code>global_settings</code> 테이블 신규 생성</td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>f6a7b8c9d0e1</code></td>
+<td><code>f6a7b8c9d0e1_plan_autorenew_extra.py</code></td>
+<td>plans에 <code>auto_renew</code>·<code>extra_info</code> 추가</td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>a7b8c9d0e1f2</code></td>
+<td><code>a7b8c9d0e1f2_payment_order_scope.py</code></td>
+<td>payments <code>order_id</code> 전역 유니크 → <code>(service_id, order_id)</code> 복합 유니크, <code>toss_order_id</code>(전역 유니크) 추가 — 감사 Phase 2(보안 M-1)</td>
+</tr>
+<tr>
+<td>13</td>
+<td><code>b8c9d0e1f2a3</code></td>
+<td><code>b8c9d0e1f2a3_perf_indexes.py</code></td>
+<td>조회 인덱스 6종: payments(status,requested_at)/(service_id,approved_at), audit_logs(created_at)/(target_type,target_id), subscriptions(service_id)/(status,current_period_end) — 감사 Phase 3(성능 M1)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>현재 HEAD</strong>: <code>b8c9d0e1f2a3</code></p>
+<h3 id="63">6.3 주요 명령어</h3>
+<pre><code class="language-bash"># DB를 최신 버전으로 업그레이드 (배포 시 실행)
+alembic upgrade head
+
+# 현재 리비전 확인
+alembic current
+
+# 리비전 이력 조회
+alembic history --verbose
+
+# 모델 변경 후 마이그레이션 파일 자동 생성
+alembic revision --autogenerate -m &quot;설명을 여기에 작성&quot;
+
+# 한 단계 롤백 (주의: 운영 환경에서 신중하게 사용)
+alembic downgrade -1
+
+# 특정 리비전으로 다운그레이드
+alembic downgrade 8cf5f449fda1
+</code></pre>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>환경변수</strong>: <code>DATABASE_URL</code> 환경변수가 설정되어 있으면 <code>alembic.ini</code>의 기본값을 덮어씁니다 (<code>alembic/env.py</code>에서 처리).</p>
+</div></blockquote>
+<h3 id="64">6.4 테스트에서의 스키마 처리</h3>
+<p>테스트 환경에서는 Alembic 마이그레이션을 사용하지 않고 <code>Base.metadata.create_all()</code>로 스키마를 생성합니다.</p>
+<pre><code class="language-python"># tests/conftest.py:45-48
+async with engine.begin() as conn:
+    await conn.run_sync(Base.metadata.drop_all)   # 기존 테이블 전체 삭제
+    await conn.run_sync(Base.metadata.create_all)  # 모델로부터 테이블 새로 생성
+</code></pre>
+<ul>
+<li><strong>이유</strong>: 테스트는 매번 깨끗한 상태에서 시작해야 하므로 drop_all → create_all 패턴 사용</li>
+<li><strong>격리</strong>: <code>tests/integration/conftest.py</code>의 <code>_auto_clean</code> fixture가 매 테스트 후 DB/Redis를 초기화</li>
+<li><strong>주의</strong>: 테스트 DB는 운영 DB와 별개(<code>payment_test</code> 데이터베이스)</li>
+</ul>
+<hr />
+<h2 id="7">7. 상호 참조</h2>
+<ul>
+<li><strong>구독 생성 API</strong>: 04번 문서 (subscription 레코드 생성, 1구독 인덱스 충돌 처리)</li>
+<li><strong>결제 처리 흐름</strong>: 05번 문서 (payment 레코드 상태 전환, 토스 API 연동)</li>
+<li><strong>스케줄러</strong>: <a href="05-subscription-renewal.html">05번 문서</a> (<code>ix_subscriptions_due</code> 인덱스를 이용한 <code>next_billing_at</code> 조회)</li>
+<li><strong>웹훅 처리</strong>: <a href="12-webhooks.html">12번 문서</a> (<code>webhook_events</code> 테이블, <code>transmission_id</code> 중복 방지)</li>
+<li><strong>관리자 인증·계정</strong>: <a href="13-admin-accounts.html">13번 문서</a> (<code>users</code>, <code>password_setup_tokens</code>)</li>
+<li><strong>암호화·인증 공통</strong>: <a href="03-auth-and-security.html">03번 문서</a> (AES-GCM, SHA-256 해시, HMAC)</li>
+<li><strong>감사 로그 기록</strong>: 15번 문서 (<code>audit_logs</code> 삽입 패턴, <code>actor_type</code> 구분)</li>
+</ul>
+    </div>
+    <div class="pager"><a class="pg prev" href="01-getting-started.html"><small>← 이전</small><b>01. 시작하기 — 구조·실행·테스트·요청 처리 공통 흐름</b></a><a class="pg next" href="03-auth-and-security.html"><small>다음 →</small><b>03. 인증과 보안 공통</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#1">1. 테이블 목록</a>
+<a class="toc-h2" href="#2">2. 공통 규칙</a>
+<a class="toc-h3" href="#21-timestampmixin-appmodelsbasepy27-37">2.1 TimestampMixin (app/models/base.py:27-37)</a>
+<a class="toc-h3" href="#22-krw">2.2 금액은 KRW 정수</a>
+<a class="toc-h3" href="#23">2.3 민감정보 보안 처리</a>
+<a class="toc-h3" href="#24-appmodelsbasepy12-18">2.4 명명 규칙 (app/models/base.py:12-18)</a>
+<a class="toc-h2" href="#3">3. 테이블 상세</a>
+<a class="toc-h3" href="#31-services">3.1 services — 서비스 등록 정보</a>
+<a class="toc-h3" href="#32-users">3.2 users — 관리자 계정</a>
+<a class="toc-h3" href="#33-password_setup_tokens">3.3 password_setup_tokens — 비밀번호 초기 설정 토큰</a>
+<a class="toc-h3" href="#34-user_services">3.4 user_services — 관리자↔서비스 다대다 연결</a>
+<a class="toc-h3" href="#35-plans">3.5 plans — 구독 요금제</a>
+<a class="toc-h3" href="#36-subscriptions">3.6 subscriptions — 구독 상태</a>
+<a class="toc-h3" href="#37-payments">3.7 payments — 결제 레코드</a>
+<a class="toc-h3" href="#38-webhook_events">3.8 webhook_events — 웹훅 이벤트</a>
+<a class="toc-h3" href="#39-audit_logs">3.9 audit_logs — 감사 로그</a>
+<a class="toc-h3" href="#310-global_settings">3.10 global_settings — 전역 운영 설정</a>
+<a class="toc-h3" href="#311-cards-vault">3.11 cards — 결제수단 보관함(vault)</a>
+<a class="toc-h2" href="#4">4. 관계도 (텍스트)</a>
+<a class="toc-h3" href="#fk-ondelete">FK + ondelete 요약</a>
+<a class="toc-h2" href="#5-enum">5. Enum 값 상세</a>
+<a class="toc-h3" href="#servicestatus-line-13">ServiceStatus (line 13)</a>
+<a class="toc-h3" href="#userrole-line-18">UserRole (line 18)</a>
+<a class="toc-h3" href="#userstatus-line-23">UserStatus (line 23)</a>
+<a class="toc-h3" href="#billingcycle-line-31">BillingCycle (line 31)</a>
+<a class="toc-h3" href="#firstpaymenttype-line-40">FirstPaymentType (line 40)</a>
+<a class="toc-h3" href="#discounttype-line-55">DiscountType (line 55)</a>
+<a class="toc-h3" href="#planstatus-line-62">PlanStatus (line 62)</a>
+<a class="toc-h3" href="#subscriptionstatus-line-67">SubscriptionStatus (line 67)</a>
+<a class="toc-h3" href="#paymentstatus-line-93">PaymentStatus (line 93)</a>
+<a class="toc-h3" href="#paymenttype-line-102">PaymentType (line 102)</a>
+<a class="toc-h3" href="#paymentkind-line-111">PaymentKind (line 111)</a>
+<a class="toc-h3" href="#webhookstatus-line-118">WebhookStatus (line 118)</a>
+<a class="toc-h2" href="#6-alembic">6. 마이그레이션 (Alembic)</a>
+<a class="toc-h3" href="#61">6.1 기본 개념</a>
+<a class="toc-h3" href="#62">6.2 마이그레이션 리비전 체인</a>
+<a class="toc-h3" href="#63">6.3 주요 명령어</a>
+<a class="toc-h3" href="#64">6.4 테스트에서의 스키마 처리</a>
+<a class="toc-h2" href="#7">7. 상호 참조</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

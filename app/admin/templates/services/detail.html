@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}{{ service.name }}{% endblock %}
+{% block crumb %}서비스 상세{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="btn-text" href="/admin/services"><span data-lucide="arrow-left"></span>서비스</a>
+  <h1 style="margin:0">{{ service.name }}</h1>
+  <span class="badge badge-{{ service.status }}">{{ service.status }}</span>
+  <span class="spacer"></span>
+  <form method="post" action="/admin/services/{{ service.id }}/status" style="margin:0">
+    <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+    <input type="hidden" name="status" value="{{ 'INACTIVE' if service.status == 'ACTIVE' else 'ACTIVE' }}">
+    <button class="btn btn-ghost" type="submit">{{ '비활성화' if service.status == 'ACTIVE' else '활성화' }}</button>
+  </form>
+  <button type="button" class="btn btn-ghost"
+          hx-get="/admin/services/{{ service.id }}/keys-modal"
+          hx-target="body" hx-swap="beforeend">
+    <span data-lucide="copy"></span>키 복사</button>
+  <form method="post" action="/admin/services/{{ service.id }}/rotate-keys" style="margin:0"
+        data-confirm="기존 키는 즉시 무효화되고 새 키가 발급됩니다."
+        data-confirm-title="키를 재발급할까요?" data-confirm-ok="재발급">
+    <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+    <button class="btn btn-ghost" type="submit"><span data-lucide="key-round"></span>키 재발급</button>
+  </form>
+  <form method="post" action="/admin/services/{{ service.id }}/delete" style="margin:0"
+        data-confirm="구독 이력이 있는 서비스는 삭제할 수 없습니다. 정말 삭제할까요?"
+        data-confirm-title="서비스를 삭제할까요?" data-confirm-ok="삭제">
+    <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+    <button class="btn btn-danger" type="submit"><span data-lucide="trash-2"></span>삭제</button>
+  </form>
+</div>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="block-head"><h2 style="margin:0">개요</h2></div>
+    <div class="kv"><span class="muted">요금제</span><span>{{ plan_count }}개</span></div>
+    <div class="kv"><span class="muted">구독</span><span>{{ sub_count }}건</span></div>
+    <div class="block-head" style="margin-top:16px">
+      <h2 style="margin:0;font-size:14px">담당자 계정</h2>
+      <button type="button" class="btn btn-sm btn-sub" data-toggle="#assign-form">
+        <span data-lucide="user-plus"></span>담당자 추가</button>
+    </div>
+    {% for m in managers %}
+    {% set is_primary = m.email == service.manager_email %}
+    <div class="kv">
+      <span><a href="/admin/users/{{ m.id }}">{{ m.email }}</a>
+        {% if is_primary %}<span class="badge badge-ACTIVE" style="margin-left:6px">대표</span>{% endif %}
+        <span class="badge badge-{{ m.status }}" style="margin-left:6px">{{ m.status }}</span></span>
+      <span style="display:flex;gap:10px;align-items:center">
+        {% if not is_primary %}
+        <form method="post" action="/admin/services/{{ service.id }}/primary-manager" style="margin:0"
+              data-confirm="알림 메일 수신처가 이 계정으로 변경됩니다." data-confirm-title="대표 담당자로 지정할까요?" data-confirm-ok="지정">
+          <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+          <input type="hidden" name="user_id" value="{{ m.id }}">
+          <button class="btn-text" type="submit">대표 지정</button>
+        </form>
+        {% endif %}
+        <a class="btn-text" href="/admin/users/{{ m.id }}/edit">수정</a>
+        {% if not is_primary %}
+        <form method="post" action="/admin/services/{{ service.id }}/managers/{{ m.id }}/remove" style="margin:0"
+              data-confirm="계정은 유지되고 이 서비스의 담당에서만 제외됩니다." data-confirm-title="담당자를 삭제할까요?" data-confirm-ok="삭제">
+          <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+          <button class="btn-text" type="submit" style="color:#E5396E">삭제</button>
+        </form>
+        {% endif %}
+      </span>
+    </div>
+    {% else %}
+    <p class="muted" style="font-size:13px">담당 관리자가 없습니다.</p>
+    {% endfor %}
+    {# '담당자 추가' 버튼은 항상 노출 — 할당 가능 계정이 없으면 토글 시 안내 문구(#assign-form p)가 나타난다 (의도된 동작) #}
+    {% if assignable_managers %}
+    <form id="assign-form" method="post" action="/admin/services/{{ service.id }}/assign-manager"
+          class="toolbar" style="margin-top:14px;display:none">
+      <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+      <select name="user_id">
+        {% for u in assignable_managers %}<option value="{{ u.id }}">{{ u.email }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-sub" type="submit">추가</button>
+    </form>
+    {% else %}
+    <p id="assign-form" class="muted" style="font-size:12px;margin-top:10px;display:none">
+      할당 가능한 서비스 담당자 계정이 없습니다. <a href="/admin/users/new">계정 추가</a></p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <div class="block-head"><h2 style="margin:0">허용 IP</h2></div>
+    <p class="muted" style="font-size:12px;margin:0 0 10px">
+      목록을 <b>비우면 IP 제한 없음</b>(모든 IP 허용 — API는 HMAC 서명으로 보호)이 됩니다.<br>
+      <b>127.0.0.1</b>(같은 서버·로컬)은 <b>항상 허용</b>되므로 목록에 표시·저장하지 않습니다.
+    </p>
+    <form method="post" action="/admin/services/{{ service.id }}/ips" data-ip-form data-ip-allow-empty>
+      <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+      <input type="hidden" name="allowed_ips">
+      <div data-ip-rows>
+        {% for ip in service.allowed_ips %}{% if ip not in '127.0.0.1 ::1'.split() %}
+        <div class="ip-row" data-ip-row>
+          {% for oct in ip.split('.') %}
+          <input type="text" inputmode="numeric" maxlength="3" class="ip-oct" value="{{ oct }}">
+          {% endfor %}
+          <button type="button" class="btn-text" data-ip-del style="color:#E5396E">삭제</button>
+        </div>
+        {% endif %}{% endfor %}
+      </div>
+      <button type="button" class="btn btn-sm btn-ghost" data-ip-add style="margin-top:8px">
+        <span data-lucide="plus"></span>IP 추가</button>
+      <div class="actions"><button class="btn btn-sm btn-danger" type="submit">IP 갱신</button></div>
+    </form>
+  </div>
+</div>
+{# 취소 정책 카드 + 서비스 알림 카드 — 나란히 배치(요청 016: 알림 URL 입력 박스는 취소정책 옆) #}
+<div class="grid grid-2">
+<div class="card">
+  <h3>일반결제 취소 정책</h3>
+  <form method="post" action="/admin/services/{{ service.id }}/cancel-policy"
+        style="display:flex;align-items:center;gap:12px">
+    <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+    <label style="display:flex;align-items:center;gap:6px">
+      <input type="checkbox" name="cancellation_enabled"
+             {{ 'checked' if service.cancellation_enabled }} style="width:auto">
+      취소 허용
+    </label>
+    <label style="display:flex;align-items:center;gap:6px">
+      취소 수수료 <input type="number" name="cancellation_fee_percent" min="0" max="100"
+        value="{{ service.cancellation_fee_percent }}" style="width:70px;height: 30px;"> %
+        <button class="btn btn-sm btn-danger" type="submit">저장</button>
+    </label>
+
+  </form>
+</div>
+{# 서비스 알림(아웃고잉 웹훅) URL 카드 — 구독·결제·카드·요금제 이벤트를 이 URL로 POST(요청 016) #}
+<div class="card">
+  <div class="block-head" style="display:flex;align-items:center;gap:8px">
+    <h3 style="margin:0">서비스 알림 URL</h3>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="document.getElementById('notify-help').classList.add('open')">
+      <span data-lucide="info"></span>상세</button>
+  </div>
+  <p class="muted" style="font-size:12px;margin:4px 0 8px">
+    구독·결제·카드·요금제 이벤트 발생 시 이 URL로 알림(POST, 서명 포함)을 보냅니다. 비우면 끔.
+  </p>
+  <form method="post" action="/admin/services/{{ service.id }}/notification-url"
+        style="display:flex;align-items:center;gap:8px">
+    <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+    <input type="text" name="notification_url" value="{{ service.notification_url or '' }}"
+           placeholder="https://your-service.example.com/notify" style="flex:1">
+    <button class="btn btn-sm btn-danger" type="submit">저장</button>
+  </form>
+  {# 테스트 알림 전송 — 저장된 URL로 샘플 알림(EVENT=notification.test)을 동기 전송하고 결과 표시 #}
+  <form method="post" action="/admin/services/{{ service.id }}/notification-test" style="margin-top:8px">
+    <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+    <button class="btn btn-sm btn-ghost" type="submit"
+            {% if not service.notification_url %}disabled title="알림 URL을 먼저 저장하세요"{% endif %}>
+      <span data-lucide="send"></span>테스트 알림 전송</button>
+    <span class="muted" style="font-size:11px;margin-left:6px">저장된 URL로 샘플 알림을 보냅니다</span>
+  </form>
+</div>
+</div>
+{# 알림 이벤트 설명 모달 — '상세' 버튼으로 열림 #}
+{% include "services/_notify_help_modal.html" %}
+{% set in_detail_page = true %}
+{% include "services/_plans_table.html" %}
+{% include "services/_subs_table.html" %}
+{# 등록 카드(결제수단 보관함) — 이 서비스에 카드를 등록한 사용자별 1건 #}
+{% include "services/_cards_table.html" %}
+{% include "services/_oneoff_table.html" %}
+
+{# ===== 이벤트(감사 로그) — 이 서비스 관련 동작 이력(요청 015), epage로 10건씩 페이징 ===== #}
+{% include "services/_events_table.html" %}
+{% endblock %}

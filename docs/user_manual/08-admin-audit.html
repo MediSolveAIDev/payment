@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8. 감사 로그 — 구독·결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>사용·개발 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>📘</span>사용자 매뉴얼</div>
+<a class="nav-link" href="00-overview.html"><span class="n">0</span><span class="tt">0. 구독·결제 서버 전체 개요</span></a>
+<a class="nav-link" href="01-admin-console.html"><span class="n">1</span><span class="tt">1. 관리자 콘솔 사용하기</span></a>
+<a class="nav-link" href="02-admin-card.html"><span class="n">2</span><span class="tt">2. 카드(결제수단) 관리</span></a>
+<a class="nav-link" href="03-admin-subscription.html"><span class="n">3</span><span class="tt">3. 구독 관리</span></a>
+<a class="nav-link" href="04-admin-plan.html"><span class="n">4</span><span class="tt">4. 요금제 관리</span></a>
+<a class="nav-link" href="05-admin-payment-refund.html"><span class="n">5</span><span class="tt">5. 일반결제와 환불(취소)</span></a>
+<a class="nav-link" href="06-admin-accounts.html"><span class="n">6</span><span class="tt">6. 계정 관리</span></a>
+<a class="nav-link" href="07-admin-settings.html"><span class="n">7</span><span class="tt">7. 전체 설정</span></a>
+<a class="nav-link active" href="08-admin-audit.html"><span class="n">8</span><span class="tt">8. 감사 로그</span></a>
+<a class="nav-link" href="09-dashboard.html"><span class="n">9</span><span class="tt">9. 대시보드</span></a>
+<div class="nav-group"><span>🛠️</span>개발자 매뉴얼</div>
+<a class="nav-link" href="10-install-deploy.html"><span class="n">10</span><span class="tt">10. 설치·설정·배포</span></a>
+<a class="nav-link" href="11-service-api.html"><span class="n">11</span><span class="tt">11. 서비스 연동 API</span></a>
+<a class="nav-link" href="12-feature-card.html"><span class="n">12</span><span class="tt">12. 카드 보관함(Card Vault) 기능</span></a>
+<a class="nav-link" href="13-feature-subscription.html"><span class="n">13</span><span class="tt">13. 구독 기능</span></a>
+<a class="nav-link" href="14-feature-payment.html"><span class="n">14</span><span class="tt">14. 일반결제·취소·정산 기능</span></a>
+<a class="nav-link" href="15-feature-notifications.html"><span class="n">15</span><span class="tt">15. 서비스 알림(아웃고잉 웹훅) 기능</span></a>
+<a class="nav-link" href="16-admin-screens.html"><span class="n">16</span><span class="tt">16. 어드민 화면별 설명</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">매뉴얼 홈</a> <span>/</span> <em>사용자 매뉴얼</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">📘 사용자 매뉴얼</span></div>
+      <h1>8. 감사 로그</h1>
+      
+    </header>
+    <div class="doc">
+
+<p>시스템에서 일어난 <strong>중요한 일들을 시간순으로 기록한 이력</strong>입니다. 좌측 메뉴 <strong>감사 로그</strong>에서 들어갑니다.</p>
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p>쉽게 말하면 "누가 · 언제 · 무엇을 · 어떻게 바꿨는지"를 빠짐없이 남기는 기록장입니다. 문제가 생겼을 때 원인을 추적하거나, 변경 내역을 되짚어 볼 때 사용합니다.</p>
+<p>참고: 감사 로그는 <span class="pill pri">SYSTEM_ADMIN</span> 역할만 볼 수 있습니다. 기록은 <strong>추가만 되고 수정·삭제되지 않는</strong> 불변 이력입니다(아래 "이전 로그 삭제" 제외).</p>
+<p>함께 보기: <a href="06-admin-accounts.html">계정 관리</a> · <a href="07-admin-settings.html">전체 설정</a></p>
+</div></blockquote>
+<hr />
+<h2 id="81">8.1 무엇이 기록되나</h2>
+<p>거의 모든 중요한 동작이 자동으로 기록됩니다.</p>
+<table>
+<thead>
+<tr>
+<th>분류</th>
+<th>기록되는 일 (예)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>로그인</td>
+<td>로그인 성공, 로그인 실패, 비밀번호 설정</td>
+</tr>
+<tr>
+<td>계정</td>
+<td>계정 생성·수정·비활성화·활성화·삭제, 서비스 담당 추가·해제, 비밀번호 재설정 메일 발송</td>
+</tr>
+<tr>
+<td>서비스</td>
+<td>서비스 등록·삭제, 키 재발급·키 조회, 허용 IP 변경, 상태 변경, 대표 담당자 지정, 취소 정책 변경, 알림 URL 변경</td>
+</tr>
+<tr>
+<td>요금제</td>
+<td>요금제 생성·수정·비활성화·활성화·삭제, 사용일 추가(보너스)</td>
+</tr>
+<tr>
+<td>구독</td>
+<td>구독 생성·취소·재개·강제 취소, 카드 변경, 만료일 연장, 사용일 추가, 자동연장 결제, 정지, 만료, 갱신 실패</td>
+</tr>
+<tr>
+<td>결제</td>
+<td>단건 결제(성공·실패), 결제 취소, 결제 정산 확정</td>
+</tr>
+<tr>
+<td>카드</td>
+<td>카드 등록·교체·삭제·활성화·비활성화</td>
+</tr>
+<tr>
+<td>설정</td>
+<td>재시도 설정 변경, 보안/결제 정책 변경, 어드민 IP 변경, 결제서버 비활성화·활성화</td>
+</tr>
+<tr>
+<td>감사 로그</td>
+<td>이전 로그 삭제(누가 몇 건을 지웠는지도 기록)</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p>쉽게 말하면 화면에서 버튼을 눌러 무언가를 바꾸는 거의 모든 행동이 기록된다고 보면 됩니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="82">8.2 화면 구성 — 무엇이 보이나</h2>
+<p>목록은 <strong>최신순</strong>으로 표시되며, 각 줄에 아래 정보가 있습니다.</p>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>시각</td>
+<td>일이 일어난 시각 (한국 시간 <code>YYYY-MM-DD HH:MM:SS</code>)</td>
+</tr>
+<tr>
+<td>행위자</td>
+<td>누가 했는지 — 관리자(이메일) / 외부 서비스(서비스명) / 시스템(자동 처리)</td>
+</tr>
+<tr>
+<td>활동</td>
+<td>무슨 일인지 (예: "계정 생성", "요금제 수정", "구독 취소")</td>
+</tr>
+<tr>
+<td>대상</td>
+<td>어떤 대상에 한 일인지 (서비스명·요금제명·이메일 등)</td>
+</tr>
+<tr>
+<td>상세</td>
+<td>구체적인 내용. 값이 바뀐 일은 <strong>변경 전 → 변경 후</strong>로 표시</td>
+</tr>
+<tr>
+<td>IP</td>
+<td>요청이 들어온 IP 주소</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_1">"변경 전 → 변경 후" 표시</h3>
+<p>설정이나 요금제처럼 값이 바뀌는 동작은, <strong>실제로 바뀐 항목만</strong> 골라 한눈에 보여 줍니다.</p>
+<table>
+<thead>
+<tr>
+<th>활동</th>
+<th>상세에 이렇게 보입니다</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>재시도 설정 변경</td>
+<td><code>재시도 횟수 4 → 6 · 재시도 간격(시간) 12 → 6</code></td>
+</tr>
+<tr>
+<td>어드민 IP 변경</td>
+<td><code>허용 IP 10.0.0.1 → 10.0.0.1, 10.0.0.2</code></td>
+</tr>
+<tr>
+<td>요금제 수정</td>
+<td><code>정가 9,900원 → 19,900원 · 첫결제 할인 없음 → 정률 10%</code></td>
+</tr>
+<tr>
+<td>서비스 상태 변경</td>
+<td><code>상태 ACTIVE → INACTIVE</code></td>
+</tr>
+<tr>
+<td>계정 수정</td>
+<td><code>이메일 old@x → new@x</code></td>
+</tr>
+<tr>
+<td>만료일 연장</td>
+<td><code>상태 ACTIVE → EXTENDED · 만료일 2026-06-30 → 2026-09-30</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p>쉽게 말하면 "9,900원이던 가격을 19,900원으로 바꿨다"처럼, 무엇이 어떻게 달라졌는지를 그대로 보여 줍니다.</p>
+<p>참고: 키 재발급·키 조회·비밀번호 재설정처럼 "전후 값"이 없는 동작은 무슨 일이 있었는지 설명 문구로 남습니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="83">8.3 검색 · 필터</h2>
+<p>원하는 기록을 빠르게 찾을 수 있습니다.</p>
+<table>
+<thead>
+<tr>
+<th>도구</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>검색창</td>
+<td>행위자(이메일)·대상·상세 내용에 들어간 단어로 검색합니다.</td>
+</tr>
+<tr>
+<td>행위자 유형 필터</td>
+<td>전체 / 관리자 / 외부 서비스 / 시스템으로 좁힙니다.</td>
+</tr>
+<tr>
+<td>활동 유형 필터</td>
+<td>"계정 생성", "구독 취소" 등 특정 활동만 골라 봅니다.</td>
+</tr>
+</tbody>
+</table>
+<ol class="steps">
+<li>검색창에 찾고 싶은 단어(이메일·서비스명 등)를 입력합니다.</li>
+<li>필요하면 <b>행위자 유형</b>·<b>활동 유형</b> 필터를 함께 적용합니다.</li>
+<li>목록이 즉시 추려집니다. 컬럼 제목(시각·행위자·활동)을 눌러 정렬할 수도 있습니다.</li>
+</ol>
+
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>팁: 특정 사람의 활동만 보고 싶으면 검색창에 그 사람의 이메일을 입력하세요. 특정 종류의 활동만 보려면 활동 유형 필터를 쓰면 편합니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="84">8.4 엑셀로 내려받기</h2>
+<p>현재 검색·필터 조건 그대로 전체 결과를 엑셀(.xlsx) 파일로 받을 수 있습니다.</p>
+<ol class="steps">
+<li>원하는 검색어·필터를 먼저 적용합니다.</li>
+<li><b>엑셀 내보내기</b> 버튼을 누릅니다.</li>
+<li>시각 · 행위자 · 활동 · 대상 · 상세 · IP 컬럼이 담긴 파일이 내려받아집니다.</li>
+</ol>
+
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 엑셀은 화면 페이지와 달리 <strong>조건에 맞는 전체 데이터</strong>를 한꺼번에 담습니다. 데이터가 많으면 내려받는 데 시간이 걸릴 수 있습니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="85-purge">8.5 이전 로그 삭제 (purge)</h2>
+<p>오래된 기록을 정리하고 싶을 때, <strong>기준일 이전의 로그를 한꺼번에 삭제</strong>할 수 있습니다.</p>
+<ol class="steps">
+<li>목록 아래쪽 <b>이전 로그 삭제</b> 영역에서 기준 <b>날짜</b>를 고릅니다.</li>
+<li>빨간 <b>이전 로그 삭제</b> 버튼을 누릅니다.</li>
+<li>"과거 로그를 삭제할까요?" 확인 창에서 <b>삭제</b>를 누릅니다.</li>
+<li>기준일 이전의 감사 로그가 영구 삭제됩니다.</li>
+</ol>
+
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>⚠️ 주의: <strong>삭제한 로그는 복구할 수 없습니다.</strong> 반드시 먼저 <a href="#84-엑셀로-내려받기">엑셀로 내려받아</a> 백업한 뒤 진행하세요. 확인 창에도 "필요하면 먼저 엑셀로 내려받으세요"라는 안내가 표시됩니다.</p>
+<p>참고: 기준일은 <strong>오늘이나 미래로 지정할 수 없습니다.</strong> 당일 로그는 삭제할 수 없으며, 미래 날짜를 넣으면 거부됩니다.</p>
+<p>중요: 로그를 삭제한 행동 자체도 "감사로그 삭제"로 기록에 남습니다. 누가 언제 몇 건을 지웠는지 추적할 수 있습니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="86">8.6 알아두면 좋은 점</h2>
+<ul>
+<li><strong>시각은 한국 시간으로 표시</strong>되지만 내부 저장 기준은 세계 표준시(UTC)입니다. 이전 로그 삭제의 기준일도 UTC 자정 기준으로 처리되므로, 한국 시간 오전에는 전날 로그가 일부 남아 있을 수 있습니다.</li>
+<li><strong>민감한 정보 보호</strong>를 위해 감사 로그는 SYSTEM_ADMIN만 볼 수 있습니다. (로그인 실패 시 입력된 이메일 등이 기록에 포함될 수 있기 때문입니다.)</li>
+<li>기록은 자동으로 쌓입니다. 운영자가 따로 기록을 남길 필요는 없습니다.</li>
+</ul>
+<hr />
+<h2 id="_2">관련 문서</h2>
+<ul>
+<li><a href="06-admin-accounts.html">계정 관리 (계정·역할·담당 서비스)</a></li>
+<li><a href="07-admin-settings.html">전체 설정 (재시도·보안 정책·IP·킬스위치)</a></li>
+</ul>
+    </div>
+    <div class="pager"><a class="pg prev" href="07-admin-settings.html"><small>← 이전</small><b>7. 전체 설정</b></a><a class="pg next" href="09-dashboard.html"><small>다음 →</small><b>9. 대시보드</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#81">8.1 무엇이 기록되나</a>
+<a class="toc-h2" href="#82">8.2 화면 구성 — 무엇이 보이나</a>
+<a class="toc-h3" href="#_1">&quot;변경 전 → 변경 후&quot; 표시</a>
+<a class="toc-h2" href="#83">8.3 검색 · 필터</a>
+<a class="toc-h2" href="#84">8.4 엑셀로 내려받기</a>
+<a class="toc-h2" href="#85-purge">8.5 이전 로그 삭제 (purge)</a>
+<a class="toc-h2" href="#86">8.6 알아두면 좋은 점</a>
+<a class="toc-h2" href="#_2">관련 문서</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12. 웹훅 처리 (토스페이먼츠 → 서버) — 개발자 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>개발자 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>🧱</span>기반 (먼저 읽기)</div>
+<a class="nav-link" href="README.html"><span class="n">·</span><span class="tt">개발자 인수인계 매뉴얼 (dev_manual)</span></a>
+<a class="nav-link" href="01-getting-started.html"><span class="n">01</span><span class="tt">01. 시작하기 — 구조·실행·테스트·요청 처리 공통 흐름</span></a>
+<a class="nav-link" href="02-database.html"><span class="n">02</span><span class="tt">02. 데이터베이스 — 테이블·모델·관계·마이그레이션</span></a>
+<a class="nav-link" href="03-auth-and-security.html"><span class="n">03</span><span class="tt">03. 인증과 보안 공통</span></a>
+<div class="nav-group"><span>⚙️</span>기능별 상세</div>
+<a class="nav-link" href="04-subscription-create.html"><span class="n">04</span><span class="tt">04. 구독 생성</span></a>
+<a class="nav-link" href="05-subscription-renewal.html"><span class="n">05</span><span class="tt">05. 구독 갱신·만료·재시도·정합성(스케줄러 배치)</span></a>
+<a class="nav-link" href="06-subscription-manage.html"><span class="n">06</span><span class="tt">06. 구독 취소·재개·수동결제·카드변경</span></a>
+<a class="nav-link" href="07-one-off-payment.html"><span class="n">07</span><span class="tt">07. 단건(일반) 결제 + 취소</span></a>
+<a class="nav-link" href="08-plans.html"><span class="n">08</span><span class="tt">08. 요금제 관리 (생성·수정·금액 계산·자동결제안함·추가정보)</span></a>
+<a class="nav-link" href="09-services-registry.html"><span class="n">09</span><span class="tt">09. 서비스 등록·키 발급/회전·취소정책·담당자</span></a>
+<a class="nav-link" href="10-settlement.html"><span class="n">10</span><span class="tt">10. 정산(어드민 화면)</span></a>
+<a class="nav-link" href="11-dashboard.html"><span class="n">11</span><span class="tt">11. 대시보드 — 어드민 메인 화면</span></a>
+<a class="nav-link active" href="12-webhooks.html"><span class="n">12</span><span class="tt">12. 웹훅 처리 (토스페이먼츠 → 서버)</span></a>
+<a class="nav-link" href="13-admin-accounts.html"><span class="n">13</span><span class="tt">13. 어드민 계정·역할·로그인/비밀번호</span></a>
+<a class="nav-link" href="14-global-settings.html"><span class="n">14</span><span class="tt">14. 전체 설정(재시도·어드민 IP·킬스위치)</span></a>
+<a class="nav-link" href="15-external-api-and-sample.html"><span class="n">15</span><span class="tt">15. 외부 API 레퍼런스 + 샘플 서비스 연동</span></a>
+<a class="nav-link" href="16-card-vault.html"><span class="n">16</span><span class="tt">16. 카드 보관함(Card Vault) — 카드 등록·교체·조회·삭제</span></a>
+<a class="nav-link" href="17-service-notifications.html"><span class="n">17</span><span class="tt">17. 서비스 알림(아웃고잉 웹훅) — 요청 016</span></a>
+<div class="nav-group"><span>🖥️</span>어드민 화면별 매뉴얼</div>
+<a class="nav-link" href="admin--README.html"><span class="n">·</span><span class="tt">어드민 콘솔 페이지 매뉴얼</span></a>
+<a class="nav-link" href="admin--01-login-and-access.html"><span class="n">01</span><span class="tt">01. 로그인·접근 (로그인 / 비밀번호 설정 / 로그아웃 / IP 제한)</span></a>
+<a class="nav-link" href="admin--02-dashboard.html"><span class="n">02</span><span class="tt">02. 대시보드</span></a>
+<a class="nav-link" href="admin--03-services.html"><span class="n">03</span><span class="tt">03. 서비스 관리</span></a>
+<a class="nav-link" href="admin--04-plans.html"><span class="n">04</span><span class="tt">04. 요금제 관리 (목록·생성·수정·활성/비활성·삭제)</span></a>
+<a class="nav-link" href="admin--05-subscriptions.html"><span class="n">05</span><span class="tt">05. 구독 관리 — 목록·상세·강제 취소</span></a>
+<a class="nav-link" href="admin--06-payments.html"><span class="n">06</span><span class="tt">06. 결제 — 목록·상세·단건 취소</span></a>
+<a class="nav-link" href="admin--07-settlement.html"><span class="n">07</span><span class="tt">07. 정산 화면</span></a>
+<a class="nav-link" href="admin--08-users.html"><span class="n">08</span><span class="tt">08. 계정 관리</span></a>
+<a class="nav-link" href="admin--09-audit.html"><span class="n">09</span><span class="tt">09. 감사 로그 (조회·검색·정리·엑셀)</span></a>
+<a class="nav-link" href="admin--10-settings.html"><span class="n">10</span><span class="tt">10. 전체 설정 (재시도 정책 · 어드민 IP · 킬스위치)</span></a>
+<div class="nav-group"><span>📋</span>운영 워크플로우</div>
+<a class="nav-link" href="admin--11-onboarding-checklist.html"><span class="n">·</span><span class="tt">신규 서비스 온보딩 체크리스트 (운영자용)</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">개발자 매뉴얼</a> <span>/</span> <em>기능별 상세</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">⚙️ 기능별 상세</span>
+        <span class="dh-src">docs/dev_manual/12-webhooks.md</span></div>
+      <h1>12. 웹훅 처리 (토스페이먼츠 → 서버)</h1>
+      <div class="summary"><span class="summary-k">⭐ 한 줄 요약</span><p>토스페이먼츠가 결제 상태 변경·빌링키 삭제 등 이벤트 발생 시 <strong>서버로 HTTP POST를 밀어 보내는(push)</strong> 것이 웹훅이다.
+서버는 이 요청을 받아 <strong>중복 방지 → 이벤트 타입 분기 → 토스 재조회 후 상태 확정 → DB 갱신</strong> 순서로 처리한다.</p></div>
+    </header>
+    <div class="doc">
+
+<blockquote class="cal ref"><span class="cal-i">🔗</span><div class="cal-b">
+<p><strong>상호참조</strong>:
+구독 갱신 → <a href="05-subscription-renewal.html">05. 구독 갱신·만료·재시도</a> |
+단건 결제 → <a href="07-one-off-payment.html">07. 단건(일반) 결제 + 취소</a> |
+인증·IP 검증 → <a href="03-auth-and-security.html">03. 인증과 보안 공통</a> |
+테이블 구조 → <a href="02-database.html">02. 데이터베이스</a></p>
+</div></blockquote>
+<hr />
+
+<hr />
+<h2 id="2">2. 언제 실행되나 — 트리거</h2>
+<p><strong>트리거: 토스페이먼츠 서버가 자동으로 POST 요청을 보낸다.</strong></p>
+<ul>
+<li>결제 상태가 변경될 때 (<code>PAYMENT_STATUS_CHANGED</code>)</li>
+<li>자동결제 빌링키가 삭제될 때 (<code>BILLING_DELETED</code>)</li>
+<li>그 밖에 토스 개발자센터에 등록한 이벤트 타입 발생 시</li>
+</ul>
+<p>우리 서버는 요청을 <strong>기다리지 않고 받는다</strong>. 사람이 직접 트리거하지 않는다.</p>
+<hr />
+<h2 id="3">3. 요청 진입점</h2>
+<pre><code>POST /api/v1/webhooks/toss
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>파일</td>
+<td><code class="loc">app/api/v1/webhooks.py:28</code></td>
+</tr>
+<tr>
+<td>라우트 함수</td>
+<td><code>toss_webhook</code></td>
+</tr>
+<tr>
+<td>인증 방식</td>
+<td><strong>서명 없음, IP 주소 화이트리스트만</strong></td>
+</tr>
+<tr>
+<td>필수 헤더</td>
+<td><code>tosspayments-webhook-transmission-id</code></td>
+</tr>
+<tr>
+<td>Content-Type</td>
+<td><code>application/json</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>왜 서명 검증을 하지 않나?</strong>
+토스 공식 문서(<code class="loc">docs/toss/2.API/5.웹훅이벤트.md:36-44</code>)에 따르면 서명(<code>tosspayments-webhook-signature</code>)은 지급대행(<code>payout.changed</code>, <code>seller.changed</code>) 전용 헤더다. 일반 결제(<code>PAYMENT_STATUS_CHANGED</code>)와 빌링(<code>BILLING_DELETED</code>) 웹훅에는 서명이 없다.
+대신 <strong>IP 주소 화이트리스트</strong>로 발신지를 검증하고, <code>PAYMENT_STATUS_CHANGED</code>는 <strong>페이로드를 믿지 않고 토스 API 재조회</strong>로 상태를 확정해 위조를 차단한다.</p>
+</div></blockquote>
+<hr />
+<h2 id="4">4. 단계별 처리 흐름</h2>
+<h3 id="41">4.1 전체 흐름 도식</h3>
+<pre><code>[토스 서버]
+    │  POST /api/v1/webhooks/toss
+    │  Header: tosspayments-webhook-transmission-id: whtrans_xxx
+    │  Body: { &quot;eventType&quot;: &quot;...&quot;, &quot;data&quot;: { ... } }
+    ▼
+[app/api/v1/webhooks.py:28]  toss_webhook()
+    │
+    ├─ (1) IP 검사 (webhook_ip_check_enabled=True일 때만)
+    │       → 허용 IP 목록 외 → PermissionDeniedError → HTTP 403
+    │
+    ├─ (2) payload JSON 파싱, transmission_id 헤더 추출
+    │
+    └─ (3) handle_webhook() 호출
+               [app/services/webhooks.py:55]
+               │
+               ├─ transmission_id 없음 → InputValidationError → HTTP 422
+               │
+               ├─ DB 조회: 동일 transmission_id 이미 있음 → 기존 행 반환(멱등)
+               │
+               ├─ WebhookEvent INSERT(status=RECEIVED) → flush
+               │     동시 중복: IntegrityError → rollback → 기존 행 재조회
+               │
+               ├─ 이벤트 타입 분기
+               │     &quot;BILLING_DELETED&quot;          → _handle_billing_deleted()
+               │     &quot;PAYMENT_STATUS_CHANGED&quot;   → _handle_payment_status_changed()
+               │     그 외                      → status=IGNORED
+               │
+               ├─ TossError 발생 시 → rollback + 재발생 → HTTP 5xx → 토스 재전송
+               │
+               ├─ 일반 Exception → status=FAILED → commit → HTTP 200 반환
+               │     (무한 재전송 방지. 운영자 reaper가 FAILED 행 점검)
+               │
+               └─ 정상 → status=PROCESSED, processed_at 기록 → commit
+
+    ▼
+HTTP 200 {&quot;status&quot;: &quot;PROCESSED&quot;} (또는 &quot;IGNORED&quot;/&quot;FAILED&quot;)
+</code></pre>
+<h3 id="42-ip">4.2 IP 화이트리스트 검사</h3>
+<p><strong>파일</strong>: <code class="loc">app/api/v1/webhooks.py:45-48</code></p>
+<pre><code class="language-python">if settings.webhook_ip_check_enabled:
+    ip = get_client_ip(request, settings)
+    if ip not in settings.toss_webhook_allowed_ips:
+        raise PermissionDeniedError(&quot;허용되지 않은 요청입니다&quot;)
+</code></pre>
+<ul>
+<li>설정 변수: <code>webhook_ip_check_enabled</code> (기본 <code>True</code>), <code>toss_webhook_allowed_ips</code></li>
+<li>IP 목록은 <code class="loc">app/core/config.py:14-18</code>의 <code>TOSS_WEBHOOK_IPS</code> 상수를 기본값으로 사용</li>
+</ul>
+<pre><code># app/core/config.py:14-18
+TOSS_WEBHOOK_IPS = [
+    &quot;13.124.18.147&quot;, &quot;13.124.108.35&quot;, &quot;3.36.173.151&quot;, &quot;3.38.81.32&quot;,
+    &quot;115.92.221.121&quot;, &quot;115.92.221.122&quot;, &quot;115.92.221.123&quot;,
+    &quot;115.92.221.125&quot;, &quot;115.92.221.126&quot;, &quot;115.92.221.127&quot;,
+]
+</code></pre>
+<ul>
+<li>로컬 개발·테스트 환경에서는 <code>webhook_ip_check_enabled=False</code>로 두어 화이트리스트 없이 동작한다. (<code class="loc">app/core/config.py:62</code>)</li>
+<li>리버스 프록시 환경이면 <code>trust_proxy=True</code>로 설정해야 <code>X-Forwarded-For</code> 헤더에서 실제 IP를 읽는다. (<code class="loc">app/api/deps.py:63-74</code>)</li>
+</ul>
+<h3 id="43">4.3 중복 방지 (멱등성 보장)</h3>
+<p>토스는 웹훅 전달에 <strong>at-least-once</strong> 방식을 사용한다. 즉, 동일 이벤트가 두 번 이상 올 수 있다.</p>
+<p>중복을 막는 방법은 두 가지다.</p>
+<table>
+<thead>
+<tr>
+<th>단계</th>
+<th>방법</th>
+<th>코드 위치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1단계 (빠른 체크)</td>
+<td><code>transmission_id</code>로 DB 조회, 이미 있으면 즉시 반환</td>
+<td><code class="loc">app/services/webhooks.py:74-77</code></td>
+</tr>
+<tr>
+<td>2단계 (동시성 처리)</td>
+<td>두 요청이 동시에 들어와 INSERT 경쟁 시 <code>IntegrityError</code> 포착 → rollback → 기존 행 반환</td>
+<td><code class="loc">app/services/webhooks.py:82-91</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>transmission_id</code>는 <code>webhook_events.transmission_id</code> 컬럼에 <code>UNIQUE</code> 제약이 걸려 있어 DB 수준에서도 중복 삽입을 차단한다. (<code class="loc">app/models/webhook_event.py:24</code>)</p>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>왜 transmission_id가 없는 요청은 거부하나?</strong> (<code class="loc">app/services/webhooks.py:71-72</code>)
+합성 ID를 만들면 헤더 없는 위조 재전송이 dedup을 우회해 무한 적재될 수 있다. 토스는 항상 이 헤더를 보내므로, 없으면 정상 요청이 아니다.</p>
+</div></blockquote>
+<h3 id="44">4.4 이벤트 타입 분기</h3>
+<p><strong>파일</strong>: <code class="loc">app/services/webhooks.py:94-101</code></p>
+<pre><code class="language-python">if event_type == &quot;BILLING_DELETED&quot;:
+    await _handle_billing_deleted(db, email_sender, payload)
+    event.status = WebhookStatus.PROCESSED
+elif event_type == &quot;PAYMENT_STATUS_CHANGED&quot;:
+    await _handle_payment_status_changed(db, toss, payload)
+    event.status = WebhookStatus.PROCESSED
+else:
+    event.status = WebhookStatus.IGNORED
+</code></pre>
+<h3 id="45-payment_status_changed">4.5 PAYMENT_STATUS_CHANGED 처리 — 페이로드 위조 방어</h3>
+<p><strong>파일</strong>: <code class="loc">app/services/webhooks.py:155-183</code></p>
+<pre><code>1. payload.data.orderId 추출
+2. payments 테이블에서 order_id로 Payment 행 조회
+   → 없으면 우리 주문이 아니므로 조용히 반환
+3. toss.get_payment_by_order_id(order_id) 로 토스 API 재조회  ← 핵심!
+   → 재조회 결과 None이면 위조 의심, 무시
+4. 재조회 결과 status == &quot;CANCELED&quot; 이고 DB 상태가 아직 CANCELED가 아닐 때만
+   Payment.status = CANCELED, canceled_amount, canceled_at, raw_response 갱신
+</code></pre>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>핵심 보안 원칙</strong>: 페이로드의 <code>data.status</code>를 직접 사용하지 않는다.
+외부에서 온 입력은 신뢰 경계 밖이다. <code>orderId</code>만 취해 서버에서 직접 재조회한 결과로 상태를 확정한다.
+재조회는 <code class="loc">app/toss/client.py:123-135</code>의 <code>get_payment_by_order_id()</code>를 사용한다.</p>
+</div></blockquote>
+<p>현재 처리하는 상태 변경: <strong>CANCELED만</strong> (전액 취소 동기화)
+<code>PARTIAL_CANCELED</code> 등 나머지 상태는 현재 미처리 — 새로 추가하려면 아래 [9. 유지보수 팁] 참고.</p>
+<h3 id="46-billing_deleted">4.6 BILLING_DELETED 처리</h3>
+<p><strong>파일</strong>: <code class="loc">app/services/webhooks.py:118-152</code></p>
+<p>자동결제에 사용하는 빌링키가 토스에서 삭제된 경우 서비스 담당자에게 알림 메일을 보낸다.</p>
+<pre><code>1. payload.data.billingKey 추출
+2. sha256_hex(billingKey)로 해시 변환 후 cards.billing_key_hash 컬럼 조회
+   (DB에 평문 빌링키 없음 — 해시로만 조회 가능 / 카드 보관함 전환 이후 cards 테이블 사용)
+3. 조회 대상: card_id FK로 연결된 구독 중 status가 ACTIVE, PAST_DUE, CANCELED인 구독만
+   - TRIAL, SUSPENDED, EXPIRED는 제외 (다음 갱신 결제가 없는 상태)
+4. 서비스(Service) 조회 — service가 None이면 조용히 반환(데이터 불일치 방어)
+5. 해당 구독의 서비스 담당자 이메일(service.manager_email)로 알림 메일 발송
+6. payload.data.reason은 _sanitize()로 개행·제어문자 제거 후 메일 본문에 삽입
+</code></pre>
+<p>왜 ACTIVE·PAST_DUE·CANCELED 구독만 대상인가: 이 세 상태는 향후 정기 갱신 결제가 예약된 구독이다. 빌링키가 삭제되면 다음 갱신이 실패하므로 담당자가 사용자에게 카드 재등록을 안내해야 한다.</p>
+<hr />
+<h2 id="5-db">5. 사용하는 DB 테이블·컬럼</h2>
+<h3 id="51-webhook_events">5.1 webhook_events (쓰기)</h3>
+<blockquote class="cal file"><span class="cal-i">📄</span><div class="cal-b">
+<p>파일: <code class="loc">app/models/webhook_event.py:18-29</code> | 02-database.md 3.8절 참조</p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>쓰기 타이밍</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>INSERT 시</td>
+<td>PK, uuid4() 자동 생성</td>
+</tr>
+<tr>
+<td><code>transmission_id</code></td>
+<td>String(100)</td>
+<td>INSERT 시</td>
+<td>토스가 부여한 고유 전송 ID. UNIQUE 제약.</td>
+</tr>
+<tr>
+<td><code>event_type</code></td>
+<td>String(100)</td>
+<td>INSERT 시</td>
+<td><code>PAYMENT_STATUS_CHANGED</code>, <code>BILLING_DELETED</code> 등</td>
+</tr>
+<tr>
+<td><code>payload</code></td>
+<td>JSONB</td>
+<td>INSERT 시</td>
+<td>토스 웹훅 원문 페이로드 전체</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>String(20)</td>
+<td>INSERT·UPDATE</td>
+<td>초기 <code>RECEIVED</code> → 처리 후 <code>PROCESSED</code>/<code>IGNORED</code>/<code>FAILED</code></td>
+</tr>
+<tr>
+<td><code>received_at</code></td>
+<td>DateTime(tz)</td>
+<td>INSERT 시</td>
+<td>DB 서버 시각(UTC), server_default=now()</td>
+</tr>
+<tr>
+<td><code>processed_at</code></td>
+<td>DateTime(tz)</td>
+<td>UPDATE 시</td>
+<td>처리 완료 시각(UTC), 미처리 시 NULL</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-payments">5.2 payments (갱신)</h3>
+<p><code>PAYMENT_STATUS_CHANGED</code> → <code>CANCELED</code> 확정 시 아래 컬럼을 갱신한다.</p>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>갱신 내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>status</code></td>
+<td><code>PaymentStatus.CANCELED</code></td>
+</tr>
+<tr>
+<td><code>canceled_amount</code></td>
+<td><code>payment.amount</code> (전액 취소로 간주)</td>
+</tr>
+<tr>
+<td><code>canceled_at</code></td>
+<td><code>utcnow()</code></td>
+</tr>
+<tr>
+<td><code>raw_response</code></td>
+<td>토스 재조회 응답 원문</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-subscriptions">5.3 subscriptions (간접 참조)</h3>
+<p><code>BILLING_DELETED</code> 처리 시 <code>billing_key_hash</code>로 구독을 조회만 한다. 구독 상태 자체를 직접 변경하지는 않는다.</p>
+<h3 id="54-services">5.4 services (읽기)</h3>
+<p><code>BILLING_DELETED</code> 처리 시 <code>service.manager_email</code>을 읽어 알림 메일을 보낸다.</p>
+<hr />
+<h2 id="6">6. 상태 전이</h2>
+<h3 id="61-webhookeventstatus">6.1 WebhookEvent.status</h3>
+<p><strong>파일</strong>: <code class="loc">app/models/enums.py:118-124</code></p>
+<pre><code>수신
+  │
+  ▼
+RECEIVED        ← INSERT 직후 (WebhookStatus.RECEIVED)
+  │
+  ├─ 정상 처리 → PROCESSED
+  ├─ 알 수 없는 이벤트 타입 → IGNORED
+  └─ 처리 불가(영구 오류) → FAILED
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>값</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>RECEIVED</code></td>
+<td>수신됨, 처리 전 (INSERT 직후 기본값)</td>
+</tr>
+<tr>
+<td><code>PROCESSED</code></td>
+<td>정상 처리 완료</td>
+</tr>
+<tr>
+<td><code>IGNORED</code></td>
+<td>처리 대상이 아닌 이벤트 타입 — 기록만 남김</td>
+</tr>
+<tr>
+<td><code>FAILED</code></td>
+<td>처리 중 영구 오류 — 운영자 수동 점검 대상</td>
+</tr>
+</tbody>
+</table>
+<p><code>TossError</code> 발생 시에는 <code>status</code>가 <code>RECEIVED</code> 상태인 채로 <strong>롤백</strong>되어 행 자체가 남지 않는다. (<code class="loc">app/services/webhooks.py:102-107</code>)</p>
+<h3 id="62">6.2 재전송 정책 분기</h3>
+<table>
+<thead>
+<tr>
+<th>예외 종류</th>
+<th>처리 방식</th>
+<th>이유</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TossError</code> (일시적 오류)</td>
+<td>rollback + 예외 재발생 → HTTP 5xx → 토스 재전송</td>
+<td>일시 장애이므로 나중에 다시 시도하면 성공 가능</td>
+</tr>
+<tr>
+<td>일반 <code>Exception</code> (영구 오류)</td>
+<td><code>status=FAILED</code> + commit → HTTP 200 반환</td>
+<td>재전송해도 같은 실패 반복 — 토스 큐에서 제거하고 운영자가 수동 처리</td>
+</tr>
+</tbody>
+</table>
+<p>토스의 재전송 정책(최대 7회, 최초 전송으로부터 3일 19시간): <code class="loc">docs/toss/1.가이드/4.더알아보기/1.웹훅연결하기.md:77-93</code> 참조.</p>
+<hr />
+<h2 id="7">7. 예외·엣지 케이스</h2>
+<table>
+<thead>
+<tr>
+<th>상황</th>
+<th>동작</th>
+<th>HTTP 응답</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>토스 IP 외 발신 (webhook_ip_check_enabled=True)</td>
+<td><code>PermissionDeniedError</code></td>
+<td>403</td>
+</tr>
+<tr>
+<td><code>transmission_id</code> 헤더 없음</td>
+<td><code>InputValidationError</code></td>
+<td>422</td>
+</tr>
+<tr>
+<td>동일 <code>transmission_id</code> 재수신 (중복)</td>
+<td>기존 행 반환, 재처리 안 함</td>
+<td>200</td>
+</tr>
+<tr>
+<td>동시 중복 수신 (race condition)</td>
+<td><code>IntegrityError</code> 포착 → 기존 행 반환</td>
+<td>200</td>
+</tr>
+<tr>
+<td>알 수 없는 이벤트 타입</td>
+<td><code>status=IGNORED</code> 기록</td>
+<td>200</td>
+</tr>
+<tr>
+<td>토스 재조회 결과 <code>None</code> (위조 의심)</td>
+<td>DB 상태 불변, 이벤트 PROCESSED 기록</td>
+<td>200</td>
+</tr>
+<tr>
+<td><code>TossError</code> (토스 API 일시 장애)</td>
+<td>rollback, 예외 재발생</td>
+<td>5xx → 토스 재전송</td>
+</tr>
+<tr>
+<td>그 외 예외 (DB 오류 등)</td>
+<td><code>status=FAILED</code>, 운영자 점검</td>
+<td>200</td>
+</tr>
+<tr>
+<td><code>reason</code> 필드에 개행·제어문자 포함</td>
+<td><code>_sanitize()</code>로 제거 후 메일 발송</td>
+<td>200</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_1">엣지 케이스 상세</h3>
+<p><strong>1. <code>PAYMENT_STATUS_CHANGED</code>에서 우리 DB에 없는 <code>orderId</code></strong>
+해당 결제가 다른 시스템의 주문이거나 위조된 것이다. <code>payment is None</code> 조건에서 조용히 반환한다. 이벤트는 <code>PROCESSED</code>로 기록된다. (<code class="loc">app/services/webhooks.py:173-175</code>)</p>
+<p><strong>2. <code>BILLING_DELETED</code>에서 해당 빌링키를 가진 구독이 없음</strong>
+이미 만료·정지된 구독의 빌링키가 삭제된 경우 등이다. 메일을 보내지 않고 조용히 반환한다. 이벤트는 <code>PROCESSED</code>로 기록된다. (<code class="loc">app/services/webhooks.py:143-144</code>)</p>
+<p><strong>2-1. <code>BILLING_DELETED</code>에서 <code>Service</code>가 DB에 없음</strong>
+구독의 <code>service_id</code>에 해당하는 서비스가 없는 경우(데이터 불일치·삭제 레이스 등)다. 조용히 반환해 메일 발송을 생략한다. 이벤트는 <code>PROCESSED</code>로 기록된다. (<code>app/services/webhooks.py</code> — <code>if service is None: return</code> 가드)</p>
+<p><strong>3. <code>PARTIAL_CANCELED</code> 등 아직 처리하지 않는 상태 변경</strong>
+<code>PAYMENT_STATUS_CHANGED</code>의 <code>_handle_payment_status_changed</code>는 현재 <code>CANCELED</code>만 처리한다. 그 외 상태는 DB 변경 없이 이벤트만 <code>PROCESSED</code>로 기록된다. (<code class="loc">app/services/webhooks.py:179-183</code>)</p>
+<hr />
+<h2 id="8">8. 관련 테스트</h2>
+<p><strong>파일</strong>: <code>tests/integration/test_webhooks.py</code></p>
+<table>
+<thead>
+<tr>
+<th>테스트 함수</th>
+<th>검증 내용</th>
+<th>위치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test_billing_deleted_notifies_manager</code></td>
+<td>BILLING_DELETED → 담당자 메일 발송 1건, status=PROCESSED</td>
+<td>line 18</td>
+</tr>
+<tr>
+<td><code>test_duplicate_transmission_processed_once</code></td>
+<td>동일 transmission_id 두 번 → 이벤트 1건, 메일 1건</td>
+<td>line 31</td>
+</tr>
+<tr>
+<td><code>test_unknown_event_ignored</code></td>
+<td>알 수 없는 이벤트 → status=IGNORED</td>
+<td>line 44</td>
+</tr>
+<tr>
+<td><code>test_payment_status_changed_verified_by_refetch</code></td>
+<td>재조회 CANCELED → payment.status=CANCELED, canceled_amount, canceled_at 갱신</td>
+<td>line 53</td>
+</tr>
+<tr>
+<td><code>test_payment_status_changed_spoofed_payload_not_applied</code></td>
+<td>재조회 None → payment.status 불변 (위조 방어 확인)</td>
+<td>line 80</td>
+</tr>
+<tr>
+<td><code>test_webhook_from_unallowed_ip_rejected</code></td>
+<td>IP 목록 외 발신 → HTTP 403</td>
+<td>line 102</td>
+</tr>
+<tr>
+<td><code>test_webhook_without_transmission_id_rejected</code></td>
+<td>transmission-id 없음 → HTTP 422, 행 미생성</td>
+<td>line 115</td>
+</tr>
+<tr>
+<td><code>test_payment_status_refetch_error_triggers_retry</code></td>
+<td>TossError 발생 → 예외 재발생, WebhookEvent 행 미생성</td>
+<td>line 126</td>
+</tr>
+<tr>
+<td><code>test_billing_deleted_reason_sanitized</code></td>
+<td>reason 개행문자 → 메일 본문에 삽입 안 됨</td>
+<td>line 155</td>
+</tr>
+</tbody>
+</table>
+<p>테스트 실행:</p>
+<pre><code class="language-bash"># 웹훅 관련 테스트만
+pytest tests/integration/test_webhooks.py -v
+
+# 전체 통합 테스트
+pytest tests/integration/ -v
+</code></pre>
+<hr />
+<h2 id="9">9. 유지보수 팁</h2>
+<h3 id="91">9.1 새 이벤트 핸들러 추가하기</h3>
+<p>예를 들어 <code>DEPOSIT_CALLBACK</code> (가상계좌 입금 콜백)을 처리하고 싶다면:</p>
+<ol>
+<li><code>app/services/webhooks.py</code>에 <code>_handle_deposit_callback(db, payload)</code> 함수 추가</li>
+<li><code>handle_webhook</code> 함수의 이벤트 분기에 <code>elif event_type == "DEPOSIT_CALLBACK":</code> 추가 (<code class="loc">app/services/webhooks.py:94-101</code> 근처)</li>
+<li>토스 개발자센터에서 해당 웹훅 이벤트 등록 (아래 9.2 참고)</li>
+<li><code>tests/integration/test_webhooks.py</code>에 해당 이벤트 테스트 추가</li>
+</ol>
+<pre><code class="language-python"># app/services/webhooks.py 분기 추가 예시
+elif event_type == &quot;DEPOSIT_CALLBACK&quot;:
+    await _handle_deposit_callback(db, payload)
+    event.status = WebhookStatus.PROCESSED
+</code></pre>
+<h3 id="92-url">9.2 토스 개발자센터에서 웹훅 URL 등록하기</h3>
+<ol>
+<li><a href="https://developers.tosspayments.com/my/webhooks">토스 개발자센터 웹훅 메뉴</a> 접속</li>
+<li><strong>웹훅 등록하기</strong> 클릭</li>
+<li>웹훅 URL 입력: <code>https://서버도메인/api/v1/webhooks/toss</code></li>
+<li>수신할 이벤트 선택: <code>PAYMENT_STATUS_CHANGED</code>, <code>BILLING_DELETED</code> 등</li>
+<li>등록 후 전송 기록에서 성공/실패 확인 가능</li>
+</ol>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>로컬 개발 시에는 외부에서 접근 불가하므로 <code>ngrok</code>을 사용해 임시 공개 URL을 생성한다.
+참고: <code class="loc">docs/toss/1.가이드/4.더알아보기/1.웹훅연결하기.md:43-58</code></p>
+</div></blockquote>
+<h3 id="93-ip">9.3 IP 목록 갱신하기</h3>
+<p>토스가 발신 IP를 추가·변경하면 <code class="loc">app/core/config.py:14-18</code>의 <code>TOSS_WEBHOOK_IPS</code> 상수를 갱신한다.
+또는 <code>.env</code> 파일에서 <code>TOSS_WEBHOOK_ALLOWED_IPS=["1.2.3.4","5.6.7.8"]</code> 형태로 오버라이드할 수 있다.
+최신 IP 목록은 토스 공식 문서(<code>docs/toss/2.API/4.방화벽,보안.md</code>)를 확인한다.</p>
+<h3 id="94-transmission_id">9.4 transmission_id로 이벤트 추적·디버깅</h3>
+<p>웹훅이 처리됐는지 확인하거나 문제를 추적할 때:</p>
+<pre><code class="language-sql">-- transmission_id로 이벤트 조회
+SELECT id, event_type, status, received_at, processed_at, payload
+FROM webhook_events
+WHERE transmission_id = 'whtrans_xxxxx';
+
+-- FAILED 이벤트 전체 조회
+SELECT * FROM webhook_events
+WHERE status = 'FAILED'
+ORDER BY received_at DESC;
+
+-- 특정 order_id와 연관된 결제 + 웹훅 이력
+SELECT we.transmission_id, we.event_type, we.status, p.status AS payment_status
+FROM webhook_events we
+JOIN payments p ON we.payload -&gt; 'data' -&gt;&gt; 'orderId' = p.order_id
+WHERE p.order_id = 'order_xxx';
+</code></pre>
+<p>토스 개발자센터 웹훅 상세 페이지에서도 <code>transmission_id</code> 기준으로 전송 기록을 확인할 수 있다.</p>
+<h3 id="95-failed">9.5 FAILED 이벤트 처리</h3>
+<p><code>status=FAILED</code>인 행은 영구적으로 처리하지 못한 이벤트다. 원인은 <code>payload</code> 컬럼과 애플리케이션 로그에서 확인한다.</p>
+<p>로그 예시:</p>
+<pre><code>ERROR payment.webhooks webhook 처리 실패(영구): PAYMENT_STATUS_CHANGED
+</code></pre>
+<p>로그 출력 코드: <code class="loc">app/services/webhooks.py:111</code> (<code>logger.exception</code>)</p>
+<p>원인을 수정한 후 수동으로 재처리하려면 <code>handle_webhook</code>을 직접 호출하거나 Admin 스크립트를 별도 작성한다. <code>transmission_id</code>가 이미 DB에 있으므로 동일 transmission_id로 재전송해도 멱등 처리로 건너뛴다. 따라서 재처리 시에는 <strong>새 transmission_id</strong>로 수동 호출해야 한다.</p>
+<h3 id="96">9.6 로컬 개발 환경 설정</h3>
+<p><code>.env</code> 파일에 다음을 추가해 IP 검사를 끈다:</p>
+<pre><code class="language-env">WEBHOOK_IP_CHECK_ENABLED=false
+</code></pre>
+<p>이후 <code>curl</code>이나 테스트 클라이언트로 자유롭게 웹훅 엔드포인트를 호출할 수 있다.</p>
+<pre><code class="language-bash">curl -X POST http://localhost:8000/api/v1/webhooks/toss \
+  -H &quot;Content-Type: application/json&quot; \
+  -H &quot;tosspayments-webhook-transmission-id: test-tid-001&quot; \
+  -d '{&quot;eventType&quot;:&quot;BILLING_DELETED&quot;,&quot;createdAt&quot;:&quot;2026-06-10T00:00:00.000000&quot;,&quot;data&quot;:{&quot;billingKey&quot;:&quot;bk_test&quot;,&quot;reason&quot;:&quot;테스트&quot;}}'
+</code></pre>
+    </div>
+    <div class="pager"><a class="pg prev" href="11-dashboard.html"><small>← 이전</small><b>11. 대시보드 — 어드민 메인 화면</b></a><a class="pg next" href="13-admin-accounts.html"><small>다음 →</small><b>13. 어드민 계정·역할·로그인/비밀번호</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#2">2. 언제 실행되나 — 트리거</a>
+<a class="toc-h2" href="#3">3. 요청 진입점</a>
+<a class="toc-h2" href="#4">4. 단계별 처리 흐름</a>
+<a class="toc-h3" href="#41">4.1 전체 흐름 도식</a>
+<a class="toc-h3" href="#42-ip">4.2 IP 화이트리스트 검사</a>
+<a class="toc-h3" href="#43">4.3 중복 방지 (멱등성 보장)</a>
+<a class="toc-h3" href="#44">4.4 이벤트 타입 분기</a>
+<a class="toc-h3" href="#45-payment_status_changed">4.5 PAYMENT_STATUS_CHANGED 처리 — 페이로드 위조 방어</a>
+<a class="toc-h3" href="#46-billing_deleted">4.6 BILLING_DELETED 처리</a>
+<a class="toc-h2" href="#5-db">5. 사용하는 DB 테이블·컬럼</a>
+<a class="toc-h3" href="#51-webhook_events">5.1 webhook_events (쓰기)</a>
+<a class="toc-h3" href="#52-payments">5.2 payments (갱신)</a>
+<a class="toc-h3" href="#53-subscriptions">5.3 subscriptions (간접 참조)</a>
+<a class="toc-h3" href="#54-services">5.4 services (읽기)</a>
+<a class="toc-h2" href="#6">6. 상태 전이</a>
+<a class="toc-h3" href="#61-webhookeventstatus">6.1 WebhookEvent.status</a>
+<a class="toc-h3" href="#62">6.2 재전송 정책 분기</a>
+<a class="toc-h2" href="#7">7. 예외·엣지 케이스</a>
+<a class="toc-h3" href="#_1">엣지 케이스 상세</a>
+<a class="toc-h2" href="#8">8. 관련 테스트</a>
+<a class="toc-h2" href="#9">9. 유지보수 팁</a>
+<a class="toc-h3" href="#91">9.1 새 이벤트 핸들러 추가하기</a>
+<a class="toc-h3" href="#92-url">9.2 토스 개발자센터에서 웹훅 URL 등록하기</a>
+<a class="toc-h3" href="#93-ip">9.3 IP 목록 갱신하기</a>
+<a class="toc-h3" href="#94-transmission_id">9.4 transmission_id로 이벤트 추적·디버깅</a>
+<a class="toc-h3" href="#95-failed">9.5 FAILED 이벤트 처리</a>
+<a class="toc-h3" href="#96">9.6 로컬 개발 환경 설정</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

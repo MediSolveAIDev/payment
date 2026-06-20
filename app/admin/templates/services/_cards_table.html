@@ -1,0 +1,58 @@
+{# 서비스 상세 — 등록 카드(결제수단 보관함) 리스트 partial (htmx 부분 갱신 대상).
+   cards 테이블을 사용자 ID 기준으로 조회해 카드 관련 정보를 모두 노출한다.
+   행 클릭 → 카드 상세(결제내역). '상태' 컬럼은 활성/비활성 뱃지 + 토글 버튼.
+   빌링키 암호문(billing_key_encrypted)은 민감 정보라 표시하지 않고,
+   조회·중복탐지용 해시(billing_key_hash)만 일부 표시한다. #}
+{% import "_list.html" as L %}
+<div id="list-svc-cards">
+<div class="card">
+  <div class="block-head"><h2 style="margin:0">등록 카드</h2>
+    <span class="muted" style="font-size:12px">결제수단 보관함 — 사용자당 1건 · 행 클릭 시 결제내역</span>
+  </div>
+  {% set base_path = '/admin/services/' ~ service.id %}
+  {# 사용자 ID 검색 툴바 — 카드는 상태/필터가 없어 검색어만 사용 #}
+  {{ L.toolbar(base_path, kpp, '사용자 ID 검색', target='list-svc-cards') }}
+  <table>
+    <thead><tr>
+      {{ L.sort_th(kpp, base_path, 'external_user_id', '사용자', target='list-svc-cards') }}
+      <th>카드번호</th>
+      <th>발급사코드</th>
+      <th>상태</th>
+      <th>customerKey</th>
+      <th>빌링키 해시</th>
+      {{ L.sort_th(kpp, base_path, 'created_at', '등록일', target='list-svc-cards') }}
+      {{ L.sort_th(kpp, base_path, 'updated_at', '변경일', target='list-svc-cards') }}
+      <th></th>
+    </tr></thead>
+    <tbody>
+    {% for c in card_page.items %}
+      {# 행 클릭 → 카드 상세(이 카드로 결제한 내역) #}
+      <tr onclick="location.href='/admin/cards/{{ c.id }}'" style="cursor:pointer">
+        <td>{{ c.external_user_id }}</td>
+        {# card_info는 토스 응답 JSONB(마스킹 번호·발급사 등). 미등록 키는 '-' #}
+        <td style="font-family:ui-monospace,monospace">{{ c.card_info.number if c.card_info and c.card_info.number else '-' }}</td>
+        <td>{{ c.card_info.issuerCode if c.card_info and c.card_info.issuerCode else '-' }}</td>
+        {# 활성/비활성 뱃지 — badge-ACTIVE(녹색)/badge-INACTIVE(회색) #}
+        <td><span class="badge badge-{{ 'ACTIVE' if c.is_active else 'INACTIVE' }}">{{ '활성' if c.is_active else '비활성' }}</span></td>
+        <td style="font-family:ui-monospace,monospace;font-size:12px">{{ c.customer_key }}</td>
+        {# 64자 SHA-256 해시는 앞 12자만 표시하고 전체는 title 툴팁으로 #}
+        <td class="muted" style="font-family:ui-monospace,monospace;font-size:12px" title="{{ c.billing_key_hash }}">{{ c.billing_key_hash[:12] }}…</td>
+        <td class="muted">{{ c.created_at|kst("%Y-%m-%d %H:%M") }}</td>
+        <td class="muted">{{ c.updated_at|kst("%Y-%m-%d %H:%M") }}</td>
+        {# 활성/비활성 토글 — htmx로 이 리스트만 갱신. 행 onclick(상세 이동)과 분리하려고 stopPropagation #}
+        <td onclick="event.stopPropagation()">
+          <form hx-post="/admin/cards/{{ c.id }}/toggle" hx-target="#list-svc-cards" hx-swap="outerHTML" style="margin:0">
+            <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+            <button class="btn btn-sm {{ 'btn-ghost' if c.is_active else 'btn-primary' }}" type="submit">
+              {{ '비활성화' if c.is_active else '활성화' }}</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="9" class="muted">등록된 카드가 없습니다</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {{ L.pager(card_page, base_path, kpp, target='list-svc-cards') }}
+</div>
+</div>

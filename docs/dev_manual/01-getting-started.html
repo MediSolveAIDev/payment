@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01. 시작하기 — 구조·실행·테스트·요청 처리 공통 흐름 — 개발자 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>개발자 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>🧱</span>기반 (먼저 읽기)</div>
+<a class="nav-link" href="README.html"><span class="n">·</span><span class="tt">개발자 인수인계 매뉴얼 (dev_manual)</span></a>
+<a class="nav-link active" href="01-getting-started.html"><span class="n">01</span><span class="tt">01. 시작하기 — 구조·실행·테스트·요청 처리 공통 흐름</span></a>
+<a class="nav-link" href="02-database.html"><span class="n">02</span><span class="tt">02. 데이터베이스 — 테이블·모델·관계·마이그레이션</span></a>
+<a class="nav-link" href="03-auth-and-security.html"><span class="n">03</span><span class="tt">03. 인증과 보안 공통</span></a>
+<div class="nav-group"><span>⚙️</span>기능별 상세</div>
+<a class="nav-link" href="04-subscription-create.html"><span class="n">04</span><span class="tt">04. 구독 생성</span></a>
+<a class="nav-link" href="05-subscription-renewal.html"><span class="n">05</span><span class="tt">05. 구독 갱신·만료·재시도·정합성(스케줄러 배치)</span></a>
+<a class="nav-link" href="06-subscription-manage.html"><span class="n">06</span><span class="tt">06. 구독 취소·재개·수동결제·카드변경</span></a>
+<a class="nav-link" href="07-one-off-payment.html"><span class="n">07</span><span class="tt">07. 단건(일반) 결제 + 취소</span></a>
+<a class="nav-link" href="08-plans.html"><span class="n">08</span><span class="tt">08. 요금제 관리 (생성·수정·금액 계산·자동결제안함·추가정보)</span></a>
+<a class="nav-link" href="09-services-registry.html"><span class="n">09</span><span class="tt">09. 서비스 등록·키 발급/회전·취소정책·담당자</span></a>
+<a class="nav-link" href="10-settlement.html"><span class="n">10</span><span class="tt">10. 정산(어드민 화면)</span></a>
+<a class="nav-link" href="11-dashboard.html"><span class="n">11</span><span class="tt">11. 대시보드 — 어드민 메인 화면</span></a>
+<a class="nav-link" href="12-webhooks.html"><span class="n">12</span><span class="tt">12. 웹훅 처리 (토스페이먼츠 → 서버)</span></a>
+<a class="nav-link" href="13-admin-accounts.html"><span class="n">13</span><span class="tt">13. 어드민 계정·역할·로그인/비밀번호</span></a>
+<a class="nav-link" href="14-global-settings.html"><span class="n">14</span><span class="tt">14. 전체 설정(재시도·어드민 IP·킬스위치)</span></a>
+<a class="nav-link" href="15-external-api-and-sample.html"><span class="n">15</span><span class="tt">15. 외부 API 레퍼런스 + 샘플 서비스 연동</span></a>
+<a class="nav-link" href="16-card-vault.html"><span class="n">16</span><span class="tt">16. 카드 보관함(Card Vault) — 카드 등록·교체·조회·삭제</span></a>
+<a class="nav-link" href="17-service-notifications.html"><span class="n">17</span><span class="tt">17. 서비스 알림(아웃고잉 웹훅) — 요청 016</span></a>
+<div class="nav-group"><span>🖥️</span>어드민 화면별 매뉴얼</div>
+<a class="nav-link" href="admin--README.html"><span class="n">·</span><span class="tt">어드민 콘솔 페이지 매뉴얼</span></a>
+<a class="nav-link" href="admin--01-login-and-access.html"><span class="n">01</span><span class="tt">01. 로그인·접근 (로그인 / 비밀번호 설정 / 로그아웃 / IP 제한)</span></a>
+<a class="nav-link" href="admin--02-dashboard.html"><span class="n">02</span><span class="tt">02. 대시보드</span></a>
+<a class="nav-link" href="admin--03-services.html"><span class="n">03</span><span class="tt">03. 서비스 관리</span></a>
+<a class="nav-link" href="admin--04-plans.html"><span class="n">04</span><span class="tt">04. 요금제 관리 (목록·생성·수정·활성/비활성·삭제)</span></a>
+<a class="nav-link" href="admin--05-subscriptions.html"><span class="n">05</span><span class="tt">05. 구독 관리 — 목록·상세·강제 취소</span></a>
+<a class="nav-link" href="admin--06-payments.html"><span class="n">06</span><span class="tt">06. 결제 — 목록·상세·단건 취소</span></a>
+<a class="nav-link" href="admin--07-settlement.html"><span class="n">07</span><span class="tt">07. 정산 화면</span></a>
+<a class="nav-link" href="admin--08-users.html"><span class="n">08</span><span class="tt">08. 계정 관리</span></a>
+<a class="nav-link" href="admin--09-audit.html"><span class="n">09</span><span class="tt">09. 감사 로그 (조회·검색·정리·엑셀)</span></a>
+<a class="nav-link" href="admin--10-settings.html"><span class="n">10</span><span class="tt">10. 전체 설정 (재시도 정책 · 어드민 IP · 킬스위치)</span></a>
+<div class="nav-group"><span>📋</span>운영 워크플로우</div>
+<a class="nav-link" href="admin--11-onboarding-checklist.html"><span class="n">·</span><span class="tt">신규 서비스 온보딩 체크리스트 (운영자용)</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">개발자 매뉴얼</a> <span>/</span> <em>기반 (먼저 읽기)</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">🧱 기반 (먼저 읽기)</span>
+        <span class="dh-src">docs/dev_manual/01-getting-started.md</span></div>
+      <h1>01. 시작하기 — 구조·실행·테스트·요청 처리 공통 흐름</h1>
+      
+    </header>
+    <div class="doc">
+
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p><strong>쉽게 말하면</strong>: 어떤 요청이 와도 항상 같은 길을 지나갑니다 — <strong>문지기(인증·<code>deps</code>) → 접수창구(API 라우터) → 실제 처리부서(<code>services</code>) → 장부(DB)</strong>. 코드를 처음 읽을 땐 이 '길' 하나만 기억하세요. 모든 기능이 같은 구조라 한 기능만 끝까지 따라가 보면 나머지는 금방 익숙해집니다.</p>
+<p><strong>대상 독자</strong>: 이 프로젝트를 처음 받아 인수인계만으로 유지보수해야 하는 초보 개발자.
+여기서 다루지 않는 세부 주제는 문서 하단의 <strong>관련 문서</strong> 링크를 참고한다.</p>
+</div></blockquote>
+<hr />
+<h2 id="1">1. 기술 스택</h2>
+<table>
+<thead>
+<tr>
+<th>구분</th>
+<th>선택</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>웹 프레임워크</td>
+<td>FastAPI 0.115+</td>
+<td>비동기(asyncio)</td>
+</tr>
+<tr>
+<td>DB</td>
+<td>PostgreSQL 16 (asyncpg 드라이버)</td>
+<td>포트 5433 (로컬 docker)</td>
+</tr>
+<tr>
+<td>ORM / 마이그레이션</td>
+<td>SQLAlchemy 2.x async + Alembic</td>
+<td></td>
+</tr>
+<tr>
+<td>캐시 / 세션 / 잠금</td>
+<td>Redis 7</td>
+<td>포트 6380 (로컬 docker)</td>
+</tr>
+<tr>
+<td>결제 모듈</td>
+<td>TossPayments 빌링 API</td>
+<td><code>app/toss/</code></td>
+</tr>
+<tr>
+<td>어드민 화면</td>
+<td>Jinja2 + htmx</td>
+<td>서버사이드 렌더</td>
+</tr>
+<tr>
+<td>스케줄러</td>
+<td>APScheduler 3.x (AsyncIOScheduler)</td>
+<td>구독 자동 갱신</td>
+</tr>
+<tr>
+<td>패키지 관리</td>
+<td>uv</td>
+<td><code>pyproject.toml</code></td>
+</tr>
+<tr>
+<td>런타임</td>
+<td>Python 3.13+</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>의존성 전체 목록: <code class="loc">pyproject.toml:6-35</code></p>
+<hr />
+<h2 id="2">2. 디렉터리 구조</h2>
+<pre><code>payment_system/
+├── app/
+│   ├── main.py             # FastAPI 앱 팩토리 + lifespan (진입점)
+│   ├── api/
+│   │   ├── deps.py         # 외부 API 공통 의존성(DB·Redis·Toss·인증)
+│   │   ├── errors.py       # DomainError → JSON 응답 핸들러
+│   │   └── v1/             # 외부 서비스가 호출하는 REST API 라우터
+│   │       ├── subscriptions.py
+│   │       ├── payments.py
+│   │       ├── plans.py
+│   │       ├── services.py
+│   │       └── webhooks.py
+│   ├── admin/
+│   │   ├── __init__.py     # Jinja2 템플릿 엔진, render() 헬퍼
+│   │   ├── deps.py         # 어드민 세션·CSRF·역할 인증
+│   │   └── routes/         # 어드민 화면 라우터 (auth, services, plans, ...)
+│   ├── services/           # 비즈니스 로직·트랜잭션 (핵심 계층)
+│   │   ├── subscriptions.py
+│   │   ├── renewals.py     # 정기 갱신 배치 로직
+│   │   ├── payments.py
+│   │   ├── plans.py
+│   │   ├── registry.py     # 서비스 등록·키 관리
+│   │   ├── auth.py         # 어드민 로그인·세션
+│   │   ├── billing_math.py # 결제 금액 계산
+│   │   ├── audit.py        # 감사 로그 기록
+│   │   └── ...
+│   ├── models/             # SQLAlchemy ORM 테이블 정의
+│   │   ├── base.py         # DeclarativeBase + TimestampMixin
+│   │   ├── enums.py        # 모든 StrEnum (상태값)
+│   │   ├── service.py / plan.py / subscription.py
+│   │   ├── payment.py / user.py / audit_log.py
+│   │   └── global_settings.py  # 전역 운영 설정(단일 행)
+│   ├── schemas/
+│   │   └── api.py          # 외부 API 요청·응답 Pydantic 스키마
+│   ├── core/
+│   │   ├── config.py       # Settings (pydantic-settings, .env 읽기)
+│   │   ├── db.py           # 엔진·세션 팩토리 생성
+│   │   ├── clock.py        # utcnow(), kst_format() — UTC/KST 규약
+│   │   ├── crypto.py       # AES-256-GCM 암복호화 (빌링키·HMAC secret)
+│   │   ├── security.py     # HMAC 서명, 해시, 비밀번호 검증
+│   │   └── errors.py       # DomainError 계층 (예외 클래스)
+│   ├── toss/
+│   │   ├── client.py       # TossClient Protocol + HttpTossClient 구현체
+│   │   ├── fake.py         # 테스트용 FakeTossClient
+│   │   └── types.py / errors.py
+│   ├── scheduler/
+│   │   └── runner.py       # APScheduler 시작 + 갱신 배치 잡 등록
+│   └── notifications/
+│       └── email.py        # EmailSender Protocol + Console/Gmail/Recording 구현체
+├── tests/
+│   ├── conftest.py         # 세션 픽스처 (engine·Redis·앱·client 등)
+│   ├── unit/               # 순수 함수 단위 테스트 (DB 없음)
+│   ├── integration/        # 서비스 레이어 + DB/Redis 통합 테스트
+│   ├── e2e/                # HTTP 엔드포인트 전체 흐름 테스트
+│   ├── security/           # HMAC 인증·어드민 보안 테스트
+│   ├── factories.py        # 테스트용 ORM 객체 생성 헬퍼
+│   └── helpers.py          # HMAC 서명 헤더 생성, admin 로그인 헬퍼
+├── alembic/
+│   ├── env.py              # Alembic 비동기 마이그레이션 설정
+│   └── versions/           # 마이그레이션 스크립트 (순서 있음)
+├── docs/                   # 설계 문서, 토스 API 참고, 개발 매뉴얼
+├── docker-compose.yml      # Postgres(5433) + Redis(6380) 로컬 환경
+└── pyproject.toml          # 의존성 + pytest 설정
+</code></pre>
+<hr />
+<h2 id="3">3. 로컬 환경 구축 및 실행</h2>
+<h3 id="3-1">3-1. 사전 준비</h3>
+<ul>
+<li>Python 3.13+, <a href="https://docs.astral.sh/uv/">uv</a> 설치 필요</li>
+<li>Docker / Docker Compose (Postgres + Redis 기동)</li>
+</ul>
+<h3 id="3-2">3-2. 의존성 설치</h3>
+<pre><code class="language-bash">uv sync
+# 테스트·개발 도구 포함 시
+uv sync --group dev
+</code></pre>
+<h3 id="3-3-postgres-redis">3-3. Postgres · Redis 기동</h3>
+<pre><code class="language-bash">docker compose up -d
+</code></pre>
+<p><code>docker-compose.yml</code>에 정의된 서비스:
+- <strong>postgres</strong>: <code>localhost:5433</code> (user=<code>payment</code>, db=<code>payment</code>)
+- <strong>redis</strong>: <code>localhost:6380</code></p>
+<h3 id="3-4-env-devprod">3-4. 환경변수 설정 (.env — dev/prod 분리)</h3>
+<p><code>app/core/config.py</code>의 <code>Settings</code> 클래스가 환경별로 파일을 읽는다. <strong>공통 <code>.env</code>를 먼저 읽은 뒤 환경별 <code>.env.&lt;env&gt;</code>(예: <code>.env.dev</code>, <code>.env.prod</code>)로 덮어쓴다</strong>(뒤 파일이 우선). 환경은 OS 환경변수 <code>APP_ENV</code>(없으면 <code>ENVIRONMENT</code>, 기본 <code>dev</code>)로 결정한다 — <code>config.py</code>의 <code>_env_files()</code> / <code>_active_env()</code> 참조.</p>
+<pre><code class="language-text">로드 순서: .env  →  .env.&lt;APP_ENV&gt;
+  APP_ENV=prod uvicorn app.main:app   →  .env + .env.prod
+  uvicorn app.main:app (미지정)        →  .env + .env.dev
+</code></pre>
+<ul>
+<li><strong><code>.env</code></strong> : dev/prod 공통값(토스 API URL·웹훅 IP·rate limit·재시도 정책·SMTP 등)</li>
+<li><strong><code>.env.dev</code></strong> : 개발 전용(로컬 DB/Redis, <code>test_sk_*</code>, dev 로그인 자동입력, Swagger 계정)</li>
+<li><strong><code>.env.prod</code></strong> : 운영 전용(운영 URL/DB, <code>live_sk_*</code>, <code>TRUST_PROXY=true</code> 등 — 실제 값으로 교체).
+  <code>TRUST_PROXY=true</code>일 때는 <strong>반드시 <code>TRUST_PROXY_HOPS</code>를 실제 프록시 단 수에 맞게</strong> 설정한다
+  (기본 1 = 프록시 1단). 프록시가 XFF를 append만 해도 안전하도록 '오른쪽에서 n번째' 방식으로
+  클라이언트 IP를 판별한다 — <a href="03-auth-and-security.html">03. 인증과 보안</a> 참조.</li>
+</ul>
+<p>시작: <code>cp .env.example .env.dev</code> 후 값 채우기. 모든 키 예시는 <code>.env.example</code>에 있다.</p>
+<p>필수 항목(환경별 파일에):</p>
+<pre><code class="language-dotenv"># AES-256-GCM 키: python -c &quot;import os,base64; print(base64.b64encode(os.urandom(32)).decode())&quot;
+ENCRYPTION_KEY=&lt;base64 32바이트&gt;     # ⚠️ dev/prod 서로 다른 키 사용 권장
+# 토스페이먼츠 시크릿 키 (dev=test_sk_..., prod=live_sk_...)
+TOSS_SECRET_KEY=test_sk_...
+</code></pre>
+<p>주요 설정 항목 (기본값 포함): <code>app/core/config.py</code></p>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>기본값</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>environment</code></td>
+<td><code>dev</code></td>
+<td><code>dev</code> / <code>test</code> / <code>prod</code></td>
+</tr>
+<tr>
+<td><code>database_url</code></td>
+<td><code>postgresql+asyncpg://payment:payment@localhost:5433/payment</code></td>
+<td>asyncpg 비동기 URL</td>
+</tr>
+<tr>
+<td><code>redis_url</code></td>
+<td><code>redis://localhost:6380/0</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>encryption_key</code></td>
+<td>(필수)</td>
+<td>base64 32바이트 AES 키</td>
+</tr>
+<tr>
+<td><code>toss_secret_key</code></td>
+<td>(필수)</td>
+<td>토스페이먼츠 시크릿 키</td>
+</tr>
+<tr>
+<td><code>scheduler_enabled</code></td>
+<td><code>True</code></td>
+<td>False이면 갱신 배치 비활성화</td>
+</tr>
+<tr>
+<td><code>scheduler_interval_minutes</code></td>
+<td><code>5</code></td>
+<td>갱신 배치 실행 주기</td>
+</tr>
+<tr>
+<td><code>rate_limit_per_minute</code></td>
+<td><code>120</code></td>
+<td>일반 API 분당 허용 건수</td>
+</tr>
+<tr>
+<td><code>rate_limit_payment_per_minute</code></td>
+<td><code>20</code></td>
+<td>결제 API 분당 허용 건수</td>
+</tr>
+<tr>
+<td><code>db_pool_size</code> / <code>db_max_overflow</code></td>
+<td><code>10</code> / <code>20</code></td>
+<td>DB 커넥션 풀(총 최대 = 합). 감사 Phase 1에서 명시 설정 도입</td>
+</tr>
+<tr>
+<td><code>db_pool_timeout</code> / <code>db_pool_recycle</code></td>
+<td><code>30</code> / <code>1800</code></td>
+<td>풀 고갈 대기 한도(초) / 커넥션 재활용 주기(초)</td>
+</tr>
+<tr>
+<td><code>trust_proxy</code></td>
+<td><code>False</code></td>
+<td>True면 X-Forwarded-For로 클라이언트 IP 판별(리버스 프록시 환경)</td>
+</tr>
+<tr>
+<td><code>trust_proxy_hops</code></td>
+<td><code>1</code></td>
+<td>신뢰 프록시 단 수 — XFF의 <strong>오른쪽에서 n번째</strong>를 클라이언트 IP로 사용(위조 방어, 03 문서 참조)</td>
+</tr>
+<tr>
+<td><code>session_absolute_ttl_seconds</code></td>
+<td><code>43200</code></td>
+<td>어드민 세션 절대 수명(12시간) — 유휴 연장과 무관하게 초과 시 파기(감사 Phase 2)</td>
+</tr>
+<tr>
+<td><code>public_service_list_enabled</code></td>
+<td><code>True</code></td>
+<td>무인증 <code>GET /api/v1/services</code> 노출 여부. 인터넷 직노출 운영에서는 <code>false</code> 권장</td>
+</tr>
+<tr>
+<td><code>gmail_id</code> / <code>gmail_pw</code></td>
+<td>`` (빈값)</td>
+<td>설정 시 실제 메일 발송, 미설정 시 콘솔 출력</td>
+</tr>
+<tr>
+<td><code>swagger_id</code> / <code>swagger_pw</code></td>
+<td>`` (빈값)</td>
+<td><strong>Swagger 문서 접근용 HTTP Basic 계정.</strong> 둘 다 설정해야 <code>/docs</code>·<code>/openapi.json</code> 노출, 비우면 404</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p><strong>주의</strong>: <code>/docs</code>와 <code>/openapi.json</code>은 <strong><code>SWAGGER_ID</code>/<code>SWAGGER_PW</code>가 둘 다 설정된 경우에만</strong> 노출되며 HTTP Basic 인증을 요구한다. 둘 중 하나라도 비면 환경과 무관하게 404다 (<code>main.py</code>의 <code>_register_protected_docs</code>).</p>
+</div></blockquote>
+<h3 id="3-5-db">3-5. DB 마이그레이션</h3>
+<pre><code class="language-bash">uv run alembic upgrade head
+</code></pre>
+<p><code class="loc">alembic/env.py:33-34</code>: 환경변수 <code>DATABASE_URL</code>이 있으면 <code>.ini</code> 기본값을 덮어쓴다.</p>
+<p>처음 팀에 합류해서 스키마가 없다면 위 명령 한 번으로 전체 테이블이 생성된다.</p>
+<h3 id="3-6">3-6. 서버 기동</h3>
+<pre><code class="language-bash">uv run uvicorn app.main:app --reload --port 8000
+</code></pre>
+<p>기동 후 접속:
+- 루트: http://localhost:8000/ → <strong><code>/admin</code>으로 자동 리다이렉트</strong>(미로그인 시 로그인 화면). <code>main.py</code>의 <code>root()</code>(307 redirect)
+- API 문서: http://localhost:8000/docs → <strong>HTTP Basic 인증</strong>(<code>SWAGGER_ID</code>/<code>SWAGGER_PW</code>). 미설정 시 404
+- 어드민: http://localhost:8000/admin
+- 헬스체크: http://localhost:8000/health</p>
+<h3 id="3-7-lifespan">3-7. lifespan에서 초기화되는 것</h3>
+<p><code class="loc">app/main.py:44-66</code>의 <code>lifespan</code> 함수가 서버 기동 시 다음 순서로 초기화한다:</p>
+<pre><code>1. app.state.settings   — Settings 인스턴스 (config.py)         main.py:46
+2. app.state.cipher     — AesGcmCipher (ENCRYPTION_KEY 검증)    main.py:48
+3. app.state.engine     — SQLAlchemy 비동기 엔진                 main.py:49
+4. app.state.session_factory — AsyncSession 팩토리               main.py:50
+5. app.state.redis      — Redis.from_url(redis_url)             main.py:51
+6. app.state.toss       — HttpTossClient (토스 API 클라이언트)   main.py:52-53
+7. app.state.email_sender — Gmail 또는 Console 발송체            main.py:54
+8. scheduler            — APScheduler 시작 (scheduler_enabled=True 시)  main.py:55
+</code></pre>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>cipher 초기화 실패 = 즉시 종료</strong>: <code>ENCRYPTION_KEY</code>가 없거나 32바이트가 아니면 <code>AesGcmCipher.__init__</code>(<code class="loc">crypto.py:27-30</code>)에서 <code>ValueError</code>가 발생해 서버가 기동되지 않는다. 의도적 설계다.</p>
+</div></blockquote>
+<p>종료 시에는 스케줄러 → Redis → Toss HTTP 클라이언트 → DB 엔진 순으로 정리한다 (<code class="loc">main.py:57-66</code>).</p>
+<h3 id="3-8">3-8. 스케줄러 동작</h3>
+<p><code class="loc">app/scheduler/runner.py:49-62</code>의 <code>start_scheduler</code>가 <code>AsyncIOScheduler</code>를 시작하고, <code>scheduler_interval_minutes</code>(기본 5분) 주기로 <code>run_renewals</code>를 실행한다.</p>
+<p><code>run_renewals</code>는 Redis <code>SET NX</code> 전역 락(<code>GLOBAL_LOCK_KEY</code>)으로 다중 인스턴스 중복 실행을 방지한다 (<code class="loc">runner.py:36</code>). 락 획득 실패 시 해당 주기는 건너뛴다. 배치 완료·예외 모두 <code>finally</code>에서 락을 해제한다 (<code class="loc">runner.py:45-46</code>).</p>
+<hr />
+<h2 id="4">4. 테스트 실행</h2>
+<pre><code class="language-bash"># 전체 테스트
+uv run pytest
+
+# 특정 폴더만
+uv run pytest tests/unit/
+uv run pytest tests/integration/
+uv run pytest tests/e2e/
+uv run pytest tests/security/
+
+# 커버리지 포함
+uv run pytest --cov=app --cov-report=term-missing
+</code></pre>
+<p><code class="loc">pyproject.toml:37-40</code>: <code>asyncio_mode = "auto"</code> 설정이므로 <code>async def</code> 테스트 함수에 별도 데코레이터가 필요 없다.</p>
+<h3 id="_1">테스트 구조</h3>
+<table>
+<thead>
+<tr>
+<th>폴더</th>
+<th>범위</th>
+<th>DB/Redis 필요</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tests/unit/</code></td>
+<td>순수 함수 (billing_math, crypto, security 등)</td>
+<td>아니오</td>
+</tr>
+<tr>
+<td><code>tests/integration/</code></td>
+<td>서비스 레이어 + 실제 DB/Redis</td>
+<td>예</td>
+</tr>
+<tr>
+<td><code>tests/e2e/</code></td>
+<td>HTTP 엔드포인트 전체 흐름 (ASGI)</td>
+<td>예</td>
+</tr>
+<tr>
+<td><code>tests/security/</code></td>
+<td>HMAC 인증, 어드민 보안 경계</td>
+<td>예</td>
+</tr>
+</tbody>
+</table>
+<h3 id="conftestpy-testsconftestpy">conftest.py 핵심 픽스처 (<code>tests/conftest.py</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>픽스처</th>
+<th>범위</th>
+<th>역할</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>settings</code></td>
+<td>session</td>
+<td><code>environment=test</code>, <code>.env</code> 무시, 스케줄러 비활성화 (<code class="loc">conftest.py:22-34</code>)</td>
+</tr>
+<tr>
+<td><code>engine</code></td>
+<td>session</td>
+<td>테스트 DB 스키마 drop_all → create_all (<code class="loc">conftest.py:43-49</code>)</td>
+</tr>
+<tr>
+<td><code>session_factory</code></td>
+<td>session</td>
+<td><code>expire_on_commit=False</code> 팩토리</td>
+</tr>
+<tr>
+<td><code>db</code></td>
+<td>function</td>
+<td>요청별 <code>AsyncSession</code></td>
+</tr>
+<tr>
+<td><code>redis_client</code></td>
+<td>function</td>
+<td>DB 15번 (테스트 전용)</td>
+</tr>
+<tr>
+<td><code>clean_db</code></td>
+<td>function</td>
+<td>테스트 후 전 테이블 TRUNCATE</td>
+</tr>
+<tr>
+<td><code>clean_redis</code></td>
+<td>function</td>
+<td>테스트 후 <code>flushdb</code></td>
+</tr>
+<tr>
+<td><code>fake_toss</code></td>
+<td>function</td>
+<td><code>FakeTossClient</code> — 실제 토스 API 미호출</td>
+</tr>
+<tr>
+<td><code>email_sender</code></td>
+<td>function</td>
+<td><code>RecordingEmailSender</code> — 발송 내역 메모리 기록</td>
+</tr>
+<tr>
+<td><code>app</code></td>
+<td>function</td>
+<td><code>create_app(settings, ..., engine=engine)</code> + <code>LifespanManager</code></td>
+</tr>
+<tr>
+<td><code>client</code></td>
+<td>function</td>
+<td><code>httpx.AsyncClient(ASGITransport(app))</code> — 실제 HTTP 서버 불필요</td>
+</tr>
+</tbody>
+</table>
+<p><code>tests/integration/conftest.py</code>와 <code>tests/e2e/conftest.py</code>에는 각각 <code>autouse=True</code>로 <code>clean_db + clean_redis</code> 조합이 걸려 있어 테스트 간 데이터가 격리된다.</p>
+<p>HMAC 서명 헤더는 <code class="loc">tests/helpers.py:8-21</code>의 <code>signed_headers()</code>로 생성한다.</p>
+<hr />
+<h2 id="5">5. 요청 처리 공통 파이프라인</h2>
+<h3 id="5-1-api-apiv1">5-1. 외부 API 요청 흐름 (<code>/api/v1/...</code>)</h3>
+<pre><code>외부 서비스 (HTTP 요청)
+       │  X-Service-Key / X-Timestamp / X-Nonce / X-Signature 헤더 포함
+       ▼
+app/main.py:78
+  app.include_router(api_v1_router, prefix=&quot;/api/v1&quot;)
+       │
+       ▼
+app/api/errors.py:26  ← register_error_handlers
+  DomainError → JSON, RequestValidationError → 422, Exception → 500
+       │
+       ▼
+app/api/v1/&lt;라우터&gt;.py  (예: subscriptions.py, payments.py)
+  @router.post(&quot;/subscriptions&quot;, ...)
+       │
+       ├─ Depends(payment_rate_limit)         ← 결제성 엔드포인트
+       │      또는 Depends(authenticate_service)  ← 읽기/상태변경 엔드포인트
+       │
+       ▼
+app/api/deps.py:77  authenticate_service
+  1. ensure_server_enabled(db)  — 킬스위치 확인 (ServerDisabledError → 503)
+  2. X-Service-Key → SHA-256 해시 → DB Service 조회
+  3. IP 화이트리스트 확인 (service.allowed_ips)
+  4. Redis sliding-window rate limit  (rl:{service_id}:{window})
+  5. X-Timestamp 윈도우 검증 (±300초, hmac_timestamp_tolerance_seconds)
+  6. HMAC-SHA256 서명 검증 (method + path + timestamp + nonce + body)
+  7. Redis nonce 1회용 소비  (nonce:{service_id}:{nonce}, TTL 600s)
+  → Service 객체 반환
+       │
+       ▼
+app/api/deps.py:141  payment_rate_limit  (결제성 엔드포인트 추가)
+  Redis sliding-window (rlp:{service_id}:{window}, 분당 20건)
+  → Service 객체 반환
+       │
+       ▼
+app/services/&lt;도메인&gt;.py  (예: subscriptions.py, payments.py)
+  비즈니스 로직 처리
+  DomainError 발생 시 상위로 전파 → errors.py 핸들러가 JSON 변환
+  성공 시 db.commit() 또는 session.flush() → commit()
+       │
+       ▼
+app/models/&lt;모델&gt;.py  (SQLAlchemy ORM)
+  SELECT / INSERT / UPDATE → asyncpg → PostgreSQL
+       │
+       ▼
+JSON 응답 반환
+</code></pre>
+<h4 id="appapidepspy">핵심 의존성 주입 함수 (<code>app/api/deps.py</code>)</h4>
+<table>
+<thead>
+<tr>
+<th>함수</th>
+<th>반환</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>get_settings</code></td>
+<td><code>Settings</code></td>
+<td><code>app.state.settings</code> 반환 (<code class="loc">deps.py:32</code>)</td>
+</tr>
+<tr>
+<td><code>get_db</code></td>
+<td><code>AsyncSession</code></td>
+<td>요청 범위 세션, 완료 후 close (<code class="loc">deps.py:37</code>)</td>
+</tr>
+<tr>
+<td><code>get_redis</code></td>
+<td><code>Redis</code></td>
+<td>앱 공유 Redis 클라이언트 (<code class="loc">deps.py:43</code>)</td>
+</tr>
+<tr>
+<td><code>get_cipher</code></td>
+<td><code>AesGcmCipher</code></td>
+<td>AES-GCM 암복호화 객체 (<code class="loc">deps.py:48</code>)</td>
+</tr>
+<tr>
+<td><code>get_toss</code></td>
+<td><code>TossClient</code></td>
+<td>토스페이먼츠 API 클라이언트 (<code class="loc">deps.py:53</code>)</td>
+</tr>
+<tr>
+<td><code>get_email_sender</code></td>
+<td><code>EmailSender</code></td>
+<td>이메일 발송 구현체 (<code class="loc">deps.py:58</code>)</td>
+</tr>
+<tr>
+<td><code>authenticate_service</code></td>
+<td><code>Service</code></td>
+<td>3중 인증 후 Service ORM 반환 (<code class="loc">deps.py:77</code>)</td>
+</tr>
+<tr>
+<td><code>payment_rate_limit</code></td>
+<td><code>Service</code></td>
+<td>결제 전용 추가 제한 (<code class="loc">deps.py:141</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="5-2-admin">5-2. 어드민 화면 요청 흐름 (<code>/admin/...</code>)</h3>
+<pre><code>브라우저 (HTTP 요청, admin_session 쿠키 포함)
+       │
+       ▼
+app/main.py:79
+  app.include_router(admin_router, prefix=&quot;/admin&quot;)
+       │
+       ▼
+app/admin/__init__.py:74-100
+  router.include_router(auth.router)
+  router.include_router(services.router)
+  ...
+       │
+       ▼
+app/admin/routes/&lt;화면&gt;.py  (예: routes/services.py, routes/plans.py)
+  @router.get(&quot;/services&quot;)
+       │
+       ├─ Depends(require_admin)   ← SYSTEM_ADMIN 전용
+       │  또는 Depends(require_any)  ← SYSTEM_ADMIN + SERVICE_MANAGER
+       │
+       ▼
+app/admin/deps.py:60  require_user
+  1. 쿠키 admin_session → Redis &quot;session:{id}&quot; 조회
+  2. user_id → DB User 조회 → user.status == ACTIVE 확인
+  3. GlobalSettings.admin_allowed_ips IP 검사 (설정 시)
+  → AdminContext(user, session_id, csrf_token, service_ids) 반환
+
+app/admin/deps.py:86  require_role
+  ctx.user.role in 허용 목록 확인 → PermissionDeniedError(403)
+       │
+       ▼
+app/services/&lt;도메인&gt;.py
+  비즈니스 로직 + db.commit()
+       │
+       ▼
+app/admin/__init__.py:51  render()  또는  render_list()
+  Jinja2 TemplateResponse
+  htmx 요청(HX-Request 헤더)이면 partial 템플릿만 렌더
+  saved= 쿼리 파라미터 있으면 HX-Trigger: showSaved 헤더 추가
+       │
+       ▼
+HTML 응답 (또는 303 RedirectResponse)
+</code></pre>
+<h4 id="_2">어드민 미인증 처리</h4>
+<p><code>AdminAuthRequired</code> 예외 발생 시 (<code class="loc">admin/deps.py:34</code>):
+- 일반 요청: <code>303 → /admin/login</code> 리다이렉트
+- htmx 요청: <code>204 + HX-Redirect: /admin/login</code> 헤더 (<code class="loc">admin/deps.py:118-130</code>)</p>
+<h4 id="post-csrf">POST 요청 CSRF 보호</h4>
+<p>모든 어드민 POST는 <code>validate_csrf()</code>를 통과해야 한다 (<code class="loc">admin/deps.py:105-110</code>).
+폼의 hidden <code>csrf_token</code> 필드 또는 <code>X-CSRF-Token</code> 헤더 중 하나를 세션 토큰과 비교한다.</p>
+<hr />
+<h2 id="6">6. 계층별 책임 — "어디를 고쳐야 하나"</h2>
+<h3 id="_3">계층 구조</h3>
+<pre><code>┌─────────────────────────────────────────────┐
+│  app/api/v1/*.py  또는  app/admin/routes/*  │  ← 라우터 계층 (얇게)
+│  역할: 요청 역직렬화·Pydantic 검증·         │
+│        의존성 주입·응답 직렬화·렌더         │
+└──────────────────────┬──────────────────────┘
+                       │ 함수 호출 (서비스 함수 직접 호출)
+┌──────────────────────▼──────────────────────┐
+│  app/services/*.py                          │  ← 서비스 계층 (핵심)
+│  역할: 비즈니스 규칙·트랜잭션·커밋         │
+│        DomainError 발생                     │
+│        db.commit() 은 여기서만 호출         │
+└──────────────────────┬──────────────────────┘
+                       │ SELECT / INSERT / UPDATE
+┌──────────────────────▼──────────────────────┐
+│  app/models/*.py                            │  ← 모델 계층
+│  역할: 테이블 정의·관계·열거형              │
+│        비즈니스 로직 없음                   │
+└──────────────────────┬──────────────────────┘
+                       │
+                   PostgreSQL
+</code></pre>
+<h3 id="_4">수정 위치 가이드</h3>
+<table>
+<thead>
+<tr>
+<th>상황</th>
+<th>수정 위치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HTTP 상태코드나 응답 필드 변경</td>
+<td><code>app/api/v1/*.py</code> 또는 <code>app/schemas/api.py</code></td>
+</tr>
+<tr>
+<td>어드민 화면 레이아웃·필드 변경</td>
+<td><code>app/admin/templates/**/*.html</code></td>
+</tr>
+<tr>
+<td>비즈니스 규칙 변경 (할인 계산, 구독 제한 등)</td>
+<td><code>app/services/*.py</code></td>
+</tr>
+<tr>
+<td>결제 금액 계산</td>
+<td><code>app/services/billing_math.py</code></td>
+</tr>
+<tr>
+<td>DB 컬럼·테이블 추가/변경</td>
+<td><code>app/models/*.py</code> → <code>alembic revision --autogenerate</code> → <code>alembic upgrade head</code></td>
+</tr>
+<tr>
+<td>설정값 추가</td>
+<td><code>app/core/config.py</code> <code>Settings</code> 클래스에 필드 추가</td>
+</tr>
+<tr>
+<td>에러 코드 추가</td>
+<td><code>app/core/errors.py</code>에 <code>DomainError</code> 서브클래스 추가</td>
+</tr>
+<tr>
+<td>갱신 배치 로직</td>
+<td><code>app/services/renewals.py</code></td>
+</tr>
+<tr>
+<td>토스 API 호출 방식</td>
+<td><code>app/toss/client.py</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="_5">중요 규칙</h3>
+<ul>
+<li><strong><code>db.commit()</code>은 서비스 레이어에서만</strong> 호출한다. 라우터에서 직접 commit하지 않는다.</li>
+<li><strong>금액은 서버가 계산</strong>한다. <code class="loc">app/schemas/api.py:5-6</code> 주석 참고 — 클라이언트가 금액을 전달하면 검증 없이 거부된다.</li>
+<li><strong>시간은 UTC 저장, KST 표시</strong>: DB에는 항상 UTC로 저장하고, 화면 출력 시에만 <code>kst_format()</code>으로 변환한다. 자세한 내용은 아래 섹션 참고.</li>
+</ul>
+<hr />
+<h2 id="7">7. 초보자 팁</h2>
+<h3 id="7-1">7-1. 로그 보는 법</h3>
+<p>코드 전반에서 <code>logging.getLogger("payment.&lt;모듈명&gt;")</code>을 사용한다.</p>
+<table>
+<thead>
+<tr>
+<th>logger 이름</th>
+<th>파일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>payment.api</code></td>
+<td><code class="loc">app/api/errors.py:23</code></td>
+</tr>
+<tr>
+<td><code>payment.subscriptions</code></td>
+<td><code class="loc">app/services/subscriptions.py:51</code></td>
+</tr>
+<tr>
+<td><code>payment.renewals</code></td>
+<td><code class="loc">app/services/renewals.py:44</code></td>
+</tr>
+<tr>
+<td><code>payment.scheduler</code></td>
+<td><code class="loc">app/scheduler/runner.py:17</code></td>
+</tr>
+<tr>
+<td><code>payment.email</code></td>
+<td><code class="loc">app/notifications/email.py:27</code></td>
+</tr>
+</tbody>
+</table>
+<p>개발 중 특정 모듈만 상세하게 보려면:</p>
+<pre><code class="language-bash">PYTHONPATH=. python -c &quot;import logging; logging.basicConfig(level=logging.DEBUG)&quot;
+# 또는 uvicorn 실행 시
+uv run uvicorn app.main:app --reload --log-level debug
+</code></pre>
+<h3 id="7-2">7-2. 자주 쓰는 명령</h3>
+<pre><code class="language-bash"># 새 마이그레이션 생성 (모델 변경 후)
+uv run alembic revision --autogenerate -m &quot;add_some_column&quot;
+
+# 마이그레이션 적용
+uv run alembic upgrade head
+
+# 마이그레이션 1단계 되돌리기
+uv run alembic downgrade -1
+
+# 현재 마이그레이션 상태
+uv run alembic current
+
+# 테스트 DB만 초기화
+TEST_DATABASE_URL=... uv run pytest tests/integration/ -x
+
+# 특정 테스트만 실행
+uv run pytest tests/integration/test_subscription_create.py -v
+</code></pre>
+<h3 id="7-3">7-3. 흔한 함정</h3>
+<h4 id="utc-kst">UTC 저장 / KST 표시</h4>
+<p><strong>잘못된 패턴</strong>:</p>
+<pre><code class="language-python"># 절대 하지 말 것
+from datetime import datetime
+now = datetime.now()          # naive datetime, UTC 보장 안 됨
+now = datetime.utcnow()       # naive datetime 반환, 의미적으로 불안전
+</code></pre>
+<p><strong>올바른 패턴</strong>:</p>
+<pre><code class="language-python">from app.core.clock import utcnow, kst_format
+
+now = utcnow()                         # timezone-aware UTC datetime (clock.py:15-21)
+display = kst_format(now)              # &quot;2026-06-10 14:30&quot; (clock.py:24-31)
+display = kst_format(now, &quot;%m-%d&quot;)     # &quot;06-10&quot;
+</code></pre>
+<p>Jinja2 템플릿에서는 <code>{{ created_at|kst }}</code> 필터를 사용한다 (<code class="loc">admin/__init__.py:17</code>).</p>
+<h4 id="encryption_key">ENCRYPTION_KEY 없으면 기동 불가</h4>
+<p><code>.env</code>에 <code>ENCRYPTION_KEY</code>가 없거나 base64 32바이트가 아니면 <code>lifespan</code>의 <code>AesGcmCipher</code> 생성 단계에서 즉시 실패한다. 새 환경 구축 시 반드시 키를 먼저 생성해야 한다:</p>
+<pre><code class="language-bash">python -c &quot;import os, base64; print(base64.b64encode(os.urandom(32)).decode())&quot;
+</code></pre>
+<h4 id="orm-lazy-load">비동기 ORM lazy-load 금지</h4>
+<p>SQLAlchemy 비동기 세션에서 관계 필드를 직접 접근하면 <code>greenlet_spawn</code> 오류가 발생한다. 반드시 <code>selectinload</code> 또는 별도 쿼리로 미리 로드해야 한다.</p>
+<h4 id="docs-404">/docs 가 404 또는 로그인 팝업</h4>
+<p><code>/docs</code>·<code>/openapi.json</code>은 <code>SWAGGER_ID</code>/<code>SWAGGER_PW</code>가 <strong>둘 다 설정된 경우에만</strong> 등록되며 HTTP Basic 인증을 요구한다(<code>main.py</code>의 <code>_register_protected_docs</code>). 증상별 원인:
+- <strong>404</strong>: 두 값 중 하나라도 비어 있음 → 환경별 <code>.env</code>에 <code>SWAGGER_ID</code>/<code>SWAGGER_PW</code>를 모두 설정.
+- <strong>로그인 팝업/401</strong>: 정상. 설정한 id/pw를 입력하면 Swagger UI가 열린다. Swagger의 <em>Try it out</em>은 서명을 자동 계산하지 못하므로 외부 API 호출은 HMAC 헤더를 직접 만들어야 한다(문서 상단 설명 참조).</p>
+<h4 id="1_1">구독은 서비스+사용자 당 1개</h4>
+<p><code>EXPIRED</code>를 제외한 '열린' 상태(<code>TRIAL</code>, <code>ACTIVE</code>, <code>PAST_DUE</code>, <code>SUSPENDED</code>, <code>CANCELED</code>)의 구독이 이미 있으면 새 구독 생성이 <code>ConflictError(409)</code>로 거부된다 (<code class="loc">models/enums.py:82-86</code>, <code class="loc">services/subscriptions.py:54</code>).</p>
+<h4 id="ttl">어드민 세션 TTL</h4>
+<p>기본 30분(<code>session_ttl_seconds=1800</code>). 유휴 상태로 30분 경과 시 자동 로그아웃된다. 개발 중 번거로우면 <code>.env</code>에서 값을 늘릴 수 있다 (<code class="loc">config.py:42</code>).</p>
+<hr />
+<h2 id="_6">관련 문서</h2>
+<ul>
+<li><strong>테이블 구조·ORM 상세</strong> → <code>02-database.md</code></li>
+<li><strong>인증·HMAC·세션·역할</strong> → <code>03-auth-and-security.md</code></li>
+<li><strong>구독 생성</strong> → <code>04-subscription-create.md</code></li>
+<li><strong>갱신·만료·재시도(스케줄러 배치)</strong> → <code>05-subscription-renewal.md</code></li>
+<li><strong>구독 취소·재개·수동결제·카드변경</strong> → <code>06-subscription-manage.md</code></li>
+<li><strong>단건 결제</strong> → <code>07-one-off-payment.md</code></li>
+<li><strong>어드민 화면별 매뉴얼</strong> → <code>admin/README.md</code></li>
+<li><strong>외부 API·샘플 연동</strong> → <code>15-external-api-and-sample.md</code></li>
+<li><strong>토스 API 참고 문서</strong> → <code>docs/toss/</code></li>
+<li><strong>설계 요청 이력</strong> → <code>docs/requests/</code></li>
+</ul>
+    </div>
+    <div class="pager"><a class="pg prev" href="README.html"><small>← 이전</small><b>개발자 인수인계 매뉴얼 (dev_manual)</b></a><a class="pg next" href="02-database.html"><small>다음 →</small><b>02. 데이터베이스 — 테이블·모델·관계·마이그레이션</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#1">1. 기술 스택</a>
+<a class="toc-h2" href="#2">2. 디렉터리 구조</a>
+<a class="toc-h2" href="#3">3. 로컬 환경 구축 및 실행</a>
+<a class="toc-h3" href="#3-1">3-1. 사전 준비</a>
+<a class="toc-h3" href="#3-2">3-2. 의존성 설치</a>
+<a class="toc-h3" href="#3-3-postgres-redis">3-3. Postgres · Redis 기동</a>
+<a class="toc-h3" href="#3-4-env-devprod">3-4. 환경변수 설정 (.env — dev/prod 분리)</a>
+<a class="toc-h3" href="#3-5-db">3-5. DB 마이그레이션</a>
+<a class="toc-h3" href="#3-6">3-6. 서버 기동</a>
+<a class="toc-h3" href="#3-7-lifespan">3-7. lifespan에서 초기화되는 것</a>
+<a class="toc-h3" href="#3-8">3-8. 스케줄러 동작</a>
+<a class="toc-h2" href="#4">4. 테스트 실행</a>
+<a class="toc-h3" href="#_1">테스트 구조</a>
+<a class="toc-h3" href="#conftestpy-testsconftestpy">conftest.py 핵심 픽스처 (tests/conftest.py)</a>
+<a class="toc-h2" href="#5">5. 요청 처리 공통 파이프라인</a>
+<a class="toc-h3" href="#5-1-api-apiv1">5-1. 외부 API 요청 흐름 (/api/v1/...)</a>
+<a class="toc-h3" href="#5-2-admin">5-2. 어드민 화면 요청 흐름 (/admin/...)</a>
+<a class="toc-h2" href="#6">6. 계층별 책임 — &quot;어디를 고쳐야 하나&quot;</a>
+<a class="toc-h3" href="#_3">계층 구조</a>
+<a class="toc-h3" href="#_4">수정 위치 가이드</a>
+<a class="toc-h3" href="#_5">중요 규칙</a>
+<a class="toc-h2" href="#7">7. 초보자 팁</a>
+<a class="toc-h3" href="#7-1">7-1. 로그 보는 법</a>
+<a class="toc-h3" href="#7-2">7-2. 자주 쓰는 명령</a>
+<a class="toc-h3" href="#7-3">7-3. 흔한 함정</a>
+<a class="toc-h2" href="#_6">관련 문서</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

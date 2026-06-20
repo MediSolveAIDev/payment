@@ -1,0 +1,28 @@
+{# 서비스 상세 — 이벤트(감사 로그) partial. epage 파라미터로 10건씩 페이징(요청 015). #}
+{% import "_list.html" as L %}
+<div id="list-svc-events">
+<div class="card">
+  <div class="block-head"><h2 style="margin:0">이벤트</h2>
+    <span class="muted" style="font-size:12px">서비스·요금제·담당자 변경 이력</span>
+    <a class="btn btn-sm btn-ghost" href="/admin/audit?q={{ service.name|urlencode }}"><span data-lucide="history"></span>감사로그</a>
+  </div>
+  <table>
+    <thead><tr>
+      <th>시각</th><th>활동</th><th>상세</th><th>행위자</th>
+    </tr></thead>
+    <tbody>
+    {% for e in events_page.items %}
+      <tr>
+        <td class="muted" style="font-size:12px;white-space:nowrap">{{ e.time|kst("%Y-%m-%d %H:%M") }}</td>
+        <td><span class="badge">{{ e.action }}</span></td>
+        <td style="font-size:13px">{{ e.detail or '-' }}</td>
+        <td class="muted" style="font-size:13px">{{ e.actor }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="muted">이벤트가 없습니다</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {{ L.pager(events_page, '/admin/services/' ~ service.id, epp, target='list-svc-events') }}
+</div>
+</div>

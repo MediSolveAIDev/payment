@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}계정 수정{% endblock %}
+{% block crumb %}계정 수정{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="btn-text" href="/admin/users/{{ account.id }}"><span data-lucide="arrow-left"></span>계정 상세</a>
+  <h1 style="margin:0">계정 수정</h1>
+</div>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<div class="card" style="max-width:520px">
+<form method="post" action="/admin/users/{{ account.id }}/edit">
+  <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+  <label for="email">이메일</label>
+  <input id="email" name="email" type="email" value="{{ account.email }}" required>
+  <p class="muted" style="font-size:12px;margin-top:4px">이메일 변경 시 중복 여부를 확인합니다.</p>
+  <label for="phone">전화번호 <span class="muted" style="font-weight:400">(선택)</span></label>
+  <input id="phone" name="phone" type="tel" value="{{ account.phone or '' }}" placeholder="010-1234-5678">
+  <div class="actions"><button class="btn btn-primary" type="submit">저장</button></div>
+</form>
+</div>
+{% endblock %}

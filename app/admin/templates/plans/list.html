@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}요금제{% endblock %}
+{% block crumb %}요금제{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>요금제</h1>
+  <span class="spacer"></span>
+  {% if ctx.user.role == 'SERVICE_MANAGER' %}
+  <a class="btn btn-primary" href="/admin/plans/new"><span data-lucide="plus"></span>요금제 생성</a>
+  {% endif %}
+</div>
+{% include "plans/_table.html" %}
+{% endblock %}

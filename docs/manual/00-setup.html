@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>설치·설정·배포 — 구독/결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+<style>
+  .dgram { background:var(--white); border:1px solid var(--border); border-radius:var(--radius-lg);
+    padding:18px; margin:16px 0 6px; box-shadow:var(--shadow-sm); overflow-x:auto; }
+  .dgram svg { width:100%; height:auto; min-width:560px; display:block; }
+  svg text { font-family:'Pretendard',sans-serif; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <a class="brand" href="index.html">
+      <span class="logo">결제</span>
+      <span class="t">구독/결제 서버<small>서비스 담당자 매뉴얼</small></span>
+    </a>
+    <div class="nav-cat">시작</div>
+    <nav class="nav">
+      <a href="index.html"><span class="num">★</span> 매뉴얼 홈</a>
+      <a href="09-overview-diagram.html"><span class="num">◆</span> 한눈에 보기(그림)</a>
+      <a href="01-getting-started.html"><span class="num">0</span> 시작하기</a>
+    </nav>
+    <div class="nav-cat">관리자 콘솔</div>
+    <nav class="nav">
+      <a href="02-plans.html"><span class="num">1</span> 요금제 관리</a>
+      <a href="03-subscriptions.html"><span class="num">2</span> 구독 관리</a>
+      <a href="04-payments.html"><span class="num">3</span> 결제·환불</a>
+      <a href="05-settlement.html"><span class="num">4</span> 정산</a>
+      <a href="08-admin-console.html"><span class="num">5</span> 화면별 가이드(캡처)</a>
+    </nav>
+    <div class="nav-cat">개발 연동</div>
+    <nav class="nav">
+      <a href="00-setup.html" class="active"><span class="num">6</span> 설치·설정·배포</a>
+      <a href="06-api-integration.html"><span class="num">7</span> API 연동</a>
+      <a href="10-qa-testcases.html"><span class="num">8</span> QA 테스트케이스</a>
+      <a href="11-dev-sandbox.html"><span class="num">9</span> 사전 개발(덤프)</a>
+      <a href="dev_manual/index.html" target="_blank" rel="noopener"><span class="num">10</span> 개발자 매뉴얼 ↗</a>
+    </nav>
+    <div class="nav-cat">참고</div>
+    <nav class="nav">
+      <a href="07-faq.html"><span class="num">11</span> FAQ</a>
+      <a href="13-status-reference.html"><span class="num">12</span> 상태·코드 레퍼런스</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+  <div class="content">
+
+    <div class="page-head">
+      <div class="page-eyebrow">CHAPTER 6 · 시스템 관리자 · Docker 설치 → 배포</div>
+      <h1>설치 · 설정 · 배포</h1>
+      <p class="lead">서버를 처음 구축·배포하는 시스템 관리자를 위한 문서입니다. <strong>Docker로 설치·실행</strong>(nginx·app·redis 컨테이너)하는 절차부터 <strong>인스턴스 환경</strong>(사양·네트워크·구성도)과 <strong><code>.env</code> 전체 레퍼런스</strong>까지 하나로 정리했습니다. DB(PostgreSQL)는 컨테이너에 넣지 않고 <strong>외부(전용 DB서버 또는 관리형 PostgreSQL)</strong>를 연결합니다.</p>
+    </div>
+
+    <div class="callout note">
+      <span class="ico">ℹ️</span>
+      <div><p>이미 서버가 구축되어 있고 <strong>계정·키를 전달받은 서비스 담당자</strong>라면 이 장을 건너뛰고 <a href="01-getting-started.html">0. 시작하기</a>부터 보면 됩니다. 이 장은 <strong>처음 서버를 띄우는 사람</strong>이 한 번만 하는 작업입니다.</p></div>
+    </div>
+
+    <div class="easybox">
+      <p>큰 그림은 단순합니다. <strong>① Docker 설치 → ② <code>.env.prod</code>에 비밀값 채우기 → ③ TLS 인증서 두기 → ④ <code>docker compose ... up -d</code></strong> 하면 컨테이너 셋(<code>nginx</code>·<code>app</code>·<code>redis</code>)이 뜨고, 앱이 시작할 때 <strong>DB 스키마(마이그레이션)가 자동 적용</strong>됩니다. 그다음 ⑤ 첫 관리자 계정을 만들고 ⑥ 토스를 연결하면 끝입니다.</p>
+    </div>
+
+    <!-- ======================= PART 1 ======================= -->
+    <div style="margin:46px 0 12px;padding:18px 20px;border-radius:var(--radius-lg);background:#F5F8FF;border:1px solid var(--border)">
+      <div class="page-eyebrow">PART 1 · 설치 · 실행</div>
+      <div style="font-size:22px;font-weight:800;margin-top:2px">Docker로 설치하고 실행하기</div>
+      <p style="margin:6px 0 0;color:var(--gray-700)">Docker 설치 → 구성 파일 → 환경값(.env.prod) → 인증서 → 빌드·실행 → 첫 관리자 → 토스 연결.</p>
+    </div>
+
+    <h2><span class="h-no">1.1</span>준비물</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>항목</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><strong>클라우드 인스턴스(리눅스)</strong></td><td>앱서버 1대. 권장 4 vCPU / 8 GB (사양은 <a href="#instances">2.3</a>). Ubuntu 22.04+ 또는 Amazon Linux 2023 기준.</td></tr>
+          <tr><td><strong>Docker Engine + Compose</strong></td><td>컨테이너 실행 런타임. <code>docker compose</code>(v2 플러그인) 사용. 설치는 <a href="#docker-install">1.2</a>.</td></tr>
+          <tr><td><strong>외부 PostgreSQL</strong></td><td>전용 DB서버의 postgres 또는 <strong>관리형 PostgreSQL</strong>(Azure Database for PostgreSQL). 앱 컨테이너에서 닿는 주소·계정이 필요(<code>DATABASE_URL</code>).</td></tr>
+          <tr><td><strong>도메인 · TLS 인증서</strong></td><td>HTTPS·토스 웹훅 수신용. Let's Encrypt 등으로 발급(테스트는 자체 서명 가능, <a href="#tls">1.6</a>).</td></tr>
+          <tr><td><strong>토스페이먼츠 가맹점</strong></td><td><strong>시크릿/클라이언트 키</strong>. 처음엔 <strong>테스트 키</strong>(<code>test_sk_…</code>)로 시작. (토스 자료: 저장소 <code>docs/toss</code>)</td></tr>
+          <tr><td><strong>저장소 코드</strong></td><td><code>payment_system</code> 프로젝트(이 매뉴얼이 든 그 저장소). 인스턴스에 <code>git clone</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <span class="anchor" id="docker-install"></span>
+    <h2><span class="h-no">1.2</span>Docker 설치</h2>
+    <p>인스턴스에 Docker Engine과 Compose 플러그인을 설치합니다.</p>
+    <pre><code># Ubuntu — 공식 편의 스크립트
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER     # docker를 sudo 없이 — 로그아웃 후 재로그인
+
+# Amazon Linux 2023
+sudo dnf install -y docker docker-compose-plugin
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+
+# 설치 확인(둘 다 버전이 나오면 OK)
+docker version
+docker compose version</code></pre>
+
+    <h2><span class="h-no">1.3</span>저장소 구성 파일</h2>
+    <p>운영 배포에 쓰는 파일들은 저장소에 포함돼 있습니다. (개발용 <code>docker-compose.yml</code>과 구분됩니다 — <a href="#dev-local">1.10</a>)</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>파일</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td><code>Dockerfile</code></td><td>앱 이미지 — <code>uv</code>로 잠금(lock) 의존성 설치 후 <code>uvicorn</code> 실행. Python 3.13, 비루트.</td></tr>
+          <tr><td><code>docker-compose.prod.yml</code></td><td>운영 오케스트레이션 — <code>app</code>·<code>redis</code>·<code>nginx</code> 세 컨테이너.</td></tr>
+          <tr><td><code>docker/entrypoint.sh</code></td><td>컨테이너 시작 시 <code>alembic upgrade head</code>(DB 스키마 적용) 후 앱 실행.</td></tr>
+          <tr><td><code>docker/nginx/conf.d/payment.conf</code></td><td>nginx TLS 리버스 프록시 — 80→443 리다이렉트, 443→<code>app:8000</code>.</td></tr>
+          <tr><td><code>.env.prod</code></td><td>운영 환경값(비밀값 포함, Git 미추적). <a href="#env">PART 3</a>에서 전체 변수 설명.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>위 파일 <strong>각각의 전체 내용과 한 줄(지시어)씩의 역할 해설</strong>은 이 장 끝의 <a href="#files">PART 4 · 구성 파일 상세 해설</a>에 정리했습니다. 처음엔 그대로 두고 진행해도 되지만, “이 줄이 왜 있는지”가 궁금하면 그곳을 참고하세요.</p>
+
+    <h2><span class="h-no">1.4</span>한 번에 보기</h2>
+    <p>처음부터 끝까지의 전체 순서입니다. 각 단계는 1.5부터 자세히 설명합니다.</p>
+    <pre><code>git clone &lt;저장소&gt; payment_system && cd payment_system
+
+cp .env.example .env.prod                      # ① 환경값 파일 만들고 값 채우기(필수값 1.5)
+#  → DATABASE_URL(외부 DB)·ENCRYPTION_KEY·TOSS_SECRET_KEY·BASE_URL·SWAGGER_PW
+
+#  ② TLS 인증서를 docker/nginx/certs/ 에 배치 (fullchain.pem, privkey.pem)
+
+docker compose -f docker-compose.prod.yml up -d --build   # ③ 빌드+기동(시작 시 마이그레이션 자동)
+docker compose -f docker-compose.prod.yml logs -f app     #    기동·마이그레이션 로그 확인
+
+docker compose -f docker-compose.prod.yml exec app \
+    python -m app.cli create-admin --email admin@회사.com --password '10자 이상 비밀번호'   # ④ 첫 관리자
+
+#  ⑤ https://도메인/health → {"status":"ok"} · https://도메인/admin 로그인
+#  ⑥ 토스 시크릿 키 연결 + 웹훅 URL 등록</code></pre>
+
+    <h2><span class="h-no">1.5</span>① 환경값 — <code>.env.prod</code></h2>
+    <p><code>.env.example</code>을 복사해 <code>.env.prod</code>를 만들고 값을 채웁니다. 비밀값은 소스에 두지 말고 이 파일(또는 OS 환경변수)에만 둡니다. <strong>처음 구축에 꼭 채워야 하는 값</strong>:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>변수</th><th>의미 · 채우는 법</th></tr></thead>
+        <tbody>
+          <tr><td><code>ENCRYPTION_KEY</code> <span class="badge b-red">필수</span></td><td>빌링키·HMAC 시크릿을 DB에 암호화 저장하는 AES-256 키(base64 32바이트). 생성:<br><code>python -c "import base64,os;print(base64.b64encode(os.urandom(32)).decode())"</code></td></tr>
+          <tr><td><code>TOSS_SECRET_KEY</code> <span class="badge b-red">필수</span></td><td>토스 <strong>시크릿 키</strong>. 개발 <code>test_sk_…</code>, 운영 <code>live_sk_…</code>. (프론트 클라이언트 키와 다름 — <a href="#toss">1.9</a>)</td></tr>
+          <tr><td><code>DATABASE_URL</code> <span class="badge b-red">필수</span></td><td>외부 DB 연결 문자열(asyncpg). 예: <code>postgresql+asyncpg://app:***@10.0.0.x:5432/payments</code>. 관리형 DB가 SSL 강제면 끝에 <code>?ssl=require</code>. <strong><code>localhost</code> 금지</strong>(컨테이너 자신을 가리킴 — <a href="#trouble">자주 겪는 오류</a>).</td></tr>
+          <tr><td><code>BASE_URL</code></td><td>공개 HTTPS 주소(메일 링크·웹훅 수신용). 예 <code>https://api.회사도메인.com</code>.</td></tr>
+          <tr><td><code>SWAGGER_ID</code> · <code>SWAGGER_PW</code></td><td>API 문서(<code>/docs</code>) 접근용 Basic 계정. <strong>둘 다 채우면</strong> 노출, <strong>비우면 404</strong>(운영 권장). 예시값은 반드시 변경.</td></tr>
+          <tr><td><code>GMAIL_ID</code> · <code>GMAIL_PW</code></td><td>(선택) 메일 <strong>실제 발송</strong> 시 Gmail 앱 비밀번호. 비우면 메일 내용이 로그로만 출력(개발).</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout note">
+      <span class="ico">🐳</span>
+      <div><p><strong>compose가 자동으로 고정 주입하는 값</strong>이 있어 <code>.env.prod</code>에 적지 않아도 됩니다(적어도 compose 값이 우선): <code>APP_ENV=prod</code>, <code>REDIS_URL=redis://redis:6379/0</code>(컨테이너 이름), <code>TRUST_PROXY=true</code>, <code>TRUST_PROXY_HOPS=1</code>. 나머지 보안·정책 값의 의미·기본값은 <a href="#env">PART 3 · <code>.env</code> 전체 레퍼런스</a>에 있습니다.</p></div>
+    </div>
+    <div class="callout danger">
+      <span class="ico">🔑</span>
+      <div><p><strong><code>ENCRYPTION_KEY</code>는 절대 분실·변경하지 마세요.</strong> 이 키로 빌링키가 암호화돼 있어, 잃으면 저장된 결제수단을 복호화할 수 없습니다. 안전한 곳에 <strong>백업</strong>하세요.</p></div>
+    </div>
+
+    <span class="anchor" id="tls"></span>
+    <h2><span class="h-no">1.6</span>② TLS 인증서 배치</h2>
+    <p>nginx가 HTTPS를 종단하므로 <code>docker/nginx/certs/</code>에 <code>fullchain.pem</code>·<code>privkey.pem</code> 두 파일이 있어야 합니다(개인키는 Git 미추적).</p>
+    <pre><code># 운영: Let's Encrypt (webroot = docker/nginx/certbot-www)
+sudo certbot certonly --webroot -w docker/nginx/certbot-www -d api.회사도메인.com
+sudo cp /etc/letsencrypt/live/api.회사도메인.com/fullchain.pem docker/nginx/certs/
+sudo cp /etc/letsencrypt/live/api.회사도메인.com/privkey.pem  docker/nginx/certs/
+
+# 테스트(도메인 없이 우선 구동): 자체 서명 인증서
+openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
+  -keyout docker/nginx/certs/privkey.pem \
+  -out   docker/nginx/certs/fullchain.pem -subj "/CN=localhost"</code></pre>
+    <p class="muted" style="font-size:13px">갱신: <code>certbot renew</code> 후 <code>docker compose -f docker-compose.prod.yml exec nginx nginx -s reload</code>.</p>
+
+    <h2><span class="h-no">1.7</span>③ 빌드 · 실행 · 로그 · 업데이트</h2>
+    <pre><code>docker compose -f docker-compose.prod.yml up -d --build   # 빌드+기동(시작 시 alembic 마이그레이션 자동 적용)
+docker compose -f docker-compose.prod.yml logs -f app     # 마이그레이션·기동 로그 확인
+docker compose -f docker-compose.prod.yml ps              # 컨테이너 상태
+
+docker compose -f docker-compose.prod.yml down            # 중지(redis 볼륨 유지)
+git pull && docker compose -f docker-compose.prod.yml up -d --build   # 재배포</code></pre>
+    <p>로그에 <code>alembic upgrade head</code> 완료 후 uvicorn 기동 메시지가 보이면 정상입니다. 외부에 열리는 포트는 <strong>nginx의 <code>80/443</code>뿐</strong>이며, <code>app</code>(8000)·<code>redis</code>(6379)는 도커 내부 네트워크 전용입니다.</p>
+
+    <h2><span class="h-no">1.8</span>④ 첫 시스템 관리자 계정 생성 <span class="badge b-red">핵심</span></h2>
+    <p>콘솔 로그인에는 계정이 필요한데, <strong>맨 처음 관리자 계정은 명령으로 직접 만듭니다</strong>(이후 계정은 콘솔 화면에서 추가). 앱 컨테이너 안에서 실행합니다.</p>
+    <pre><code>docker compose -f docker-compose.prod.yml exec app \
+    python -m app.cli create-admin \
+    --email admin@회사.com \
+    --password '10자 이상 비밀번호'</code></pre>
+    <p>성공하면 <code>SYSTEM_ADMIN 생성 완료: admin@회사.com</code>이 출력됩니다. 이 계정으로 로그인합니다.</p>
+
+    <span class="anchor" id="toss"></span>
+    <h2><span class="h-no">1.9</span>⑤ 첫 로그인 · ⑥ 토스 연결</h2>
+    <ol class="steps">
+      <li><h4>동작 확인</h4><p><code>https://도메인/health</code> → <code>{"status":"ok"}</code>가 보이면 정상.</p></li>
+      <li><h4>콘솔 로그인</h4><p><code>https://도메인/admin</code>에서 1.8의 관리자 계정으로 로그인 → 대시보드가 보이면 성공. <strong>로그인 화면 하단의 “📚 전체 매뉴얼 보기” 링크</strong>로 이 매뉴얼을 바로 열 수 있습니다(로그인 불필요).</p></li>
+    </ol>
+    <div class="callout note">
+      <span class="ico">📚</span>
+      <div><p>이 매뉴얼은 서버에서 <code>https://도메인/manual/</code> 로도 서빙됩니다(<code>app/main.py</code>의 <code>/manual</code> 정적 마운트). 로그인 페이지에서 인증 없이 링크돼 있어, 담당자가 키를 받기 전에도 열람할 수 있습니다. 운영 이미지에는 <code>.dockerignore</code> 설정으로 <code>docs/manual</code>만 포함됩니다.</p></div>
+    </div>
+    <p>실제 결제가 되려면 토스 키 2종을 <strong>각자 다른 위치</strong>에 둡니다.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>키</th><th>두는 곳</th><th>용도</th></tr></thead>
+        <tbody>
+          <tr><td><strong>시크릿 키</strong> (<code>…sk_…</code>)</td><td><strong>결제 서버</strong> <code>.env.prod</code> → <code>TOSS_SECRET_KEY</code></td><td>서버→토스 결제 승인·빌링키 발급(서버 간)</td></tr>
+          <tr><td><strong>클라이언트 키</strong> (<code>…ck_…</code>)</td><td><strong>각 서비스의 프론트엔드</strong></td><td>브라우저에서 토스 카드 등록창(SDK)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>웹훅(Webhook) 등록</h3>
+    <ul>
+      <li><strong>수신 URL</strong> — <code>(BASE_URL)/api/v1/webhooks/toss</code> (예: <code>https://api.회사도메인.com/api/v1/webhooks/toss</code>)</li>
+      <li><strong>허용 IP</strong> — 토스 공식 발신 IP만 받습니다(<code>WEBHOOK_IP_CHECK_ENABLED=true</code>, 목록은 <code>TOSS_WEBHOOK_ALLOWED_IPS</code>에 기본 포함). 개발 중 검증을 끄려면 <code>false</code>.</li>
+    </ul>
+    <div class="callout warn">
+      <span class="ico">⚠️</span>
+      <div><p>웹훅은 외부(토스)에서 들어오므로 <code>BASE_URL</code>이 <strong>인터넷에서 접근 가능한 HTTPS 주소</strong>여야 합니다. 토스 대시보드 등록 위치·테스트 방법은 저장소 <code>docs/toss</code> 참고.</p></div>
+    </div>
+
+    <span class="anchor" id="dev-local"></span>
+    <h2><span class="h-no">1.10</span>(참고) 로컬 개발 실행</h2>
+    <p>운영 배포가 아니라 <strong>로컬에서 빠르게 개발</strong>할 때는 개발용 <code>docker-compose.yml</code>로 DB·Redis만 띄우고 앱은 <code>uv</code>로 직접 실행합니다.</p>
+    <pre><code>docker compose up -d                  # 개발용 PostgreSQL(5433)·Redis(6380)
+cp .env.example .env.dev              # 개발 환경값
+uv sync                               # 의존성 설치
+uv run alembic upgrade head           # 스키마 생성
+uv run python -m app.cli create-admin --email admin@회사.com --password '10자 이상'
+uv run uvicorn app.main:app --reload  # http://localhost:8000/admin</code></pre>
+    <div class="callout danger">
+      <span class="ico">⛔</span>
+      <div><p>개발용 <code>docker-compose.yml</code>은 비밀번호가 <code>payment</code>로 고정된 <strong>개발 전용</strong>입니다. 운영에서는 절대 그대로 쓰지 말고, 위 <code>docker-compose.prod.yml</code> + 외부 DB + 강한 자격증명을 사용하세요.</p></div>
+    </div>
+
+    <h2><span class="h-no">1.11</span>구축 완료 체크리스트</h2>
+    <div class="card mt0">
+      <ul style="margin:0">
+        <li>인스턴스에 Docker·Compose 설치 확인(<code>docker compose version</code>).</li>
+        <li><code>.env.prod</code>에 <strong><code>DATABASE_URL</code>(외부 DB)·<code>ENCRYPTION_KEY</code>·<code>TOSS_SECRET_KEY</code>·<code>BASE_URL</code></strong>를 채우고 <code>SWAGGER_PW</code> 변경.</li>
+        <li><code>docker/nginx/certs/</code>에 <strong>TLS 인증서</strong> 2개 배치.</li>
+        <li><code>up -d --build</code> 후 <code>logs -f app</code>에서 마이그레이션·기동 정상.</li>
+        <li><code>create-admin</code>으로 <strong>첫 관리자 계정</strong> 생성.</li>
+        <li><code>/health</code>가 <code>ok</code>, <code>/admin</code> 로그인 성공.</li>
+        <li>토스 <strong>시크릿 키</strong>(서버)·<strong>클라이언트 키</strong>(서비스 프론트) 배치 + 웹훅 URL 등록.</li>
+        <li><code>ENCRYPTION_KEY</code>를 안전하게 <strong>백업</strong>, DB <strong>자동 백업</strong> 설정.</li>
+      </ul>
+    </div>
+
+    <!-- ======================= PART 2 ======================= -->
+    <div style="margin:46px 0 12px;padding:18px 20px;border-radius:var(--radius-lg);background:#F5F8FF;border:1px solid var(--border)">
+      <div class="page-eyebrow">PART 2 · 인스턴스 환경</div>
+      <div style="font-size:22px;font-weight:800;margin-top:2px">배포 아키텍처 · 인스턴스 사양 · 네트워크</div>
+      <p style="margin:6px 0 0;color:var(--gray-700)">앱서버(nginx+app+redis 컨테이너) + 외부 DB(전용 서버 또는 관리형 PostgreSQL) 구성.</p>
+    </div>
+
+    <span class="anchor" id="deploy"></span>
+    <h2><span class="h-no">2.1</span>구성 개요</h2>
+    <p><strong>앱서버 1대</strong>에 <code>nginx</code> · <code>app</code> · <code>redis</code>를 docker로 띄우고, <strong>DB(PostgreSQL)는 분리</strong>합니다 — 전용 DB서버의 postgres이거나 관리형 PostgreSQL입니다. 돈 기록(DB)을 앱과 분리해 백업·보안을 단순하게 만드는 것이 핵심입니다.</p>
+    <div class="easybox">
+      <p>비유하면 — <strong>app은 주문받는 점원</strong>, <strong>PostgreSQL은 금고·장부</strong>(돈 기록, 절대 분실 금지 → 백업), <strong>redis는 포스트잇 메모</strong>(로그인·잠금 같은 임시 정보), <strong>nginx는 입구 안내데스크</strong>(HTTPS). 금고(DB)만 안전한 곳에 따로 두고, 나머지는 한 박스(앱서버)에 모았다고 보면 됩니다.</p>
+    </div>
+
+    <span class="anchor" id="instances"></span>
+    <h3>인스턴스 ↔ docker 매핑</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>대상</th><th>역할</th><th>구성</th><th>외부 노출</th></tr></thead>
+        <tbody>
+          <tr><td><strong>① 앱서버</strong></td><td>입구 · 애플리케이션 · 공유 캐시</td><td><code>nginx</code> + <code>app</code> + <code>redis</code> (docker)</td><td>HTTPS <code>443</code>·<code>80</code>만 공개</td></tr>
+          <tr><td><strong>② DB</strong></td><td>영구 데이터(돈 기록)</td><td>전용 DB서버의 <code>postgresql</code> 또는 <strong>Azure Database for PostgreSQL</strong></td><td>비공개 — 사설망/보안그룹에서 앱서버만 접근</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>구성도</h3>
+    <div class="dgram">
+      <svg viewBox="0 0 780 300" role="img" aria-label="배포 구성 다이어그램">
+        <defs>
+          <marker id="ar2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#476CFF"/></marker>
+        </defs>
+        <rect x="20" y="118" width="124" height="62" rx="12" fill="#F3F3F3" stroke="#D6D6D6"/>
+        <text x="82" y="145" text-anchor="middle" font-size="13" font-weight="600" fill="#3E3E3E">인터넷·토스</text>
+        <text x="82" y="165" text-anchor="middle" font-size="11" fill="#6E6E6E">사용자·웹훅</text>
+
+        <rect x="200" y="55" width="252" height="190" rx="14" fill="#F0F4FF" stroke="#476CFF" stroke-dasharray="5 4"/>
+        <text x="326" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#2c3e8c">① 앱서버 · 4 vCPU / 8 GB</text>
+        <rect x="222" y="95" width="208" height="36" rx="8" fill="#ffffff" stroke="#DDE6FF"/>
+        <text x="326" y="118" text-anchor="middle" font-size="12" fill="#2c3e8c">nginx — HTTPS 입구(443)</text>
+        <rect x="222" y="137" width="208" height="36" rx="8" fill="#476CFF"/>
+        <text x="326" y="160" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">app — FastAPI(8000)</text>
+        <rect x="222" y="179" width="208" height="36" rx="8" fill="#FFF1ED" stroke="#FF8064"/>
+        <text x="326" y="202" text-anchor="middle" font-size="12" fill="#9a4321">redis — 세션·락(내부)</text>
+
+        <rect x="520" y="98" width="236" height="104" rx="14" fill="#E7F7F0" stroke="#1FA971"/>
+        <text x="638" y="128" text-anchor="middle" font-size="13" font-weight="700" fill="#146b48">② DB · 전용 서버 또는 관리형</text>
+        <text x="638" y="151" text-anchor="middle" font-size="12" fill="#176b4a">postgresql — 영구 데이터</text>
+        <text x="638" y="172" text-anchor="middle" font-size="11" fill="#176b4a">전용 SSD · 자동 백업</text>
+
+        <line x1="144" y1="149" x2="196" y2="149" stroke="#476CFF" stroke-width="2.5" marker-end="url(#ar2)"/>
+        <text x="170" y="141" text-anchor="middle" font-size="10.5" fill="#476CFF">443</text>
+        <line x1="452" y1="150" x2="516" y2="150" stroke="#1FA971" stroke-width="2.5" marker-end="url(#ar2)"/>
+        <text x="484" y="142" text-anchor="middle" font-size="10.5" fill="#9F9F9F">5432</text>
+        <text x="478" y="270" text-anchor="middle" font-size="11" fill="#6E6E6E">DB·redis는 사설망 내부만 · 인터넷 미노출</text>
+      </svg>
+    </div>
+
+    <h3>인스턴스당 권장 사양</h3>
+    <p>사내 공용 · 중소 트래픽(피크 수십~수백 RPS 이하) 기준 <strong>권장값</strong>입니다(정확한 값은 부하 테스트로 확정).</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>대상</th><th>구성</th><th>권장</th><th>최소</th><th>디스크</th></tr></thead>
+        <tbody>
+          <tr><td><strong>① 앱서버</strong></td><td><code>nginx</code>+<code>app</code>+<code>redis</code></td><td><strong>4 vCPU / 8 GB</strong></td><td>2 vCPU / 4 GB</td><td>50 GB SSD (OS·이미지·로그)</td></tr>
+          <tr><td><strong>② DB</strong></td><td><code>postgresql</code> / 관리형</td><td><strong>4 vCPU / 16 GB</strong></td><td>2 vCPU / 8 GB</td><td>데이터 전용 100 GB SSD(IOPS 보장)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:13px;color:var(--gray-700)">예시 타입(Azure 기준) — 앱서버(4 vCPU/8 GB): <code>Standard_F4s_v2</code>(4/8)·여유 <code>Standard_D4s_v5</code>(4/16) / 최소 <code>Standard_D2s_v5</code>(2/8) · DB(4 vCPU/16 GB): <strong>Azure Database for PostgreSQL — 유연한 서버</strong> General Purpose <code>D4ds_v5</code>.</p>
+    <p><strong>사양 근거</strong></p>
+    <ul>
+      <li><strong>앱서버 8 GB 권장</strong> — <code>app</code>(uvicorn 워커)·<code>redis</code>·<code>nginx</code>가 RAM을 나눠 씁니다. redis <code>maxmemory</code>를 1~2 GB로 못 박아 OOM을 막으세요.</li>
+      <li><strong>DB는 메모리가 성능</strong> — PostgreSQL 캐시(<code>shared_buffers</code> ≈ RAM 25%)가 RAM에 올라가야 빠릅니다. 가장 중요한 한 대라 16 GB 권장.</li>
+      <li><strong>DB 데이터는 OS와 분리된 SSD</strong> — IOPS 보장 볼륨 + 자동 스냅샷. 결제 부하가 늘면 이 디스크가 먼저 병목.</li>
+    </ul>
+
+    <h3>네트워크 · 보안 원칙</h3>
+    <ul>
+      <li><strong>앱은 무상태(stateless)</strong> — 세션·락·요청제한은 redis에, 영구 데이터는 전부 DB에. 앱 컨테이너는 언제든 재시작·교체 가능.</li>
+      <li><strong>포트 최소 노출</strong> — 앱서버는 <code>80/443</code>만 공개. <code>app</code>(8000)·<code>redis</code>(6379)는 docker 내부 네트워크 전용. DB <code>5432</code>는 <strong>앱서버만</strong> 접근(인터넷 비공개).</li>
+      <li><strong>nginx가 HTTPS 입구</strong> — 앱(8000)을 공인 443에 직접 노출하지 말고 nginx 뒤에 둡니다(TLS 종단).</li>
+      <li><strong>클라이언트 IP 판별</strong> — nginx가 <code>X-Forwarded-For</code>를 세팅하고 앱은 <code>TRUST_PROXY=true</code>·<code>TRUST_PROXY_HOPS=1</code>로 읽습니다(서비스/어드민 IP 화이트리스트 정확도에 직결). 앞단에 <strong>LB가 하나 더</strong> 있으면 <code>TRUST_PROXY_HOPS=2</code>.</li>
+      <li><strong>redis 보호</strong> — 내부 네트워크 전용 + 필요 시 <code>requirepass</code>. <code>maxmemory</code> 한도·제거정책 설정.</li>
+      <li><strong>시크릿 백업</strong> — <code>ENCRYPTION_KEY</code> 분실 시 빌링키 복호화 불가.</li>
+    </ul>
+
+    <h3>운영 핵심</h3>
+    <ul>
+      <li><strong>DB 백업은 필수·자동</strong> — 관리형이면 자동 백업·스냅샷을 켜고, 직접 운영이면 <code>pg_dump</code>/스냅샷을 매일 떠 <strong>인스턴스 밖(오브젝트 스토리지 등)</strong>에 보관. 결제 데이터엔 타협 불가.</li>
+      <li><strong>스케줄러</strong> — 앱이 1대이므로 <code>SCHEDULER_ENABLED=true</code>면 자동결제 갱신 배치가 앱서버에서 돕니다(Redis 분산 락이 중복 실행을 차단).</li>
+      <li><strong>마이그레이션</strong> — 컨테이너 시작 시 자동 적용. 앱을 2대 이상으로 늘릴 땐 한 대만 적용하도록 나머지는 <code>RUN_MIGRATIONS=0</code>으로 띄웁니다.</li>
+      <li><strong>무중단은 아님</strong> — 앱이 1대라 재배포 시 짧은 중단이 생깁니다. 점검 공지 또는 트래픽 적은 시간대 배포.</li>
+    </ul>
+
+    <div class="callout note">
+      <span class="ico">🔁</span>
+      <div><p><strong>앱을 늘린다면</strong> — 앱서버를 2대 이상으로 확장할 땐 <code>redis</code>를 앱 밖의 <strong>공유 위치</strong>로 옮겨 모든 앱이 같은 redis를 보게 해야 합니다(<code>REDIS_URL</code>을 그 주소로). 안 그러면 락·세션이 분리돼 자동결제 중복·세션 꼬임이 생깁니다.</p></div>
+    </div>
+
+    <span class="anchor" id="trouble"></span>
+    <div class="callout warn">
+      <span class="ico">⚠️</span>
+      <div><p><strong>자주 겪는 오류</strong></p>
+      <ul>
+        <li><strong>DB 접속 실패</strong> <code>Connect call failed ('127.0.0.1', 5433)</code> — <code>DATABASE_URL</code>이 <code>localhost</code>이면 <em>컨테이너 자신</em>을 가리켜 실패합니다. 외부 DB는 <strong>사설 IP·관리형 DB 엔드포인트</strong>로, 호스트의 개발 DB로 테스트할 땐 <code>host.docker.internal</code>로 지정(관리형 DB가 SSL 강제면 <code>?ssl=require</code>).</li>
+        <li><strong>nginx 기동 실패</strong> <code>cannot load certificate ".../fullchain.pem"</code> — 인증서 파일이 없습니다. <a href="#tls">1.6</a>으로 먼저 배치하세요.</li>
+      </ul></div>
+    </div>
+
+    <!-- ======================= PART 3 ======================= -->
+    <div style="margin:46px 0 12px;padding:18px 20px;border-radius:var(--radius-lg);background:#F5F8FF;border:1px solid var(--border)">
+      <div class="page-eyebrow">PART 3 · 설정</div>
+      <div style="font-size:22px;font-weight:800;margin-top:2px"><code>.env</code> 전체 레퍼런스</div>
+      <p style="margin:6px 0 0;color:var(--gray-700)">로딩 순서 · 전체 환경변수와 기본값 · 런타임 변경 가능 항목.</p>
+    </div>
+
+    <span class="anchor" id="env"></span>
+    <h2><span class="h-no">3.1</span><code>.env</code> 로딩 순서</h2>
+    <p>공통 <code>.env</code>를 먼저 읽고 <strong>환경별 <code>.env.&lt;APP_ENV&gt;</code></strong>(예: <code>.env.dev</code>/<code>.env.prod</code>)로 덮어씁니다(뒤가 우선). 환경 선택은 OS 변수 <code>APP_ENV</code>(없으면 <code>ENVIRONMENT</code>, 기본 <code>dev</code>)로 합니다.</p>
+    <ul>
+      <li>개발: <code>uv run uvicorn …</code> → <code>.env</code> + <code>.env.dev</code></li>
+      <li>운영(직접 실행): <code>APP_ENV=prod uvicorn …</code> → <code>.env</code> + <code>.env.prod</code></li>
+      <li>운영(Docker): compose가 <code>.env</code>+<code>.env.prod</code>를 컨테이너 환경변수로 주입. <strong>OS/컨테이너 환경변수가 <code>.env</code> 파일보다 우선</strong>하므로 compose가 <code>APP_ENV=prod</code>·<code>REDIS_URL</code>·<code>TRUST_PROXY</code>를 고정합니다.</li>
+    </ul>
+    <div class="callout note">
+      <span class="ico">ℹ️</span>
+      <div><p>선언되지 않은 변수는 무시됩니다(<code>extra="ignore"</code>). 값은 프로세스 시작 시 한 번 읽으므로 <strong>변경 후 재시작</strong>이 필요합니다(<span class="badge b-blue">런타임</span> 표시 값은 예외 — 콘솔 <a href="08-admin-console.html">전체 설정</a>에서 재배포 없이 즉시 변경, DB 전역설정이 우선).</p></div>
+    </div>
+
+    <h2><span class="h-no">3.2</span>핵심 · 인프라</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>변수</th><th>기본값</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><code>ENVIRONMENT</code></td><td><code>dev</code></td><td>실행 환경(<code>dev</code>/<code>test</code>/<code>prod</code>). Docker는 <code>prod</code> 주입.</td></tr>
+          <tr><td><code>BASE_URL</code></td><td><code>http://localhost:8000</code></td><td>서버 공개 주소(메일 링크·웹훅). 운영은 HTTPS 도메인.</td></tr>
+          <tr><td><code>DATABASE_URL</code> <span class="badge b-red">필수</span></td><td>(dev: 로컬 5433)</td><td>asyncpg 연결 문자열. 운영은 외부 DB/관리형 PostgreSQL. <code>localhost</code> 금지(컨테이너 자신).</td></tr>
+          <tr><td><code>REDIS_URL</code></td><td><code>redis://localhost:6380/0</code></td><td>Docker는 <code>redis://redis:6379/0</code> 주입.</td></tr>
+          <tr><td><code>DB_POOL_SIZE</code> · <code>DB_MAX_OVERFLOW</code></td><td><code>10</code> · <code>20</code></td><td>커넥션 풀(총 최대 = 합). 토스 지연 대비 기본 상향.</td></tr>
+          <tr><td><code>DB_POOL_TIMEOUT</code> · <code>DB_POOL_RECYCLE</code></td><td><code>30</code> · <code>1800</code></td><td>풀 대기 한도(초) · 커넥션 재활용 주기(초).</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2><span class="h-no">3.3</span>보안 · 세션 · 프록시</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>변수</th><th>기본값</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><code>ENCRYPTION_KEY</code> <span class="badge b-red">필수</span></td><td>(빈값)</td><td>AES-256-GCM 키(base64 32B). 빌링키·시크릿 암호화. <strong>분실 금지·백업</strong>.</td></tr>
+          <tr><td><code>TRUST_PROXY</code> · <code>TRUST_PROXY_HOPS</code></td><td><code>false</code> · <code>1</code></td><td>리버스 프록시 뒤면 <code>true</code>. XFF에서 오른쪽 n번째를 클라이언트 IP로. Docker는 <code>true</code>/<code>1</code> 주입.</td></tr>
+          <tr><td><code>SWAGGER_ID</code> · <code>SWAGGER_PW</code></td><td>(빈값)</td><td><code>/docs</code> Basic 인증. 둘 다 채워야 노출, 비우면 404.</td></tr>
+          <tr><td><code>SESSION_TTL_SECONDS</code></td><td><code>1800</code></td><td>어드민 세션 유휴 만료(30분, 활동 시 연장).</td></tr>
+          <tr><td><code>SESSION_ABSOLUTE_TTL_SECONDS</code></td><td><code>43200</code></td><td>세션 절대 수명(12시간, 활동 무관 파기).</td></tr>
+          <tr><td><code>HMAC_TIMESTAMP_TOLERANCE_SECONDS</code></td><td><code>300</code></td><td>외부 API 서명 타임스탬프 허용 오차(±초).</td></tr>
+          <tr><td><code>HMAC_NONCE_TTL_SECONDS</code></td><td><code>600</code></td><td>요청 nonce 보관(재전송 차단) 시간.</td></tr>
+          <tr><td><code>MAX_FAILED_LOGINS</code> · <code>ACCOUNT_LOCK_MINUTES</code> <span class="badge b-blue">런타임</span></td><td><code>5</code> · <code>15</code></td><td>로그인 연속 실패 잠금 임계치 · 잠금 지속(분).</td></tr>
+          <tr><td><code>MIN_PASSWORD_LENGTH</code></td><td><code>10</code></td><td>어드민 비밀번호 최소 길이.</td></tr>
+          <tr><td><code>PASSWORD_LINK_TTL_HOURS</code></td><td><code>48</code></td><td>비밀번호 설정·재설정 링크 유효시간(시간).</td></tr>
+          <tr><td><code>ADMIN_LOGIN_RATE_LIMIT_PER_MINUTE</code></td><td><code>10</code></td><td>어드민 로그인 IP당 분당 허용 횟수.</td></tr>
+          <tr><td><code>RATE_LIMIT_PER_MINUTE</code> · <code>RATE_LIMIT_PAYMENT_PER_MINUTE</code></td><td><code>120</code> · <code>20</code></td><td>외부 API 분당 한도(일반/결제). 결제가 더 엄격.</td></tr>
+          <tr><td><code>ONE_OFF_MAX_AMOUNT</code> <span class="badge b-blue">런타임</span></td><td><code>100000000</code></td><td>단건 결제 1회 최대 금액(원). 더 올리려면 API 스키마 제약도 상향.</td></tr>
+          <tr><td><code>PUBLIC_SERVICE_LIST_ENABLED</code></td><td><code>true</code></td><td>무인증 서비스 목록 API 노출. 인터넷 직접 노출 운영은 <code>false</code> 권장.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2><span class="h-no">3.4</span>토스페이먼츠 · 웹훅</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>변수</th><th>기본값</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><code>TOSS_SECRET_KEY</code> <span class="badge b-red">필수</span></td><td>(빈값)</td><td>토스 시크릿 키(서버 전용). dev <code>test_sk_…</code> / prod <code>live_sk_…</code>.</td></tr>
+          <tr><td><code>TOSS_API_BASE_URL</code></td><td><code>https://api.tosspayments.com</code></td><td>토스 API 베이스.</td></tr>
+          <tr><td><code>TOSS_READ_TIMEOUT_SECONDS</code> · <code>TOSS_CONNECT_TIMEOUT_SECONDS</code></td><td><code>65</code> · <code>5</code></td><td>토스 HTTP read/connect 타임아웃(자동결제 승인은 최대 60초).</td></tr>
+          <tr><td><code>WEBHOOK_IP_CHECK_ENABLED</code></td><td><code>true</code></td><td>토스 발신 IP 검증. 개발 편의로 <code>false</code> 가능.</td></tr>
+          <tr><td><code>TOSS_WEBHOOK_ALLOWED_IPS</code></td><td>(토스 공식 IP 목록)</td><td>JSON 배열. 위 검증이 켜졌을 때 허용 IP.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2><span class="h-no">3.5</span>스케줄러 · 재시도 · 내보내기</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>변수</th><th>기본값</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><code>SCHEDULER_ENABLED</code></td><td><code>true</code></td><td><code>false</code>면 자동 갱신 배치 미실행.</td></tr>
+          <tr><td><code>SCHEDULER_INTERVAL_MINUTES</code></td><td><code>5</code></td><td>갱신 배치 실행 주기(분).</td></tr>
+          <tr><td><code>SCHEDULER_LOCK_TTL_SECONDS</code></td><td><code>240</code></td><td>배치 Redis 전역 락 TTL(데드맨 스위치). heartbeat 주기는 1/3 파생.</td></tr>
+          <tr><td><code>RENEWAL_BATCH_LIMIT</code></td><td><code>1000</code></td><td>배치 1회 카테고리별 처리 상한.</td></tr>
+          <tr><td><code>RETRY_LIMIT</code> · <code>RETRY_INTERVAL_HOURS</code> <span class="badge b-blue">런타임</span></td><td><code>4</code> · <code>12</code></td><td>결제 실패 재시도 횟수 · 간격(시간).</td></tr>
+          <tr><td><code>SUSPENDED_GRACE_DAYS</code> <span class="badge b-blue">런타임</span></td><td><code>30</code></td><td>강제 정지(SUSPENDED) 후 EXPIRED까지 수동 결제 대기 일수.</td></tr>
+          <tr><td><code>EXPORT_MAX_ROWS</code></td><td><code>100000</code></td><td>엑셀 다운로드 1건 최대 행 수(워커 메모리 보호).</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2><span class="h-no">3.6</span>메일(SMTP) · 개발 편의</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>변수</th><th>기본값</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><code>GMAIL_ID</code> · <code>GMAIL_PW</code></td><td>(빈값)</td><td>둘 다 설정 시 Gmail SMTP로 <strong>실제 발송</strong>(앱 비밀번호). 비우면 메일 내용을 로그 출력.</td></tr>
+          <tr><td><code>SMTP_HOST</code> · <code>SMTP_PORT</code></td><td><code>smtp.gmail.com</code> · <code>587</code></td><td>SMTP 서버·포트.</td></tr>
+          <tr><td><code>MAIL_FROM_NAME</code></td><td><code>결제시스템</code></td><td>보내는 사람 표시 이름.</td></tr>
+          <tr><td><code>DEV_LOGIN_EMAIL</code> · <code>DEV_LOGIN_PASSWORD</code></td><td>(빈값)</td><td>로그인 폼 기본값 자동 채움. <code>prod</code>에서는 무시.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="font-size:13px"><span class="badge b-red">필수</span> = 비우면 기동/결제 불가 · <span class="badge b-blue">런타임</span> = 콘솔 <a href="08-admin-console.html">전체 설정</a>에서 재배포 없이 즉시 변경(DB 전역설정이 <code>.env</code> 부팅값보다 우선). 모든 기본값은 <code>.env.example</code>에도 정리돼 있습니다.</p>
+
+    <!-- ======================= PART 4 ======================= -->
+    <div style="margin:46px 0 12px;padding:18px 20px;border-radius:var(--radius-lg);background:#F5F8FF;border:1px solid var(--border)">
+      <div class="page-eyebrow">PART 4 · 구성 파일 상세 해설</div>
+      <div style="font-size:22px;font-weight:800;margin-top:2px">Docker 관련 파일 — 전체 내용과 줄별 역할</div>
+      <p style="margin:6px 0 0;color:var(--gray-700)">저장소에 든 Docker 파일을 <strong>실제 내용 그대로</strong> 싣고, 각 줄(지시어)이 <strong>어떤 역할을 하는지</strong> 표로 풀어 설명합니다. 값을 바꿔야 할 때 “이 줄을 건드려도 되는지”를 판단하는 근거로 쓰세요.</p>
+    </div>
+
+    <span class="anchor" id="files"></span>
+    <div class="callout note">
+      <span class="ico">🗂️</span>
+      <div><p>파일 4개는 서로 맞물려 한 흐름을 만듭니다 — <strong><code>Dockerfile</code></strong>(앱 이미지를 어떻게 만들지) → <strong><code>docker-compose.prod.yml</code></strong>(그 이미지를 redis·nginx와 함께 어떻게 띄울지) → <strong><code>entrypoint.sh</code></strong>(컨테이너가 켜질 때 DB 스키마부터 맞춤) → <strong><code>nginx/payment.conf</code></strong>(바깥 HTTPS 요청을 앱으로 전달). <code>.dockerignore</code>는 이미지를 가볍고 안전하게 굽는 보조 파일입니다.</p></div>
+    </div>
+
+    <!-- ── 4.1 Dockerfile ───────────────────────────────────────────────── -->
+    <h2><span class="h-no">4.1</span><code>Dockerfile</code> — 앱 이미지 굽기</h2>
+    <p><strong>앱(FastAPI) 컨테이너 이미지를 만드는 설계도</strong>입니다. <code>uv</code>로 잠금된 의존성을 설치하고 <code>uvicorn</code>으로 실행합니다. DB는 이미지에 넣지 않고 외부를 연결합니다.</p>
+    <pre><code># payment_system(FastAPI) 운영 이미지 — uv로 잠금(lock)된 의존성 설치 후 uvicorn 실행.
+# DB(PostgreSQL)는 외부 관리형(RDS 등)을 DATABASE_URL로 연결한다(이미지에 미포함).
+FROM python:3.13-slim
+
+# 파이썬 런타임 위생 + uv 설정
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/app/.venv \
+    PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+
+# uv 설치(공식 정적 바이너리 복사 — pip보다 빠르고 캐시 친화적)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# 1) 의존성만 먼저 설치 — 소스가 바뀌어도 이 레이어는 캐시됨
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+
+# 2) 앱 소스 + 마이그레이션
+COPY app ./app
+COPY alembic ./alembic
+COPY alembic.ini ./
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# 비루트 실행
+RUN useradd --create-home --uid 10001 appuser && chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8000
+# 엔트리포인트가 alembic 마이그레이션을 적용한 뒤 CMD를 exec 한다.
+ENTRYPOINT ["entrypoint.sh"]
+# 앱 포트(8000)는 외부에 공개하지 않고 nginx만 접근하므로 프록시 헤더를 신뢰한다.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", \
+     "--proxy-headers", "--forwarded-allow-ips", "*"]</code></pre>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>지시어</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td><code>FROM python:3.13-slim</code></td><td>베이스 이미지. 데비안 슬림 + Python 3.13. 군더더기 없이 작아 이미지·공격면이 작습니다.</td></tr>
+          <tr><td><code>ENV PYTHONUNBUFFERED=1</code></td><td>표준출력 버퍼링을 끔 → 앱 로그가 <strong>지연 없이 즉시</strong> <code>docker logs</code>에 보입니다.</td></tr>
+          <tr><td><code>PYTHONDONTWRITEBYTECODE=1</code></td><td>실행 중 <code>.pyc</code> 캐시 파일을 만들지 않음(컨테이너엔 불필요한 군더더기).</td></tr>
+          <tr><td><code>UV_COMPILE_BYTECODE=1</code></td><td>반대로 <strong>설치 시점에</strong> 바이트코드를 미리 컴파일 → 첫 기동이 빨라집니다.</td></tr>
+          <tr><td><code>UV_LINK_MODE=copy</code></td><td>uv가 패키지를 하드링크 대신 <strong>복사</strong>로 배치(레이어·마운트 경계에서 안전).</td></tr>
+          <tr><td><code>UV_PROJECT_ENVIRONMENT=/app/.venv</code></td><td>가상환경 위치를 <code>/app/.venv</code>로 고정.</td></tr>
+          <tr><td><code>PATH="/app/.venv/bin:$PATH"</code></td><td>venv의 실행파일(<code>uvicorn</code>·<code>alembic</code> 등)을 경로에 올려 바로 호출 가능하게.</td></tr>
+          <tr><td><code>WORKDIR /app</code></td><td>이후 명령의 기준 작업 디렉터리.</td></tr>
+          <tr><td><code>COPY --from=…/uv …</code></td><td>uv 정적 바이너리를 공식 이미지에서 복사. pip보다 빠른 의존성 설치 도구.</td></tr>
+          <tr><td><code>COPY pyproject.toml uv.lock</code> + <code>RUN uv sync …</code></td><td><strong>레이어 캐시 전략</strong>. 의존성 파일만 먼저 복사·설치하므로 앱 코드만 바뀌면 이 무거운 레이어는 <strong>재사용</strong>돼 빌드가 빠릅니다.</td></tr>
+          <tr><td><code>--frozen</code></td><td><code>uv.lock</code>을 <strong>그대로</strong> 설치(재해석·갱신 금지) → 빌드 재현성 보장.</td></tr>
+          <tr><td><code>--no-dev</code></td><td>테스트·린트 같은 <strong>개발 전용 의존성 제외</strong>(운영 이미지 슬림화).</td></tr>
+          <tr><td><code>--no-install-project</code></td><td>이 단계에선 <strong>앱 코드는 아직 설치 안 함</strong>(의존성 레이어만 분리하려는 것).</td></tr>
+          <tr><td><code>COPY app / alembic / alembic.ini</code></td><td>앱 소스와 DB 마이그레이션 파일을 이미지에 복사.</td></tr>
+          <tr><td><code>COPY docker/entrypoint.sh …</code> + <code>chmod +x</code></td><td>시작 스크립트를 설치하고 실행 권한 부여(4.3 참조).</td></tr>
+          <tr><td><code>useradd … appuser</code> + <code>USER appuser</code></td><td><strong>비루트(uid 10001)로 실행</strong> → 컨테이너가 탈취돼도 루트 권한 피해를 막습니다(보안 기본).</td></tr>
+          <tr><td><code>EXPOSE 8000</code></td><td>앱이 듣는 포트를 문서로 선언. 실제 외부 공개 여부는 compose가 결정(여기선 미공개).</td></tr>
+          <tr><td><code>ENTRYPOINT ["entrypoint.sh"]</code></td><td>컨테이너가 켜지면 <strong>항상 엔트리포인트 먼저</strong> 실행(= DB 마이그레이션 선행).</td></tr>
+          <tr><td><code>CMD ["uvicorn", …]</code></td><td>엔트리포인트가 마지막에 <code>exec</code>할 <strong>실제 앱 실행 명령</strong>. <code>--proxy-headers</code>·<code>--forwarded-allow-ips *</code> = nginx가 붙여 준 <code>X-Forwarded-*</code> 헤더를 신뢰(클라이언트 IP 판별).</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── 4.2 docker-compose.prod.yml ──────────────────────────────────── -->
+    <h2><span class="h-no">4.2</span><code>docker-compose.prod.yml</code> — 세 컨테이너 오케스트레이션</h2>
+    <p>위 이미지를 <code>redis</code>·<code>nginx</code>와 함께 <strong>어떻게 묶어 띄울지</strong> 정의합니다. DB는 여기에 없습니다(외부 연결).</p>
+    <pre><code>services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # .env(공통) + .env.prod(운영) 값을 컨테이너 환경변수로 주입.
+    env_file:
+      - .env
+      - .env.prod
+    environment:
+      APP_ENV: prod
+      # 인프라 결선 — .env 값과 무관하게 컨테이너 네트워크 기준으로 고정
+      REDIS_URL: redis://redis:6379/0
+      # nginx 뒤에 있으므로 X-Forwarded-For 신뢰
+      TRUST_PROXY: "true"
+      TRUST_PROXY_HOPS: "1"
+    depends_on:
+      redis:
+        condition: service_healthy
+    # 로컬 테스트 시 호스트의 개발용 Postgres에 닿게 함(실제 배포에선 미사용·무해)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    expose:
+      - "8000"          # 외부로 직접 노출하지 않음 — nginx만 접근
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket,sys; s=socket.create_connection(('127.0.0.1',8000),3); s.close()"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    # 세션·nonce·레이트리밋·킬스위치 캐시 저장소. 내부 네트워크에서만 접근(포트 미공개).
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "no"]
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+      - ./docker/nginx/certbot-www:/var/www/certbot   # Let's Encrypt webroot(갱신용)
+    restart: unless-stopped
+
+volumes:
+  redis-data:</code></pre>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>키</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td><code>app.build.context/dockerfile</code></td><td>현재 폴더(<code>.</code>)를 빌드 컨텍스트로 <code>Dockerfile</code>을 빌드해 <code>app</code> 이미지를 만듭니다.</td></tr>
+          <tr><td><code>app.env_file: .env, .env.prod</code></td><td>두 파일의 값을 컨테이너 환경변수로 주입(<strong>뒤가 우선</strong> → 운영값이 공통값을 덮음).</td></tr>
+          <tr><td><code>environment.APP_ENV: prod</code></td><td>실행 환경을 <strong>운영으로 강제</strong>(<code>.env</code> 로딩 분기·개발 편의 기능 차단).</td></tr>
+          <tr><td><code>REDIS_URL: redis://redis:6379/0</code></td><td>같은 compose 네트워크의 <strong>컨테이너 이름 <code>redis</code></strong>로 결선. 호스트 포트와 무관하게 고정.</td></tr>
+          <tr><td><code>TRUST_PROXY / TRUST_PROXY_HOPS</code></td><td>nginx 뒤에 있으므로 <code>X-Forwarded-For</code>를 신뢰하고 오른쪽 1번째를 클라이언트 IP로 사용(IP 화이트리스트 정합).</td></tr>
+          <tr><td><code>depends_on.redis: service_healthy</code></td><td>redis의 <strong>헬스체크가 통과한 뒤에</strong> app을 시작(캐시 미준비 상태 기동 방지).</td></tr>
+          <tr><td><code>extra_hosts: host.docker.internal</code></td><td>로컬 테스트에서 <strong>호스트의 개발 DB</strong>에 닿기 위한 별칭(리눅스 포함). 실제 외부 DB 배포에선 안 쓰여 무해.</td></tr>
+          <tr><td><code>expose: "8000"</code></td><td>포트를 <strong>내부 네트워크에만</strong> 노출(호스트로 publish 아님) → nginx만 접근.</td></tr>
+          <tr><td><code>restart: unless-stopped</code></td><td>컨테이너가 죽으면 <strong>자동 재시작</strong>(사람이 <code>down</code>으로 멈춘 경우만 제외).</td></tr>
+          <tr><td><code>app.healthcheck</code></td><td>8000 TCP 연결로 <strong>앱 생존 확인</strong>. <code>start_period 30s</code>는 기동·마이그레이션 동안 실패로 안 세는 유예.</td></tr>
+          <tr><td><code>redis.image: redis:7-alpine</code></td><td>경량 Redis 7. 세션·nonce·레이트리밋·킬스위치 캐시 저장.</td></tr>
+          <tr><td><code>redis.command --save 60 1 --appendonly no</code></td><td>60초 내 키 1개 이상 변경 시 <strong>스냅샷 저장</strong>, AOF 로그는 끔. 캐시·세션 용도라 강한 영속성이 불필요.</td></tr>
+          <tr><td><code>redis.volumes redis-data:/data</code></td><td>스냅샷을 <strong>명명 볼륨</strong>에 보관 → 재시작해도 세션이 유지.</td></tr>
+          <tr><td><code>nginx.ports "80:80" "443:443"</code></td><td><strong>유일하게 외부(호스트)로 공개되는 포트.</strong> 모든 인터넷 트래픽의 입구.</td></tr>
+          <tr><td><code>nginx.volumes …:ro</code></td><td>설정(<code>conf.d</code>)·인증서(<code>certs</code>)를 <strong>읽기전용(ro)</strong>으로 마운트, <code>certbot-www</code>는 인증서 갱신용 webroot.</td></tr>
+          <tr><td><code>volumes: redis-data</code></td><td>위에서 쓴 명명 볼륨을 선언(데이터 보관 영역).</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── 4.3 entrypoint.sh ────────────────────────────────────────────── -->
+    <h2><span class="h-no">4.3</span><code>docker/entrypoint.sh</code> — 시작 시 DB 스키마 자동 적용</h2>
+    <p>컨테이너가 켜질 때 <strong>가장 먼저</strong> 실행됩니다. DB 스키마를 최신으로 맞춘 뒤 앱(<code>CMD</code>)을 넘겨받아 실행합니다.</p>
+    <pre><code>#!/bin/sh
+# 컨테이너 시작 시 DB 스키마를 최신으로 맞춘 뒤(alembic) 앱(CMD)을 실행한다.
+set -e
+
+if [ "${RUN_MIGRATIONS:-1}" != "0" ]; then
+  echo "[entrypoint] applying DB migrations (alembic upgrade head)..."
+  alembic upgrade head
+else
+  echo "[entrypoint] RUN_MIGRATIONS=0 — skipping migrations"
+fi
+
+echo "[entrypoint] starting: $*"
+exec "$@"</code></pre>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>줄</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td><code>#!/bin/sh</code></td><td>POSIX sh로 실행(alpine·slim에 기본 포함되는 셸).</td></tr>
+          <tr><td><code>set -e</code></td><td><strong>어느 명령이라도 실패하면 즉시 중단</strong> → 마이그레이션이 실패했는데 앱이 뜨는 상황을 막습니다.</td></tr>
+          <tr><td><code>if RUN_MIGRATIONS != 0 … alembic upgrade head</code></td><td>기본값으로 <strong>DB 스키마를 최신(head)까지 적용</strong>. <code>DATABASE_URL</code> 환경변수가 대상 DB를 가리킵니다.</td></tr>
+          <tr><td><code>RUN_MIGRATIONS=0</code> 분기</td><td>앱을 <strong>여러 대로 늘릴 때</strong> 한 대만 마이그레이션하고 나머지는 건너뛰게 하는 안전장치(중복 적용 방지).</td></tr>
+          <tr><td><code>exec "$@"</code></td><td>전달받은 <code>CMD</code>(uvicorn)를 <strong>PID 1로 교체 실행</strong>. 셸이 중간에 끼지 않아 종료 시그널(SIGTERM)이 앱에 정확히 전달돼 깔끔하게 종료됩니다.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── 4.4 nginx payment.conf ───────────────────────────────────────── -->
+    <h2><span class="h-no">4.4</span><code>docker/nginx/conf.d/payment.conf</code> — TLS 리버스 프록시</h2>
+    <p>인터넷의 HTTPS 요청을 받아 <strong>TLS를 종단</strong>하고 내부 <code>app:8000</code>으로 전달합니다. 80은 모두 https로 리다이렉트합니다.</p>
+    <pre><code>upstream payment_app {
+    server app:8000;
+    keepalive 32;
+}
+
+# ── HTTP(80): ACME(Let's Encrypt) 챌린지 외에는 전부 https로 ──
+server {
+    listen 80;
+    server_name _;
+    location /.well-known/acme-challenge/ {   # 인증서 발급/갱신용
+        root /var/www/certbot;
+    }
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ── HTTPS(443): 실제 서비스 ──
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1h;
+
+    client_max_body_size 16m;   # 엑셀 업로드/다운로드 등
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    location / {
+        proxy_pass http://payment_app;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection        "";
+        proxy_read_timeout 90s;   # 토스 자동결제 승인(최대 65s)보다 넉넉히
+    }
+}</code></pre>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>지시어</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td><code>upstream payment_app { server app:8000; keepalive 32; }</code></td><td>백엔드 풀 정의. <code>app</code> 컨테이너의 8000으로 보내고, <strong>연결 32개를 재사용(keepalive)</strong>해 매 요청 TCP 핸드셰이크 비용을 줄입니다.</td></tr>
+          <tr><td><code>listen 80</code> / <code>location /.well-known/acme-challenge/</code></td><td>80 포트는 <strong>Let's Encrypt 인증서 발급·갱신</strong> 경로만 webroot로 처리.</td></tr>
+          <tr><td><code>location / { return 301 https://… }</code></td><td>나머지 모든 80 요청을 <strong>HTTPS로 영구 리다이렉트</strong>(평문 차단).</td></tr>
+          <tr><td><code>listen 443 ssl</code> + <code>http2 on</code></td><td>실제 서비스 포트. TLS + HTTP/2 활성화.</td></tr>
+          <tr><td><code>ssl_certificate / ssl_certificate_key</code></td><td>마운트된 <strong>인증서·개인키</strong> 경로(1.6에서 배치). 없으면 nginx가 기동 실패.</td></tr>
+          <tr><td><code>ssl_protocols TLSv1.2 TLSv1.3</code> / <code>ssl_ciphers HIGH:…</code></td><td>구버전 취약 프로토콜·암호 제외, <strong>안전한 조합만 허용</strong>.</td></tr>
+          <tr><td><code>ssl_session_cache / timeout</code></td><td>TLS 세션을 캐시해 <strong>재접속 핸드셰이크를 생략</strong>(성능).</td></tr>
+          <tr><td><code>client_max_body_size 16m</code></td><td>업로드 본문 최대 크기(엑셀 업로드 등). 더 큰 파일이 필요하면 상향.</td></tr>
+          <tr><td><code>add_header … nosniff / DENY / HSTS</code></td><td>보안 헤더 보강 — MIME 스니핑 차단·클릭재킹(iframe) 차단·HTTPS 강제(HSTS).</td></tr>
+          <tr><td><code>proxy_pass http://payment_app</code></td><td>요청을 위 upstream(앱)으로 전달.</td></tr>
+          <tr><td><code>proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for</code></td><td>클라이언트 IP를 XFF <strong>맨 오른쪽에 append</strong> → 앱의 <code>TRUST_PROXY_HOPS=1</code>과 정확히 맞물려 진짜 IP를 식별.</td></tr>
+          <tr><td><code>X-Real-IP / X-Forwarded-Proto</code></td><td>원 클라이언트 IP와 원 프로토콜(https)을 앱에 전달.</td></tr>
+          <tr><td><code>proxy_set_header Connection ""</code></td><td>업스트림 keepalive를 살리기 위해 hop-by-hop <code>Connection</code> 헤더 제거.</td></tr>
+          <tr><td><code>proxy_read_timeout 90s</code></td><td>응답 대기 한도. <strong>토스 자동결제 승인(최대 65초)</strong>이 끊기지 않도록 넉넉히 잡음.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── 4.5 .dockerignore ────────────────────────────────────────────── -->
+    <h2><span class="h-no">4.5</span><code>.dockerignore</code> — 이미지에 넣지 않을 것</h2>
+    <p>빌드 컨텍스트에서 제외할 목록입니다. <strong>비밀값·대용량·불필요 파일</strong>을 이미지에 굽지 않아 이미지를 가볍고 안전하게 만듭니다.</p>
+    <pre><code># 이미지 빌드 컨텍스트에서 제외 — 비밀값/대용량/불필요 파일 차단
+.git
+.venv
+**/.venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov
+
+# 비밀값은 이미지에 굽지 않는다 — 런타임에 compose env_file 로 주입
+.env
+.env.*
+!.env.example
+
+# 앱 운영에 불필요한 디렉터리
+tests
+docs
+backups
+sample_service
+scripts
+
+# 도커/문서 메타 — entrypoint.sh 는 이미지에 필요하므로 유지
+Dockerfile
+docker-compose*.yml
+docker/*
+!docker/entrypoint.sh
+README.md</code></pre>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>항목</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td><code>.git · .venv · __pycache__ · *.pyc · .pytest_cache · .ruff_cache · .coverage</code></td><td>버전관리·로컬 가상환경·캐시·테스트 산출물 제외 → <strong>빌드 컨텍스트 축소</strong>로 빌드가 빨라집니다.</td></tr>
+          <tr><td><code>.env</code> · <code>.env.*</code> + <code>!.env.example</code></td><td><strong>비밀값 파일을 이미지에 굽지 않음</strong>(런타임에 compose가 주입). 예시 템플릿(<code>.env.example</code>)만 예외로 포함.</td></tr>
+          <tr><td><code>tests · docs · backups · sample_service · scripts</code></td><td>운영 실행에 불필요한 디렉터리 제외(이미지 슬림화).</td></tr>
+          <tr><td><code>Dockerfile · docker-compose*.yml · docker/*</code></td><td>빌드·오케스트레이션 메타는 이미지 안에 둘 필요 없음 → 제외.</td></tr>
+          <tr><td><code>!docker/entrypoint.sh</code></td><td><strong>예외</strong> — 엔트리포인트 스크립트는 이미지가 직접 쓰므로 반드시 포함.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── 4.6 dev docker-compose.yml ───────────────────────────────────── -->
+    <h2><span class="h-no">4.6</span>(참고) <code>docker-compose.yml</code> — 개발 전용 인프라</h2>
+    <p>운영 파일과 헷갈리지 않도록 정리합니다. 이건 <strong>로컬 개발에서 Postgres·Redis만</strong> 띄우는 용도이며(앱은 <code>uv</code>로 직접 실행 — <a href="#dev-local">1.10</a>), <strong>운영에 쓰면 안 됩니다.</strong></p>
+    <pre><code># 개발 전용 인프라(Postgres/Redis). 운영에서는 이 파일을 그대로 쓰지 말 것.
+# 포트는 루프백(127.0.0.1)에만 바인딩한다(보안: 외부 노출 방지).
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: payment
+      POSTGRES_PASSWORD: payment   # 개발 전용 — 운영은 별도 자격증명 필수
+      POSTGRES_DB: payment
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      - pgdata:/var/lib/postgresql/data
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6380:6379"
+volumes:
+  pgdata:</code></pre>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>항목</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td><code>postgres:16-alpine</code> + <code>POSTGRES_*</code></td><td>개발용 로컬 DB. 계정·비번·DB명을 <code>payment</code>로 고정(<strong>개발 전용</strong>).</td></tr>
+          <tr><td><code>ports "127.0.0.1:5433:5432"</code></td><td><strong>루프백에만 바인딩</strong> — Docker 기본(0.0.0.0)으로 띄우면 외부에서 DB가 노출되므로, 호스트 안에서만 접근하도록 제한(호스트 포트 5433).</td></tr>
+          <tr><td><code>volumes init-db.sql · pgdata</code></td><td>최초 1회 초기화 SQL 실행 + 데이터 영속 볼륨.</td></tr>
+          <tr><td><code>redis "127.0.0.1:6380:6379"</code></td><td>개발용 Redis도 루프백 6380에만 노출.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout danger">
+      <span class="ico">⛔</span>
+      <div><p>이 파일의 비밀번호는 <code>payment</code>로 <strong>공개·고정</strong>이라 개발 전용입니다. 운영은 반드시 <code>docker-compose.prod.yml</code> + <strong>외부 DB</strong> + 강한 자격증명을 쓰세요(<a href="#deploy">PART 2</a>).</p></div>
+    </div>
+
+    <div class="callout tip">
+      <span class="ico">🧭</span>
+      <div><p>구축을 마쳤다면 콘솔에서 운영을 시작하세요 — <a href="08-admin-console.html">5. 화면별 가이드</a>(계정 생성 → 서비스 등록 → 키 발급 → 요금제 생성), 전체 개념은 <a href="01-getting-started.html">0. 시작하기</a>, API 인증 원리는 <a href="06-api-integration.html">7. API 연동</a>, 그림 요약은 <a href="09-overview-diagram.html">한눈에 보기</a>. Docker 상세 런북은 저장소 <code>docker/README.md</code>.</p></div>
+    </div>
+
+    <div class="pager">
+      <a href="08-admin-console.html"><small>이전</small><span>← 화면별 가이드</span></a>
+      <a class="next" href="06-api-integration.html"><small>다음</small><span>API 연동 →</span></a>
+    </div>
+
+  </div>
+  </main>
+</div>
+<script src="assets/glossary.js"></script>
+</body>
+</html>

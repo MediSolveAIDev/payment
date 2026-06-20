@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10. 전체 설정 (재시도 정책 · 어드민 IP · 킬스위치) — 개발자 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>개발자 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>🧱</span>기반 (먼저 읽기)</div>
+<a class="nav-link" href="README.html"><span class="n">·</span><span class="tt">개발자 인수인계 매뉴얼 (dev_manual)</span></a>
+<a class="nav-link" href="01-getting-started.html"><span class="n">01</span><span class="tt">01. 시작하기 — 구조·실행·테스트·요청 처리 공통 흐름</span></a>
+<a class="nav-link" href="02-database.html"><span class="n">02</span><span class="tt">02. 데이터베이스 — 테이블·모델·관계·마이그레이션</span></a>
+<a class="nav-link" href="03-auth-and-security.html"><span class="n">03</span><span class="tt">03. 인증과 보안 공통</span></a>
+<div class="nav-group"><span>⚙️</span>기능별 상세</div>
+<a class="nav-link" href="04-subscription-create.html"><span class="n">04</span><span class="tt">04. 구독 생성</span></a>
+<a class="nav-link" href="05-subscription-renewal.html"><span class="n">05</span><span class="tt">05. 구독 갱신·만료·재시도·정합성(스케줄러 배치)</span></a>
+<a class="nav-link" href="06-subscription-manage.html"><span class="n">06</span><span class="tt">06. 구독 취소·재개·수동결제·카드변경</span></a>
+<a class="nav-link" href="07-one-off-payment.html"><span class="n">07</span><span class="tt">07. 단건(일반) 결제 + 취소</span></a>
+<a class="nav-link" href="08-plans.html"><span class="n">08</span><span class="tt">08. 요금제 관리 (생성·수정·금액 계산·자동결제안함·추가정보)</span></a>
+<a class="nav-link" href="09-services-registry.html"><span class="n">09</span><span class="tt">09. 서비스 등록·키 발급/회전·취소정책·담당자</span></a>
+<a class="nav-link" href="10-settlement.html"><span class="n">10</span><span class="tt">10. 정산(어드민 화면)</span></a>
+<a class="nav-link" href="11-dashboard.html"><span class="n">11</span><span class="tt">11. 대시보드 — 어드민 메인 화면</span></a>
+<a class="nav-link" href="12-webhooks.html"><span class="n">12</span><span class="tt">12. 웹훅 처리 (토스페이먼츠 → 서버)</span></a>
+<a class="nav-link" href="13-admin-accounts.html"><span class="n">13</span><span class="tt">13. 어드민 계정·역할·로그인/비밀번호</span></a>
+<a class="nav-link" href="14-global-settings.html"><span class="n">14</span><span class="tt">14. 전체 설정(재시도·어드민 IP·킬스위치)</span></a>
+<a class="nav-link" href="15-external-api-and-sample.html"><span class="n">15</span><span class="tt">15. 외부 API 레퍼런스 + 샘플 서비스 연동</span></a>
+<a class="nav-link" href="16-card-vault.html"><span class="n">16</span><span class="tt">16. 카드 보관함(Card Vault) — 카드 등록·교체·조회·삭제</span></a>
+<a class="nav-link" href="17-service-notifications.html"><span class="n">17</span><span class="tt">17. 서비스 알림(아웃고잉 웹훅) — 요청 016</span></a>
+<div class="nav-group"><span>🖥️</span>어드민 화면별 매뉴얼</div>
+<a class="nav-link" href="admin--README.html"><span class="n">·</span><span class="tt">어드민 콘솔 페이지 매뉴얼</span></a>
+<a class="nav-link" href="admin--01-login-and-access.html"><span class="n">01</span><span class="tt">01. 로그인·접근 (로그인 / 비밀번호 설정 / 로그아웃 / IP 제한)</span></a>
+<a class="nav-link" href="admin--02-dashboard.html"><span class="n">02</span><span class="tt">02. 대시보드</span></a>
+<a class="nav-link" href="admin--03-services.html"><span class="n">03</span><span class="tt">03. 서비스 관리</span></a>
+<a class="nav-link" href="admin--04-plans.html"><span class="n">04</span><span class="tt">04. 요금제 관리 (목록·생성·수정·활성/비활성·삭제)</span></a>
+<a class="nav-link" href="admin--05-subscriptions.html"><span class="n">05</span><span class="tt">05. 구독 관리 — 목록·상세·강제 취소</span></a>
+<a class="nav-link" href="admin--06-payments.html"><span class="n">06</span><span class="tt">06. 결제 — 목록·상세·단건 취소</span></a>
+<a class="nav-link" href="admin--07-settlement.html"><span class="n">07</span><span class="tt">07. 정산 화면</span></a>
+<a class="nav-link" href="admin--08-users.html"><span class="n">08</span><span class="tt">08. 계정 관리</span></a>
+<a class="nav-link" href="admin--09-audit.html"><span class="n">09</span><span class="tt">09. 감사 로그 (조회·검색·정리·엑셀)</span></a>
+<a class="nav-link active" href="admin--10-settings.html"><span class="n">10</span><span class="tt">10. 전체 설정 (재시도 정책 · 어드민 IP · 킬스위치)</span></a>
+<div class="nav-group"><span>📋</span>운영 워크플로우</div>
+<a class="nav-link" href="admin--11-onboarding-checklist.html"><span class="n">·</span><span class="tt">신규 서비스 온보딩 체크리스트 (운영자용)</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">개발자 매뉴얼</a> <span>/</span> <em>어드민 화면별 매뉴얼</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">🖥️ 어드민 화면별 매뉴얼</span>
+        <span class="dh-src">docs/dev_manual/admin/10-settings.md</span></div>
+      <h1>10. 전체 설정 (재시도 정책 · 어드민 IP · 킬스위치)</h1>
+      
+    </header>
+    <div class="doc">
+
+<blockquote class="cal who"><span class="cal-i">👤</span><div class="cal-b">
+<p><strong>대상 독자</strong>: 어드민 콘솔을 사용하는 운영자(화면 조작 방법) + 내부 구현을 파악해야 하는 개발자(라우트·서비스·모델 위치).</p>
+<p>GlobalSettings 모델·마이그레이션·감사 로그 상세는 <a href="14-global-settings.html">../14-global-settings.md</a>를 참고하세요.
+어드민 IP 제한의 세션·미들웨어 적용 흐름은 <a href="03-auth-and-security.html">../03-auth-and-security.md</a>를 참고하세요.</p>
+</div></blockquote>
+<hr />
+<h2 id="1">1. 이 화면은 무엇인가 / 접근 경로·권한</h2>
+<table>
+<thead>
+<tr>
+<th>화면/동작</th>
+<th>URL</th>
+<th>메서드</th>
+<th>접근 권한</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>전체 설정 화면 렌더</td>
+<td><code>/admin/settings</code></td>
+<td>GET</td>
+<td><code>SYSTEM_ADMIN</code></td>
+</tr>
+<tr>
+<td>재시도 정책 저장</td>
+<td><code>/admin/settings/retry</code></td>
+<td>POST</td>
+<td><code>SYSTEM_ADMIN</code></td>
+</tr>
+<tr>
+<td>어드민 허용 IP 저장</td>
+<td><code>/admin/settings/admin-ips</code></td>
+<td>POST</td>
+<td><code>SYSTEM_ADMIN</code></td>
+</tr>
+<tr>
+<td>킬스위치 전환(활성/비활성)</td>
+<td><code>/admin/settings/server-toggle</code></td>
+<td>POST</td>
+<td><code>SYSTEM_ADMIN</code></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>접근 경로</strong>: 좌측 사이드바 → <strong>전체 설정</strong> 메뉴 클릭(또는 URL 직접 입력).</li>
+<li><strong>권한</strong>: 모든 엔드포인트는 <code>require_admin</code>(= <code>SYSTEM_ADMIN</code> 전용)으로 보호됩니다. <code>SERVICE_MANAGER</code> 역할은 이 화면에 접근할 수 없으며 403으로 차단됩니다.</li>
+<li>이 화면에서 변경한 설정은 <strong>DB에 저장되어 런타임에 즉시 반영</strong>됩니다(캐시 없음).</li>
+</ul>
+<hr />
+<h2 id="2">2. 화면 구성</h2>
+<p>템플릿: <code>app/admin/templates/settings/index.html</code></p>
+<p>화면 제목 <strong>전체 설정</strong> 아래 세 개의 카드가 2열 그리드로 배치됩니다. 세 번째 카드(킬스위치)는 <code>grid-column:1/-1</code>로 전체 폭을 차지합니다.</p>
+<h3 id="1_1">카드 1 — 자동결제 재시도</h3>
+<table>
+<thead>
+<tr>
+<th>필드</th>
+<th>입력 타입</th>
+<th>현재 값 소스</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>최대 재시도 횟수</td>
+<td><code>number</code> (min=0, max=99)</td>
+<td><code>gs.retry_limit</code></td>
+</tr>
+<tr>
+<td>재시도 간격(시간)</td>
+<td><code>number</code> (min=1)</td>
+<td><code>gs.retry_interval_hours</code></td>
+</tr>
+<tr>
+<td>SUSPENDED 만료 유예(일)</td>
+<td><code>number</code> (min=0)</td>
+<td><code>gs.suspended_grace_days</code></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>저장</strong> 버튼(<code>btn-primary</code>): <code>POST /admin/settings/retry</code> 제출.</li>
+</ul>
+<h3 id="2-ip">카드 2 — 어드민 접속 허용 IP</h3>
+<ul>
+<li>저장된 IP가 옥텟 4칸 행으로 펼쳐집니다. 저장된 IP가 없으면 빈 행 1개가 기본으로 표시됩니다.</li>
+<li>각 옥텟 칸은 <code>inputmode="numeric"</code> / <code>maxlength="3"</code>.</li>
+<li><strong>삭제</strong> 버튼(<code>data-ip-del</code>): 해당 행 제거.</li>
+<li><strong>IP 추가</strong> 버튼(<code>data-ip-add</code>): 빈 옥텟 행 1개 추가.</li>
+<li><strong>저장</strong> 버튼(<code>btn-primary</code>): <code>POST /admin/settings/admin-ips</code> 제출.</li>
+<li>폼에는 <code>data-ip-form</code> / <code>data-ip-target="admin_allowed_ips"</code> / <code>data-ip-allow-empty</code> 속성이 있습니다. <code>admin.js</code>가 submit 직전 모든 행의 옥텟을 조합하여 hidden 필드 <code>admin_allowed_ips</code>에 줄바꿈(<code>\n</code>) 구분 문자열로 채웁니다.</li>
+<li><strong>목록이 비어 있으면 모든 IP에서 접속 가능</strong>합니다(<code>data-ip-allow-empty</code>로 빈 제출 허용).</li>
+</ul>
+<h3 id="3">카드 3 — 결제서버 킬스위치</h3>
+<h4 id="_1">현재 상태 패널</h4>
+<table>
+<thead>
+<tr>
+<th>상태</th>
+<th>배지</th>
+<th>추가 표시</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>정상 운영</td>
+<td><code>badge-ACTIVE</code> "정상 운영"</td>
+<td>없음</td>
+</tr>
+<tr>
+<td>비활성화(점검 중)</td>
+<td><code>badge-INACTIVE</code> "비활성화(점검 중)"</td>
+<td>비활성화 사유(<code>gs.disabled_reason</code>)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="_2">폼 필드</h4>
+<ul>
+<li><code>&lt;input type="hidden" name="disabled"&gt;</code>: 현재 상태에 따라 서버가 목표 상태를 주입합니다.</li>
+<li>현재 정상이면 <code>value="on"</code> → 제출 시 <strong>비활성화</strong>.</li>
+<li>현재 비활성이면 <code>value=""</code> → 제출 시 <strong>활성화</strong>.</li>
+<li><strong>비활성화 사유</strong> 입력 (<code>name="reason"</code>, <code>maxlength="500"</code>): <strong>정상 운영 상태일 때만</strong> 표시됩니다. 비활성화 시 필수.</li>
+<li><strong>본인 비밀번호 확인</strong> 입력 (<code>name="password"</code>, <code>type="password"</code>): 활성화·비활성화 모두에서 항상 표시됩니다.</li>
+<li><strong>버튼</strong>: 현재 정상이면 <code>btn-danger</code> "비활성화", 현재 비활성이면 <code>btn-primary</code> "활성화(복구)".</li>
+<li>비활성화 방향(정상 → 비활성) 시 폼에 <code>data-confirm</code> / <code>data-confirm-title</code> / <code>data-confirm-ok</code> 속성이 있어 <code>admin.js</code>가 제출 전 <strong>확인 모달</strong>을 표시합니다.</li>
+</ul>
+<hr />
+<h2 id="3_1">3. 할 수 있는 동작</h2>
+<h3 id="3-1">3-1. 재시도 정책 변경</h3>
+<ol>
+<li><strong>카드 1</strong>에서 세 개의 숫자 필드를 원하는 값으로 수정합니다.</li>
+<li><strong>저장</strong> 버튼을 클릭하면 <code>POST /admin/settings/retry</code>가 전송됩니다.</li>
+<li>성공 시 <code>/admin/settings?saved=저장되었습니다</code>로 303 리다이렉트 → <strong>저장 완료 모달</strong>이 표시됩니다.</li>
+<li>실패 시 <code>/admin/settings?error=&lt;메시지&gt;</code>로 리다이렉트 → 화면 상단 <strong>오류 배너</strong>가 표시됩니다.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>입력 오류</th>
+<th>화면에 표시되는 메시지</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>재시도 횟수 &lt; 0 또는 간격 &lt; 1 또는 유예일 &lt; 0</td>
+<td>"재시도 설정 값이 올바르지 않습니다"</td>
+</tr>
+<tr>
+<td>숫자가 아닌 입력</td>
+<td>"숫자를 입력하세요"</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>변경된 값은 <strong>다음 구독 갱신 배치 실행 시부터</strong> 적용됩니다. 현재 처리 중인 배치에는 소급되지 않습니다.</p>
+</div></blockquote>
+<p><strong>각 필드의 의미</strong></p>
+<table>
+<thead>
+<tr>
+<th>필드</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>최대 재시도 횟수 (<code>retry_limit</code>)</td>
+<td>구독 갱신 결제 실패 시 최대 몇 번 재시도할지. 0이면 재시도 없음.</td>
+</tr>
+<tr>
+<td>재시도 간격(<code>retry_interval_hours</code>)</td>
+<td>재시도 사이의 간격(시간 단위). 1 이상 필수.</td>
+</tr>
+<tr>
+<td>SUSPENDED 만료 유예(<code>suspended_grace_days</code>)</td>
+<td>모든 재시도 소진 후 구독이 SUSPENDED 상태로 전환될 때 실제 만료까지 유예되는 일수. 0이면 즉시 만료.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="3-2-ip">3-2. 어드민 접속 허용 IP 변경</h3>
+<ol>
+<li><strong>카드 2</strong>의 행에서 허용할 IP를 옥텟별로 입력합니다.</li>
+<li>IP를 추가하려면 <strong>IP 추가</strong> 버튼을 클릭해 빈 행을 만들고 입력합니다.</li>
+<li>특정 행을 제거하려면 해당 행의 <strong>삭제</strong> 버튼을 클릭합니다.</li>
+<li><strong>저장</strong> 버튼을 클릭하면 <code>POST /admin/settings/admin-ips</code>가 전송됩니다.</li>
+<li>성공 시 저장 완료 모달, 실패 시 오류 배너가 표시됩니다.</li>
+</ol>
+<p><strong>빈 목록 저장 시</strong>: 어드민 IP 제한이 해제되어 모든 IP에서 접속 가능해집니다.</p>
+<table>
+<thead>
+<tr>
+<th>입력 오류</th>
+<th>화면에 표시되는 메시지</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>유효하지 않은 IP 형식</td>
+<td>"유효하지 않은 IP: <ip>"</td>
+</tr>
+<tr>
+<td>현재 접속 IP가 목록에 없음</td>
+<td>"현재 접속 IP를 포함해야 잠금을 피할 수 있습니다"</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p><strong>중요</strong>: 반드시 현재 접속 중인 본인의 IP를 목록에 포함해야 합니다. 포함하지 않으면 서버가 저장을 거부합니다. 이 검사는 운영자 전원이 어드민에서 잠기는 사고를 방지하는 lockout 보호 장치입니다.</p>
+</div></blockquote>
+<h3 id="3-3">3-3. 킬스위치 전환</h3>
+<h4 id="_3">결제서버 비활성화 (정상 → 비활성)</h4>
+<ol>
+<li><strong>카드 3</strong> 현재 상태가 <strong>정상 운영</strong>인 상태에서 <strong>비활성화 사유</strong>를 입력합니다(예: "정기 점검 2026-06-09 00:00~06:00").</li>
+<li><strong>본인 비밀번호</strong>를 입력합니다.</li>
+<li>빨간 <strong>비활성화</strong> 버튼을 클릭합니다.</li>
+<li><code>admin.js</code>가 <strong>확인 모달</strong> ("결제서버를 비활성화할까요?")을 표시합니다. <strong>비활성화</strong> 버튼을 클릭해야 실제 제출됩니다.</li>
+<li>성공 시 저장 완료 모달. 이후 화면을 새로고침하면 상태 패널이 "비활성화(점검 중)"와 사유로 바뀝니다.</li>
+</ol>
+<h4 id="_4">결제서버 활성화 (비활성 → 정상 복구)</h4>
+<ol>
+<li><strong>카드 3</strong> 현재 상태가 <strong>비활성화(점검 중)</strong>인 상태에서 <strong>본인 비밀번호</strong>를 입력합니다(사유 입력 불필요).</li>
+<li>파란 <strong>활성화(복구)</strong> 버튼을 클릭합니다. 확인 모달 없이 바로 제출됩니다.</li>
+<li>성공 시 저장 완료 모달.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>입력 오류</th>
+<th>화면에 표시되는 메시지</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>비밀번호 불일치</td>
+<td>"비밀번호가 일치하지 않습니다"</td>
+</tr>
+<tr>
+<td>비활성화 시 사유가 빈 문자열</td>
+<td>"비활성화 사유를 입력해야 합니다"</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>비활성화 효과</strong>: <code>GlobalSettings.server_disabled=True</code>가 저장된 순간부터 외부 API(<code>authenticate_service</code> 진입 시 <code>ensure_server_enabled</code> 게이트 호출) 전체가 HTTP 503을 반환합니다. <strong>어드민 화면(<code>/admin</code>)은 킬스위치 영향을 받지 않습니다.</strong></p>
+</div></blockquote>
+<hr />
+<h2 id="4">4. 개발 참조</h2>
+<h3 id="4-1">4-1. 라우트 함수</h3>
+<p>모든 설정 라우트는 <code>app/admin/routes/settings.py</code>에 있습니다.</p>
+<table>
+<thead>
+<tr>
+<th>기능</th>
+<th>함수</th>
+<th>파일:줄</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>전체 설정 화면 렌더</td>
+<td><code>settings_page</code></td>
+<td><code class="loc">app/admin/routes/settings.py:25</code></td>
+</tr>
+<tr>
+<td>재시도 정책 저장</td>
+<td><code>settings_retry</code></td>
+<td><code class="loc">app/admin/routes/settings.py:47</code></td>
+</tr>
+<tr>
+<td>어드민 허용 IP 저장</td>
+<td><code>settings_admin_ips</code></td>
+<td><code class="loc">app/admin/routes/settings.py:76</code></td>
+</tr>
+<tr>
+<td>킬스위치 전환</td>
+<td><code>settings_server_toggle</code></td>
+<td><code class="loc">app/admin/routes/settings.py:114</code></td>
+</tr>
+</tbody>
+</table>
+<p>모든 라우트는 <code>require_admin</code>(<code class="loc">app/admin/deps.py:100</code>) 의존성으로 <code>SYSTEM_ADMIN</code> 권한을 강제하며, POST 라우트는 <code>validate_csrf</code>를 호출합니다.</p>
+<h3 id="4-2-appservicesapp_settingspy">4-2. 서비스 레이어 (<code>app/services/app_settings.py</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>기능</th>
+<th>함수</th>
+<th>파일:줄</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GlobalSettings 단일행 조회 (없으면 기본값 생성)</td>
+<td><code>get_global_settings</code></td>
+<td><code class="loc">app/services/app_settings.py:18</code></td>
+</tr>
+<tr>
+<td>재시도 설정 갱신</td>
+<td><code>update_retry_settings</code></td>
+<td><code class="loc">app/services/app_settings.py:33</code></td>
+</tr>
+<tr>
+<td>어드민 허용 IP 갱신 (lockout 방지 포함)</td>
+<td><code>update_admin_ips</code></td>
+<td><code class="loc">app/services/app_settings.py:59</code></td>
+</tr>
+<tr>
+<td>외부 API 킬스위치 게이트 (비활성 시 503)</td>
+<td><code>ensure_server_enabled</code></td>
+<td><code class="loc">app/services/app_settings.py:93</code></td>
+</tr>
+<tr>
+<td>킬스위치 전환 (비밀번호 재확인 포함)</td>
+<td><code>set_server_disabled</code></td>
+<td><code class="loc">app/services/app_settings.py:105</code></td>
+</tr>
+</tbody>
+</table>
+<p>모든 함수는 <code>id=1</code> 단일 행(<code>GlobalSettings</code>)만 읽고 씁니다. <code>get_global_settings</code>는 행이 없을 때 기본값으로 생성합니다(기본값: <code>retry_limit=4</code>, <code>retry_interval_hours=12</code>, <code>suspended_grace_days=30</code>, <code>admin_allowed_ips=[]</code>, <code>server_disabled=False</code>).</p>
+<h3 id="4-3-globalsettings-appmodelsglobal_settingspy16">4-3. GlobalSettings 모델 (<code class="loc">app/models/global_settings.py:16</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>타입</th>
+<th>기본값</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td><code>Integer</code> PK</td>
+<td><code>1</code></td>
+<td>싱글톤 — 항상 1</td>
+</tr>
+<tr>
+<td><code>retry_limit</code></td>
+<td><code>Integer</code></td>
+<td><code>4</code></td>
+<td>자동결제 재시도 최대 횟수</td>
+</tr>
+<tr>
+<td><code>retry_interval_hours</code></td>
+<td><code>Integer</code></td>
+<td><code>12</code></td>
+<td>재시도 간격(시간)</td>
+</tr>
+<tr>
+<td><code>suspended_grace_days</code></td>
+<td><code>Integer</code></td>
+<td><code>30</code></td>
+<td>SUSPENDED 유예 일수</td>
+</tr>
+<tr>
+<td><code>admin_allowed_ips</code></td>
+<td><code>JSONB</code></td>
+<td><code>[]</code></td>
+<td>어드민 허용 IP 목록 (빈=제한 없음)</td>
+</tr>
+<tr>
+<td><code>server_disabled</code></td>
+<td><code>Boolean</code></td>
+<td><code>false</code></td>
+<td>킬스위치 상태</td>
+</tr>
+<tr>
+<td><code>disabled_reason</code></td>
+<td><code>String(500)</code></td>
+<td><code>null</code></td>
+<td>비활성화 사유</td>
+</tr>
+<tr>
+<td><code>disabled_at</code></td>
+<td><code>DateTime(tz)</code></td>
+<td><code>null</code></td>
+<td>비활성화 시각(UTC)</td>
+</tr>
+<tr>
+<td><code>disabled_by</code></td>
+<td><code>UUID</code></td>
+<td><code>null</code></td>
+<td>비활성화한 관리자 user id</td>
+</tr>
+</tbody>
+</table>
+<h3 id="4-4-appapidepspy86">4-4. 킬스위치 게이트 위치 (<code class="loc">app/api/deps.py:86</code>)</h3>
+<p><code>authenticate_service</code> 함수(외부 API 공통 인증 의존성) 내 API 키 검사 직전에 <code>ensure_server_enabled(db)</code>를 호출합니다.</p>
+<pre><code class="language-python"># app/api/deps.py:85-86
+# 킬스위치(요청 013): 서버 비활성화 상태면 API 키 읽기 전에 즉시 503 차단
+await ensure_server_enabled(db)
+</code></pre>
+<p><code>ensure_server_enabled</code>는 <code>GlobalSettings.server_disabled=True</code>이면 <code>ServerDisabledError</code>(HTTP 503, <code class="loc">app/core/errors.py:100</code>)를 발생시킵니다. 사유(<code>disabled_reason</code>)가 있으면 응답 메시지에 포함됩니다.</p>
+<h3 id="4-5-ip-appadmindepspy78-81">4-5. 어드민 IP 제한 적용 위치 (<code class="loc">app/admin/deps.py:78-81</code>)</h3>
+<p><code>require_user</code> 내부에서 <code>GlobalSettings.admin_allowed_ips</code>를 매 요청마다 DB에서 조회합니다. 목록이 비어 있으면 제한 없음, 목록이 있으면 현재 클라이언트 IP가 포함돼야 합니다. 위반 시 <code>PermissionDeniedError("허용되지 않은 IP입니다")</code> → 403으로 처리됩니다. 캐시가 없으므로 설정 변경은 즉시 반영됩니다.</p>
+<h3 id="4-6">4-6. 폼 데이터 흐름 요약</h3>
+<table>
+<thead>
+<tr>
+<th>라우트</th>
+<th>폼 필드</th>
+<th>파싱 위치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/settings/retry</code></td>
+<td><code>retry_limit</code>, <code>retry_interval_hours</code>, <code>suspended_grace_days</code></td>
+<td><code class="loc">settings.py:59-65</code> (int 변환)</td>
+</tr>
+<tr>
+<td><code>/settings/admin-ips</code></td>
+<td><code>admin_allowed_ips</code> (줄바꿈 구분 문자열)</td>
+<td><code class="loc">settings.py:92-97</code> (splitlines)</td>
+</tr>
+<tr>
+<td><code>/settings/server-toggle</code></td>
+<td><code>disabled</code> (on/true/1=비활성), <code>reason</code>, <code>password</code></td>
+<td><code class="loc">settings.py:132</code> (str 비교)</td>
+</tr>
+</tbody>
+</table>
+<p><code>admin-ips</code> 폼의 옥텟 칸은 서버에 직접 전달되지 않습니다. <code>admin.js</code>의 <code>data-ip-form</code> 핸들러가 submit 이벤트를 가로채 옥텟을 <code>a.b.c.d</code> 형태로 조합한 뒤 <code>&lt;input name="admin_allowed_ips"&gt;</code> hidden 필드를 채우고 제출합니다.</p>
+<h3 id="4-7-record_audit-appservicesapp_settingspy">4-7. 감사 로그 (<code>record_audit</code> 호출 — <code>app/services/app_settings.py</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>동작</th>
+<th><code>action</code> 값</th>
+<th>기록 detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>재시도 설정 저장</td>
+<td><code>settings.retry_updated</code></td>
+<td><code>retry_limit</code>, <code>interval_hours</code>, <code>grace_days</code></td>
+</tr>
+<tr>
+<td>어드민 IP 저장</td>
+<td><code>settings.admin_ips_updated</code></td>
+<td><code>count</code> (저장된 IP 개수)</td>
+</tr>
+<tr>
+<td>킬스위치 비활성화</td>
+<td><code>server.disabled</code></td>
+<td><code>reason</code></td>
+</tr>
+<tr>
+<td>킬스위치 활성화</td>
+<td><code>server.enabled</code></td>
+<td><code>reason: null</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="4-8">4-8. 관련 문서 링크</h3>
+<ul>
+<li>GlobalSettings 모델·마이그레이션·기본값 상세: <a href="14-global-settings.html">../14-global-settings.md</a></li>
+<li>어드민 IP 제한 세션·미들웨어 흐름: <a href="03-auth-and-security.html">../03-auth-and-security.md</a></li>
+</ul>
+<hr />
+<h2 id="5">5. 주의사항 / 자주 하는 실수</h2>
+<h3 id="_5">운영자</h3>
+<ul>
+<li><strong>어드민 IP 설정 시 본인 IP 누락 주의</strong>: 저장할 목록에 현재 접속 중인 본인의 IP가 없으면 서버가 저장을 거부합니다. 반드시 포함 여부를 확인한 뒤 저장하세요. 반대로, 모든 IP를 허용하려면 목록을 완전히 비워 저장합니다.</li>
+<li><strong>킬스위치 사용 전 필수 확인 사항</strong>:
+  1. <strong>비활성화 사유</strong>를 명확히 입력하세요(점검 시간대, 사유 등). 외부 서비스 담당자가 503 응답을 받을 때 이 사유가 메시지에 포함될 수 있습니다.
+  2. <strong>본인 비밀번호</strong>를 입력해야 합니다. 비밀번호 불일치 시 전환이 거부됩니다.
+  3. 비활성화 확인 모달에서 한 번 더 확인 후 버튼을 클릭합니다.
+  4. 비활성화하면 <strong>어드민 화면은 정상 사용 가능</strong>하지만 외부 서비스의 구독·결제 API 전체가 즉시 503을 반환합니다. 미처리 결제 요청이 있을 수 있으므로 점검 공지 후 진행하는 것을 권장합니다.
+  5. 복구는 <strong>활성화(복구)</strong> 버튼 + 비밀번호 확인으로 즉시 가능합니다. 확인 모달은 없으니 신중히 클릭하세요.</li>
+<li><strong>재시도 설정은 즉시 적용되지 않습니다</strong>: 변경 후 다음 갱신 배치 실행부터 새 값이 사용됩니다. 현재 처리 중인 구독 갱신에는 영향을 미치지 않습니다.</li>
+</ul>
+<h3 id="_6">개발자</h3>
+<ul>
+<li><strong>GlobalSettings은 싱글톤 행(<code>id=1</code>)입니다.</strong> 여러 행을 생성하면 안 됩니다. <code>get_global_settings</code>의 <code>get_or_create</code> 패턴(<code class="loc">app/services/app_settings.py:24-30</code>)이 항상 id=1 행만 관리하도록 설계되어 있습니다.</li>
+<li><strong><code>update_admin_ips</code>의 lockout 검사는 비어있지 않은 목록에만 작동합니다</strong> (<code class="loc">app/services/app_settings.py:82</code>). 빈 목록을 저장하면 lockout 검사를 건너뛰고 IP 제한이 해제됩니다. 이는 의도된 설계입니다(<code>data-ip-allow-empty</code>).</li>
+<li><strong>킬스위치 게이트는 <code>authenticate_service</code> 진입 직후 최우선으로 실행됩니다</strong> (<code class="loc">app/api/deps.py:86</code>). 새 외부 API 엔드포인트를 추가할 때 <code>authenticate_service</code> 의존성을 반드시 포함해야 킬스위치가 적용됩니다. 어드민 라우트에는 이 의존성을 추가하지 마세요.</li>
+<li><strong><code>set_server_disabled</code>의 비밀번호 검증은 <code>verify_password(평문, 해시)</code> 순서입니다</strong> (<code class="loc">app/services/app_settings.py:120</code>). 인자 순서를 바꾸면 항상 실패합니다.</li>
+<li><strong>감사 로그는 DB 커밋 전에 <code>record_audit</code>을 호출하고 단일 <code>commit()</code>으로 함께 저장합니다</strong>. <code>record_audit</code> 자체는 커밋하지 않으므로(<code class="loc">app/services/app_settings.py:1-5</code> docstring 참고) 설정 변경과 감사 로그가 원자적으로 처리됩니다.</li>
+<li><strong>어드민 IP는 변경 즉시 매 요청마다 적용됩니다</strong> (캐시 없음, <code class="loc">app/admin/deps.py:80</code>). 잘못된 목록을 실수로 저장하면 즉시 전원 접근이 차단될 수 있습니다. 테스트 환경에서 변경 후 다른 탭에서 어드민 접속이 되는지 먼저 확인하는 습관을 권장합니다.</li>
+</ul>
+    </div>
+    <div class="pager"><a class="pg prev" href="admin--09-audit.html"><small>← 이전</small><b>09. 감사 로그 (조회·검색·정리·엑셀)</b></a><a class="pg next" href="admin--11-onboarding-checklist.html"><small>다음 →</small><b>신규 서비스 온보딩 체크리스트 (운영자용)</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#1">1. 이 화면은 무엇인가 / 접근 경로·권한</a>
+<a class="toc-h2" href="#2">2. 화면 구성</a>
+<a class="toc-h3" href="#1_1">카드 1 — 자동결제 재시도</a>
+<a class="toc-h3" href="#2-ip">카드 2 — 어드민 접속 허용 IP</a>
+<a class="toc-h3" href="#3">카드 3 — 결제서버 킬스위치</a>
+<a class="toc-h2" href="#3_1">3. 할 수 있는 동작</a>
+<a class="toc-h3" href="#3-1">3-1. 재시도 정책 변경</a>
+<a class="toc-h3" href="#3-2-ip">3-2. 어드민 접속 허용 IP 변경</a>
+<a class="toc-h3" href="#3-3">3-3. 킬스위치 전환</a>
+<a class="toc-h2" href="#4">4. 개발 참조</a>
+<a class="toc-h3" href="#4-1">4-1. 라우트 함수</a>
+<a class="toc-h3" href="#4-2-appservicesapp_settingspy">4-2. 서비스 레이어 (app/services/app_settings.py)</a>
+<a class="toc-h3" href="#4-3-globalsettings-appmodelsglobal_settingspy16">4-3. GlobalSettings 모델 (app/models/global_settings.py:16)</a>
+<a class="toc-h3" href="#4-4-appapidepspy86">4-4. 킬스위치 게이트 위치 (app/api/deps.py:86)</a>
+<a class="toc-h3" href="#4-5-ip-appadmindepspy78-81">4-5. 어드민 IP 제한 적용 위치 (app/admin/deps.py:78-81)</a>
+<a class="toc-h3" href="#4-6">4-6. 폼 데이터 흐름 요약</a>
+<a class="toc-h3" href="#4-7-record_audit-appservicesapp_settingspy">4-7. 감사 로그 (record_audit 호출 — app/services/app_settings.py)</a>
+<a class="toc-h3" href="#4-8">4-8. 관련 문서 링크</a>
+<a class="toc-h2" href="#5">5. 주의사항 / 자주 하는 실수</a>
+<a class="toc-h3" href="#_5">운영자</a>
+<a class="toc-h3" href="#_6">개발자</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

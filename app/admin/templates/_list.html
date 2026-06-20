@@ -1,0 +1,85 @@
+{# 목록 공통 매크로: 검색바, 정렬 헤더, 페이지네이션 #}
+
+{# 검색 + 필터 툴바. extra_selects=[(name, options[list of (value,label)], current)] #}
+{%- macro toolbar(action, pp, placeholder='검색', extra_selects=None, target=None, date_inputs=None, export_url=None) -%}
+<form method="get" action="{{ action }}" class="toolbar"{% if target %} hx-get="{{ action }}" hx-target="#{{ target }}" hx-swap="outerHTML" hx-push-url="true"{% endif %}>
+  <div class="searchbox" style="width:240px">
+    <span data-lucide="search"></span>
+    <input type="text" name="q" value="{{ pp.q }}" placeholder="{{ placeholder }}">
+  </div>
+  {%- if extra_selects -%}
+    {%- for name, options, current in extra_selects -%}
+    <select name="{{ name }}" onchange="{% if name == 'service_id' %}if(this.form.plan_name)this.form.plan_name.value='';{% endif %}this.form.requestSubmit()">
+      {%- for value, label in options -%}
+      <option value="{{ value }}" {{ 'selected' if current == value }}>{{ label }}</option>
+      {%- endfor -%}
+    </select>
+    {%- endfor -%}
+  {%- endif -%}
+  {%- if date_inputs -%}
+    {%- for name, value in date_inputs -%}
+    <input type="date" name="{{ name }}" value="{{ value }}" style="width:auto"
+           onchange="this.form.requestSubmit()">
+    {%- endfor -%}
+  {%- endif -%}
+  {%- if pp.sort -%}<input type="hidden" name="sort" value="{{ pp.sort }}"><input type="hidden" name="dir" value="{{ pp.direction }}">{%- endif -%}
+  <button class="btn btn-sub" type="submit">검색</button>
+  {%- if export_url -%}
+    <a class="btn btn-sm btn-ghost" href="{{ export_url }}{% if pp.query_without('page') %}?{{ pp.query_without('page') }}{% endif %}">
+      <span data-lucide="download"></span>엑셀</a>
+  {%- endif -%}
+  {%- if pp.q or pp.filters -%}<a class="btn-text" href="{{ action }}"{% if target %} hx-get="{{ action }}" hx-target="#{{ target }}" hx-swap="outerHTML" hx-push-url="true"{% endif %}>초기화</a>{%- endif -%}
+</form>
+{%- endmacro -%}
+
+{# 정렬 가능한 th. col=정렬키, label=표시 #}
+{%- macro sort_th(pp, action, col, label, target=None) -%}
+  {%- set base = pp.query_without('sort', 'dir', 'page') -%}
+  {%- set sep = '&' if base else '' -%}
+  <th>
+    <a href="{{ action }}?{{ base }}{{ sep }}sort={{ col }}&dir={{ pp.toggled_dir(col) }}"
+       {% if target %}hx-get="{{ action }}?{{ base }}{{ sep }}sort={{ col }}&dir={{ pp.toggled_dir(col) }}" hx-target="#{{ target }}" hx-swap="outerHTML" hx-push-url="true"{% endif %}
+       style="display:inline-flex;align-items:center;gap:4px;color:inherit">
+      {{ label }}
+      {%- if pp.sort == col -%}
+      <span data-lucide="{{ 'arrow-up' if pp.direction == 'asc' else 'arrow-down' }}" style="width:12px;height:12px"></span>
+      {%- endif -%}
+    </a>
+  </th>
+{%- endmacro -%}
+
+{# 페이저 링크 내부 헬퍼 — target 있으면 hx 부분 갱신 #}
+{%- macro _plink(action, qs, label, cls, disabled, target) -%}
+<a class="{{ cls }} {{ 'disabled' if disabled }}" href="{{ action }}?{{ qs }}"
+   {% if target and not disabled %}hx-get="{{ action }}?{{ qs }}" hx-target="#{{ target }}" hx-swap="outerHTML" hx-push-url="true"{% endif %}
+   {% if disabled %}style="pointer-events:none;opacity:.4"{% endif %}>{{ label }}</a>
+{%- endmacro -%}
+
+{# 페이지네이션 컨트롤 #}
+{%- macro pager(page, action, pp, target=None) -%}
+{%- set pk = pp.page_param -%}
+{%- set base = pp.query_without(pk) -%}
+{%- set sep = '&' if base else '' -%}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;gap:12px;flex-wrap:wrap">
+  <span class="muted" style="font-size:13px">
+    총 {{ page.total }}건 중 {{ page.start }}–{{ page.end }}
+  </span>
+  {%- if page.pages > 1 -%}
+  <nav style="display:flex;align-items:center;gap:4px">
+    {{ _plink(action, base ~ sep ~ pk ~ '=' ~ (page.page - 1), '이전', 'btn btn-sm btn-ghost', not page.has_prev, target) }}
+    {%- if page.window()[0] > 1 -%}
+      {{ _plink(action, base ~ sep ~ pk ~ '=1', '1', 'btn btn-sm btn-ghost', false, target) }}
+      {%- if page.window()[0] > 2 -%}<span class="muted" style="padding:0 4px">…</span>{%- endif -%}
+    {%- endif -%}
+    {%- for n in page.window() -%}
+      {{ _plink(action, base ~ sep ~ pk ~ '=' ~ n, n, 'btn btn-sm ' ~ ('btn-primary' if n == page.page else 'btn-ghost'), false, target) }}
+    {%- endfor -%}
+    {%- if page.window()[-1] < page.pages -%}
+      {%- if page.window()[-1] < page.pages - 1 -%}<span class="muted" style="padding:0 4px">…</span>{%- endif -%}
+      {{ _plink(action, base ~ sep ~ pk ~ '=' ~ page.pages, page.pages, 'btn btn-sm btn-ghost', false, target) }}
+    {%- endif -%}
+    {{ _plink(action, base ~ sep ~ pk ~ '=' ~ (page.page + 1), '다음', 'btn btn-sm btn-ghost', not page.has_next, target) }}
+  </nav>
+  {%- endif -%}
+</div>
+{%- endmacro -%}
