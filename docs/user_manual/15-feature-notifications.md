@@ -23,7 +23,7 @@
 | 이벤트 발생 지점(구독/결제/카드/요금제) | `app/services/subscriptions.py`, `renewals.py`, `payments.py`, `cards.py`, `plans.py` |
 | 샘플 수신기(검증·저장·표시) | `sample_service/shop/views.py` |
 
-## 15.2 이벤트 16종(+테스트 1종)
+## 15.2 이벤트 17종(+테스트 1종)
 
 `app/notifications/service_notify.py:29`~`46`에 이벤트 식별자 상수가 정의돼 있다. 이 값은 payload의 `EVENT` 필드와 `X-Event` 헤더에 들어간다.
 
@@ -48,7 +48,7 @@
 | 요금제 | `EVENT_PLAN_BONUS_DAYS` | `plan.bonus_days` |
 | 테스트 | `EVENT_TEST` | `notification.test` |
 
-> 참고: 표의 데이터 이벤트는 16종이고, 여기에 어드민 "테스트 알림 전송" 버튼이 쓰는 `notification.test`가 더해진다.
+> 참고: 표의 데이터 이벤트는 17종(구독 5·카드 5·결제 3·요금제 4)이고, 여기에 어드민 "테스트 알림 전송" 버튼이 쓰는 `notification.test`가 더해진다.
 
 ## 15.3 payload 구조(EVENT 포함)
 

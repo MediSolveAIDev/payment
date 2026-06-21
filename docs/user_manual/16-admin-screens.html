@@ -25,6 +25,7 @@
 <a class="nav-link" href="07-admin-settings.html"><span class="n">7</span><span class="tt">7. 전체 설정</span></a>
 <a class="nav-link" href="08-admin-audit.html"><span class="n">8</span><span class="tt">8. 감사 로그</span></a>
 <a class="nav-link" href="09-dashboard.html"><span class="n">9</span><span class="tt">9. 대시보드</span></a>
+<a class="nav-link" href="18-status-reference.html"><span class="n">·</span><span class="tt">상태값 사전 — 모든 상태의 의미</span></a>
 <div class="nav-group"><span>🛠️</span>개발자 매뉴얼</div>
 <a class="nav-link" href="10-install-deploy.html"><span class="n">10</span><span class="tt">10. 설치·설정·배포</span></a>
 <a class="nav-link" href="11-service-api.html"><span class="n">11</span><span class="tt">11. 서비스 연동 API</span></a>
@@ -33,6 +34,7 @@
 <a class="nav-link" href="14-feature-payment.html"><span class="n">14</span><span class="tt">14. 일반결제·취소·정산 기능</span></a>
 <a class="nav-link" href="15-feature-notifications.html"><span class="n">15</span><span class="tt">15. 서비스 알림(아웃고잉 웹훅) 기능</span></a>
 <a class="nav-link active" href="16-admin-screens.html"><span class="n">16</span><span class="tt">16. 어드민 화면별 설명</span></a>
+<a class="nav-link" href="17-sample-service.html"><span class="n">17</span><span class="tt">17. 샘플 서비스(sample_service) 사용법</span></a>
 </nav>
 </aside>
 <div class="scrim" id="scrim"></div>
@@ -93,7 +95,7 @@
     name = partial_name if request.headers.get(&quot;HX-Request&quot;) else full_name
     return render(request, name, ctx=ctx, **extra)
 </code></pre>
-<p>서비스 상세처럼 한 화면에 탭이 여러 개인 경우는 <code>HX-Target</code> 헤더 값으로 partial을 갈라 렌더합니다(<code class="loc">app/admin/routes/services.py:322</code>).</p>
+<p>서비스 상세처럼 한 화면에 탭이 여러 개인 경우는 <code>HX-Target</code> 헤더 값으로 partial을 갈라 렌더합니다(<code class="loc">app/admin/routes/services.py:323</code>).</p>
 <p><code>render</code>(<code class="loc">app/admin/__init__.py:61</code>)는 공통으로 <code>?flash</code>/<code>?saved</code> 쿼리를 컨텍스트에 넣고, <code>saved</code>가 있으면 <code>HX-Trigger: showSaved</code> 헤더를 붙여 admin.js가 완료 모달(✓)을 띄우게 합니다. DB 쓰기 성공 후에는 <code>saved_redirect</code>(<code class="loc">app/admin/__init__.py:49</code>)로 대상 URL에 <code>?saved=</code> 메시지를 덧붙여 리다이렉트합니다.</p>
 <h3 id="paginationpy">페이지네이션·정렬·검색 (pagination.py)</h3>
 <p>목록 라우트는 <code>PageParams.from_request</code>(<code class="loc">app/admin/pagination.py:31</code>)로 쿼리스트링을 파싱합니다.</p>
@@ -281,7 +283,7 @@
 </tr>
 </tbody>
 </table>
-<p>상세는 <code>HX-Target</code> 헤더로 탭 partial을 갈라 렌더합니다(<code class="loc">app/admin/routes/services.py:325</code>).</p>
+<p>상세는 <code>HX-Target</code> 헤더로 탭 partial을 갈라 렌더합니다(<code class="loc">app/admin/routes/services.py:323</code>).</p>
 <table>
 <thead>
 <tr>
@@ -807,7 +809,7 @@
 <p>주의: 어드민 IP 저장은 lockout 방지를 위해 현재 접속 IP가 목록에 없으면 <code>InputValidationError</code>로 거부합니다. 킬스위치 비활성화는 사유(<code>reason</code>)와 작업자 본인 비밀번호 재확인(<code>password</code>)이 필요하고, Redis로 킬스위치 캐시를 즉시 무효화해 전파 지연을 없앱니다.</p>
 </div></blockquote>
     </div>
-    <div class="pager"><a class="pg prev" href="15-feature-notifications.html"><small>← 이전</small><b>15. 서비스 알림(아웃고잉 웹훅) 기능</b></a></div>
+    <div class="pager"><a class="pg prev" href="15-feature-notifications.html"><small>← 이전</small><b>15. 서비스 알림(아웃고잉 웹훅) 기능</b></a><a class="pg next" href="17-sample-service.html"><small>다음 →</small><b>17. 샘플 서비스(sample_service) 사용법</b></a></div>
   </article>
   <aside class="toc" id="toc">
 <div class="toc-h">이 페이지 내용</div>

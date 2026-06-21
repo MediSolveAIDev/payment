@@ -3,7 +3,8 @@
 #   app(payment_system/FastAPI) · redis(세션·캐시)
 # TLS 종단·리버스 프록시는 컨테이너가 아니라 **호스트(VM)에 설치된 nginx**가 담당한다.
 #   인터넷 ──443/80──▶ 호스트 nginx(TLS) ──127.0.0.1:8000──▶ app 컨테이너
-# PostgreSQL은 여기에 없음: 외부 관리형 DB를 .env.prod 의 DATABASE_URL 로 연결한다.
+# PostgreSQL은 여기에 없음: 같은 VM의 별도 docker(db_server/) 또는 외부 관리형 DB를
+#   .env.prod 의 DATABASE_URL 로 연결한다(앱·테스트 모두 외부 DB 엔드포인트 사용).
 #
 # 실행:  docker compose -f docker-compose.prod.yml up -d --build
 # 로그:  docker compose -f docker-compose.prod.yml logs -f app

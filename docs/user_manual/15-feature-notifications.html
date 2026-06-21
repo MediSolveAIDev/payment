@@ -25,6 +25,7 @@
 <a class="nav-link" href="07-admin-settings.html"><span class="n">7</span><span class="tt">7. 전체 설정</span></a>
 <a class="nav-link" href="08-admin-audit.html"><span class="n">8</span><span class="tt">8. 감사 로그</span></a>
 <a class="nav-link" href="09-dashboard.html"><span class="n">9</span><span class="tt">9. 대시보드</span></a>
+<a class="nav-link" href="18-status-reference.html"><span class="n">·</span><span class="tt">상태값 사전 — 모든 상태의 의미</span></a>
 <div class="nav-group"><span>🛠️</span>개발자 매뉴얼</div>
 <a class="nav-link" href="10-install-deploy.html"><span class="n">10</span><span class="tt">10. 설치·설정·배포</span></a>
 <a class="nav-link" href="11-service-api.html"><span class="n">11</span><span class="tt">11. 서비스 연동 API</span></a>
@@ -33,6 +34,7 @@
 <a class="nav-link" href="14-feature-payment.html"><span class="n">14</span><span class="tt">14. 일반결제·취소·정산 기능</span></a>
 <a class="nav-link active" href="15-feature-notifications.html"><span class="n">15</span><span class="tt">15. 서비스 알림(아웃고잉 웹훅) 기능</span></a>
 <a class="nav-link" href="16-admin-screens.html"><span class="n">16</span><span class="tt">16. 어드민 화면별 설명</span></a>
+<a class="nav-link" href="17-sample-service.html"><span class="n">17</span><span class="tt">17. 샘플 서비스(sample_service) 사용법</span></a>
 </nav>
 </aside>
 <div class="scrim" id="scrim"></div>
@@ -89,7 +91,7 @@
 </tr>
 </tbody>
 </table>
-<h2 id="152-16-1">15.2 이벤트 16종(+테스트 1종)</h2>
+<h2 id="152-17-1">15.2 이벤트 17종(+테스트 1종)</h2>
 <p><code class="loc">app/notifications/service_notify.py:29</code>~<code>46</code>에 이벤트 식별자 상수가 정의돼 있다. 이 값은 payload의 <code>EVENT</code> 필드와 <code>X-Event</code> 헤더에 들어간다.</p>
 <table>
 <thead>
@@ -193,7 +195,7 @@
 </tbody>
 </table>
 <blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
-<p>참고: 표의 데이터 이벤트는 16종이고, 여기에 어드민 "테스트 알림 전송" 버튼이 쓰는 <code>notification.test</code>가 더해진다.</p>
+<p>참고: 표의 데이터 이벤트는 17종(구독 5·카드 5·결제 3·요금제 4)이고, 여기에 어드민 "테스트 알림 전송" 버튼이 쓰는 <code>notification.test</code>가 더해진다.</p>
 </div></blockquote>
 <h2 id="153-payload-event">15.3 payload 구조(EVENT 포함)</h2>
 <p><code class="loc">app/notifications/service_notify.py:49</code>의 <code>build_payload</code>가 고정 구조의 dict를 만든다. 없는 값은 빈 문자열로 채운다(키는 항상 존재).</p>
@@ -417,7 +419,7 @@ return RedirectResponse(
 <a class="toc-h2" href="#151">15.1 기능 개요·관련 파일</a>
 <a class="toc-h3" href="#_1">핵심 성질</a>
 <a class="toc-h3" href="#_2">관련 파일</a>
-<a class="toc-h2" href="#152-16-1">15.2 이벤트 16종(+테스트 1종)</a>
+<a class="toc-h2" href="#152-17-1">15.2 이벤트 17종(+테스트 1종)</a>
 <a class="toc-h2" href="#153-payload-event">15.3 payload 구조(EVENT 포함)</a>
 <a class="toc-h2" href="#154-httpservicenotifiersend-best-effort">15.4 발송 흐름(HttpServiceNotifier.send) — best-effort</a>
 <a class="toc-h3" href="#sign_request">서명 규칙(sign_request)</a>

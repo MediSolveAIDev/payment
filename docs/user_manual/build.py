@@ -29,6 +29,7 @@ DOCS = [
     ("07-admin-settings.md", "사용자 매뉴얼"),
     ("08-admin-audit.md", "사용자 매뉴얼"),
     ("09-dashboard.md", "사용자 매뉴얼"),
+    ("18-status-reference.md", "사용자 매뉴얼"),
     ("10-install-deploy.md", "개발자 매뉴얼"),
     ("11-service-api.md", "개발자 매뉴얼"),
     ("12-feature-card.md", "개발자 매뉴얼"),
@@ -36,6 +37,7 @@ DOCS = [
     ("14-feature-payment.md", "개발자 매뉴얼"),
     ("15-feature-notifications.md", "개발자 매뉴얼"),
     ("16-admin-screens.md", "개발자 매뉴얼"),
+    ("17-sample-service.md", "개발자 매뉴얼"),
 ]
 
 GROUP_ICON = {"사용자 매뉴얼": "📘", "개발자 매뉴얼": "🛠️"}

@@ -751,12 +751,10 @@ class ServiceCredential(models.Model):
 DJANGO_SECRET_KEY=change-me
 DEBUG=True
 PAYMENT_API_BASE=http://127.0.0.1:8000   # 구독서버 주소
-SERVICE_API_KEY=svc_xxx                  # 어드민 > 서비스 상세 > 키 복사
-SERVICE_HMAC_SECRET=xxx                  # 〃
 TOSS_CLIENT_KEY=test_ck_ex6BJGQOVD9YZDN6jvwqrW4w2zNb
 ```
 
-`SERVICE_API_KEY`/`SERVICE_HMAC_SECRET`는 서비스를 하나만 테스트할 때 사용하는 폴백 값입니다. 여러 서비스를 테스트할 때는 화면에서 직접 입력해 `ServiceCredential`에 저장하면 됩니다.
+`SERVICE_API_KEY`/`SERVICE_HMAC_SECRET`는 **`.env`에 두지 않습니다** — 서비스 키·HMAC 시크릿은 실행 후 `/services` 화면에서 서비스를 골라 입력하면 `ServiceCredential`에 저장되어 이후 모든 호출에 쓰입니다(여러 서비스 전환 가능). 코드에는 `settings.SERVICE_API_KEY` 폴백이 남아 있으나 기본값이 빈 문자열이라, 인증이 필요 없는 엔드포인트(서비스 목록)에만 영향이 없습니다.
 
 ### 4-7. 셋업 및 실행
 
@@ -768,7 +766,7 @@ TOSS_CLIENT_KEY=test_ck_ex6BJGQOVD9YZDN6jvwqrW4w2zNb
 
 # 2. 샘플 서비스 설정
 cd sample_service
-cp .env.example .env   # SERVICE_API_KEY / SERVICE_HMAC_SECRET 채우기
+cp .env.example .env   # PAYMENT_API_BASE 등 채우기 (서비스 키·HMAC은 실행 후 /services 화면에서 입력)
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python manage.py migrate
 

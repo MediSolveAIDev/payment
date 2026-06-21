@@ -71,7 +71,7 @@
   </div>
 </div>
 {% endif %}
-
+<!-- 
 {% comment %}
    수동 authKey 폴백 — 토스 client key가 없거나 테스트 시 authKey를 직접 붙여 등록.
    실제 운영에서는 위의 토스 등록창만 쓰면 된다. 이 폼은 라이브 토스 키 없이도
@@ -90,7 +90,7 @@
     <input type="hidden" name="customerKey" value="{{ user.customer_key }}">
     <button class="btn btn-ghost sm" type="submit">이 authKey로 카드 등록</button>
   </form>
-</details>
+</details> -->
 
 <details class="dev-note" {% if not card %}open{% endif %}>
   <summary>🔍 <b>개발자 노트</b> — 카드 보관함 API 3종 <span class="hint">POST / GET / DELETE /api/v1/cards</span></summary>

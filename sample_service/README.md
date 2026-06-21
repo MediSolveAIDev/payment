@@ -50,11 +50,11 @@ payment_system 구독서버의 **외부 서비스 역할을 하는 Django 참고
 
 1. **구독서버에서 서비스 등록** (http://127.0.0.1:8000/admin)
    - 서비스 관리 > 서비스 등록 — 허용 IP에 `127.0.0.1`
-   - 등록 직후 키 화면(또는 서비스 상세의 **키 복사** 버튼)에서 API 키/HMAC Secret 복사
+   - 등록 직후 키 화면(또는 서비스 상세의 **키 복사** 버튼)에서 API 키/HMAC Secret 복사 → **실행 후 `/services` 화면에 입력**(`.env` 아님)
    - 요금제 1개 이상 생성 (체험 요금제 포함 권장)
 2. **이 프로젝트 설정**
    ```bash
-   cp .env.example .env   # SERVICE_API_KEY / SERVICE_HMAC_SECRET 채우기
+   cp .env.example .env   # PAYMENT_API_BASE 등 (서비스 키는 /services 화면에서 입력)
    python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
    .venv/bin/python manage.py migrate
    ```

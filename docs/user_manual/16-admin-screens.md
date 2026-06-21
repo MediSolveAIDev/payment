@@ -41,7 +41,7 @@ def render_list(request, full_name, partial_name, ctx=None, **extra):
     return render(request, name, ctx=ctx, **extra)
 ```
 
-서비스 상세처럼 한 화면에 탭이 여러 개인 경우는 `HX-Target` 헤더 값으로 partial을 갈라 렌더합니다(`app/admin/routes/services.py:322`).
+서비스 상세처럼 한 화면에 탭이 여러 개인 경우는 `HX-Target` 헤더 값으로 partial을 갈라 렌더합니다(`app/admin/routes/services.py:323`).
 
 `render`(`app/admin/__init__.py:61`)는 공통으로 `?flash`/`?saved` 쿼리를 컨텍스트에 넣고, `saved`가 있으면 `HX-Trigger: showSaved` 헤더를 붙여 admin.js가 완료 모달(✓)을 띄우게 합니다. DB 쓰기 성공 후에는 `saved_redirect`(`app/admin/__init__.py:49`)로 대상 URL에 `?saved=` 메시지를 덧붙여 리다이렉트합니다.
 
@@ -124,7 +124,7 @@ def render_list(request, full_name, partial_name, ctx=None, **extra):
 |------|-------------|--------|
 | `GET /admin/services/{id}` | `services_detail` `app/admin/routes/services.py:284` | `services/detail.html` / 탭 partial |
 
-상세는 `HX-Target` 헤더로 탭 partial을 갈라 렌더합니다(`app/admin/routes/services.py:325`).
+상세는 `HX-Target` 헤더로 탭 partial을 갈라 렌더합니다(`app/admin/routes/services.py:323`).
 
 | `HX-Target` | partial | 탭 데이터 빌더 |
 |-------------|---------|----------------|
