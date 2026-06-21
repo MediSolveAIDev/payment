@@ -1,0 +1,1 @@
+docker exec ec5a565ba7c9 pg_dumpall -U payment > postgres_all_backup_$(date +%Y%m%d).sql
