@@ -115,6 +115,11 @@ def render_list(request, full_name, partial_name, ctx=None, **extra):
 
 ### 상세 (탭)
 
+<figure class="shot">
+  <img src="assets/img/service-detail.png" alt="서비스 상세 화면 (키·카드·요금제 탭)" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">서비스 상세 화면 (키·카드·요금제 탭)</figcaption>
+</figure>
+
 | 경로 | 라우트 함수 | 템플릿 |
 |------|-------------|--------|
 | `GET /admin/services/{id}` | `services_detail` `app/admin/routes/services.py:284` | `services/detail.html` / 탭 partial |

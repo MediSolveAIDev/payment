@@ -27,6 +27,11 @@
 
 ## 6.2 계정 목록 보기 · 검색
 
+<figure class="shot">
+  <img src="assets/img/accounts-list.png" alt="계정 목록" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">계정 목록</figcaption>
+</figure>
+
 좌측 메뉴에서 **계정**을 누르면 등록된 계정 목록이 나옵니다.
 
 목록에는 **이메일 · 역할 · 주 서비스 · 상태**가 표시됩니다.
@@ -54,6 +59,11 @@
 ---
 
 ## 6.3 새 계정 만들기
+
+<figure class="shot">
+  <img src="assets/img/account-new.png" alt="계정 생성 폼" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">계정 생성 폼</figcaption>
+</figure>
 
 <ol class="steps">
 <li>계정 목록 화면 오른쪽 위 <b>계정 추가</b> 버튼을 누릅니다.</li>

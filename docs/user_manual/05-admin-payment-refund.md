@@ -10,6 +10,11 @@
 
 ## 5.1 결제 내역 보기
 
+<figure class="shot">
+  <img src="assets/img/payments-list.png" alt="결제 목록 (구독·단건)" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">결제 목록 (구독·단건)</figcaption>
+</figure>
+
 왼쪽 메뉴에서 **결제**를 누르면 결제 목록이 열립니다.
 
 각 줄에는 주문번호, 서비스, **종류**(<span class="pill pri">구독</span> / <span class="pill">일반</span>), 사용자, 금액, **상태**(<span class="pill pri">완료</span> / <span class="pill no">실패</span> / 대기 / <span class="pill no">취소</span>), 요청 시각이 보입니다.
@@ -33,6 +38,11 @@
 ---
 
 ## 5.2 결제 상세 화면
+
+<figure class="shot">
+  <img src="assets/img/payment-detail.png" alt="결제 상세·환불 화면" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">결제 상세·환불 화면</figcaption>
+</figure>
 
 목록에서 주문번호를 누르면 결제 1건의 상세가 열립니다. 주문번호, 상품명, 종류, 서비스, 사용자, **결제 카드**, 금액, 상태, 실패 코드/메시지, 요청·승인 시각, 연결된 구독 등을 한눈에 볼 수 있습니다.
 

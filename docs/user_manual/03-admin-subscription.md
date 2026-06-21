@@ -10,6 +10,11 @@
 
 ## 3.1 구독 목록 보기
 
+<figure class="shot">
+  <img src="assets/img/subscriptions-list.png" alt="구독 목록 (상태 필터)" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">구독 목록 (상태 필터)</figcaption>
+</figure>
+
 <ol class="steps">
 <li>왼쪽 메뉴에서 <b>구독</b>을 누릅니다.</li>
 <li>위쪽 검색·필터로 원하는 구독을 좁힙니다. 사용자 ID 검색, 서비스·요금제·상태 드롭다운, 등록일 범위로 필터링할 수 있습니다.</li>
@@ -43,6 +48,11 @@
 ---
 
 ## 3.3 구독 상세 화면 둘러보기
+
+<figure class="shot">
+  <img src="assets/img/subscription-detail.png" alt="구독 상세 화면" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">구독 상세 화면</figcaption>
+</figure>
 
 목록에서 구독 한 줄을 클릭하면 상세 화면이 열립니다. 화면은 크게 세 부분입니다.
 

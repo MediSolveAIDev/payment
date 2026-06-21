@@ -184,6 +184,16 @@
 
 ## 0-5. 빠른 시작 — 관리자 관점 따라하기
 
+<figure class="shot">
+  <img src="assets/img/service-new.png" alt="서비스 등록 폼" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">서비스 등록 폼</figcaption>
+</figure>
+
+<figure class="shot">
+  <img src="assets/img/service-keys.png" alt="서비스 키·HMAC 시크릿 1회 표시 화면" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">서비스 키·HMAC 시크릿 1회 표시 화면</figcaption>
+</figure>
+
 신규 서비스를 처음 붙일 때, 콘솔에서 순서대로 진행합니다. **계정을 먼저 만들고 서비스를 등록**하는 순서가 중요합니다(서비스 등록 화면에서 담당자를 *선택*하기 때문).
 
 <ol class="steps">

@@ -10,6 +10,11 @@
 
 ## 4.1 요금제 관리 화면 열기
 
+<figure class="shot">
+  <img src="assets/img/plans-list.png" alt="요금제 목록" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">요금제 목록</figcaption>
+</figure>
+
 요금제는 **두 곳**에서 관리할 수 있습니다. 어느 쪽에서 만들든 결과는 같습니다.
 
 | 화면 | 여는 방법 | 특징 |
@@ -24,6 +29,11 @@
 ---
 
 ## 4.2 요금제 만들기
+
+<figure class="shot">
+  <img src="assets/img/plan-form.png" alt="요금제 생성/수정 폼" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">요금제 생성/수정 폼</figcaption>
+</figure>
 
 <ol class="steps">
 <li>전체 요금제 목록에서 오른쪽 위 <b>[요금제 생성]</b>, 또는 서비스 상세의 요금제 카드에서 <b>[요금제 추가]</b>를 누릅니다.</li>

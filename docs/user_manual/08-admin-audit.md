@@ -32,6 +32,11 @@
 
 ## 8.2 화면 구성 — 무엇이 보이나
 
+<figure class="shot">
+  <img src="assets/img/audit.png" alt="감사 로그 화면" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">감사 로그 화면</figcaption>
+</figure>
+
 목록은 **최신순**으로 표시되며, 각 줄에 아래 정보가 있습니다.
 
 | 컬럼 | 설명 |

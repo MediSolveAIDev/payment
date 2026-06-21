@@ -23,6 +23,11 @@
 
 ## 2.2 서비스 상세의 '등록 카드' 목록
 
+<figure class="shot">
+  <img src="assets/img/cards-list.png" alt="서비스 상세의 ‘등록 카드’ 목록" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">서비스 상세의 ‘등록 카드’ 목록</figcaption>
+</figure>
+
 서비스마다 그 서비스에 등록된 카드들을 한 곳에서 볼 수 있습니다.
 
 <ol class="steps">
@@ -52,6 +57,11 @@
 ---
 
 ## 2.3 카드 상세 — 이 카드로 결제한 내역
+
+<figure class="shot">
+  <img src="assets/img/card-detail.png" alt="카드 상세 화면 (활성/비활성 토글)" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">카드 상세 화면 (활성/비활성 토글)</figcaption>
+</figure>
 
 등록 카드 목록에서 한 줄을 클릭하면 **카드 상세** 화면이 열립니다.
 

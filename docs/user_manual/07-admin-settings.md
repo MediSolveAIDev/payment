@@ -17,6 +17,12 @@
 
 ---
 
+
+<figure class="shot">
+  <img src="assets/img/settings.png" alt="전체 설정 화면 (킬스위치 등)" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">전체 설정 화면 (킬스위치 등)</figcaption>
+</figure>
+
 ## 7.1 자동결제 재시도 설정
 
 구독 갱신 결제가 실패했을 때, 시스템이 **자동으로 몇 번·얼마 간격으로 다시 시도**할지 정합니다.
