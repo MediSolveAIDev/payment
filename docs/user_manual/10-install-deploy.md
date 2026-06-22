@@ -259,9 +259,31 @@ server {
         proxy_read_timeout 90s;                          # 토스 자동결제 승인(최대 65s) 대비
     }
 }
+
+# ── 8001: 별도 백엔드 서비스 통과 프록시(외부 8001 → 127.0.0.1:8001) ──
+# 같은 VM의 별도 서비스를 8001 포트 그대로 평문(http)으로 외부에 노출한다.
+# 80/443 도메인 프록시와는 독립. 8001은 방화벽/보안그룹 인바운드를 별도로 열어야 한다.
+server {
+    listen 8001;
+    listen [::]:8001;
+    server_name api-stg-pay.medisolveai.com;
+
+    client_max_body_size 16m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8001;                # 별도 백엔드 서비스(루프백 publish)
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection        "";
+        proxy_read_timeout 90s;
+    }
+}
 ```
 
-핵심: **80 블록의 `return 301`**이 평문을 전부 https로 보낸다(이게 없으면 브라우저 "Not secure"). 443 블록은 인증서로 TLS를 종단하고 `proxy_pass`로 app(루프백 8000)에 전달하며, `X-Forwarded-For`/`X-Forwarded-Proto`로 app이 진짜 클라이언트 IP·https를 인식한다(`TRUST_PROXY_HOPS=1` 정합). HSTS로 이후 브라우저가 https를 강제한다.
+핵심: **80 블록의 `return 301`**이 평문을 전부 https로 보낸다(이게 없으면 브라우저 "Not secure"). 443 블록은 인증서로 TLS를 종단하고 `proxy_pass`로 app(루프백 8000)에 전달하며, `X-Forwarded-For`/`X-Forwarded-Proto`로 app이 진짜 클라이언트 IP·https를 인식한다(`TRUST_PROXY_HOPS=1` 정합). HSTS로 이후 브라우저가 https를 강제한다. **8001 블록**은 같은 VM의 별도 백엔드(`127.0.0.1:8001`)를 8001 포트 그대로 통과 프록시하는 선택 블록으로, 쓰려면 VM 방화벽/보안그룹에서 8001 인바운드를 별도로 열어야 한다(평문이므로 TLS가 필요하면 별도 도메인·인증서 구성 권장).
 
 설치·발급·적용 — 위 파일은 인증서 경로를 참조하므로 **certbot 발급을 먼저** 해야 `nginx -t`가 통과한다.
 
