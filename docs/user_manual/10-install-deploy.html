@@ -370,30 +370,11 @@ server {
         proxy_read_timeout 90s;                          # 토스 자동결제 승인(최대 65s) 대비
     }
 }
-
-# ── 8001: 별도 백엔드 서비스 통과 프록시(외부 8001 → 127.0.0.1:8001) ──
-# 같은 VM의 별도 서비스를 8001 포트 그대로 평문(http)으로 외부에 노출한다.
-# 80/443 도메인 프록시와는 독립. 8001은 방화벽/보안그룹 인바운드를 별도로 열어야 한다.
-server {
-    listen 8001;
-    listen [::]:8001;
-    server_name api-stg-pay.medisolveai.com;
-
-    client_max_body_size 16m;
-
-    location / {
-        proxy_pass http://127.0.0.1:8001;                # 별도 백엔드 서비스(루프백 publish)
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Connection        &quot;&quot;;
-        proxy_read_timeout 90s;
-    }
-}
 </code></pre>
-<p>핵심: <strong>80 블록의 <code>return 301</code></strong>이 평문을 전부 https로 보낸다(이게 없으면 브라우저 "Not secure"). 443 블록은 인증서로 TLS를 종단하고 <code>proxy_pass</code>로 app(루프백 8000)에 전달하며, <code>X-Forwarded-For</code>/<code>X-Forwarded-Proto</code>로 app이 진짜 클라이언트 IP·https를 인식한다(<code>TRUST_PROXY_HOPS=1</code> 정합). HSTS로 이후 브라우저가 https를 강제한다. <strong>8001 블록</strong>은 같은 VM의 별도 백엔드(<code class="loc">127.0.0.1:8001</code>)를 8001 포트 그대로 통과 프록시하는 선택 블록으로, 쓰려면 VM 방화벽/보안그룹에서 8001 인바운드를 별도로 열어야 한다(평문이므로 TLS가 필요하면 별도 도메인·인증서 구성 권장).</p>
+<p>핵심: <strong>80 블록의 <code>return 301</code></strong>이 평문을 전부 https로 보낸다(이게 없으면 브라우저 "Not secure"). 443 블록은 인증서로 TLS를 종단하고 <code>proxy_pass</code>로 app(루프백 8000)에 전달하며, <code>X-Forwarded-For</code>/<code>X-Forwarded-Proto</code>로 app이 진짜 클라이언트 IP·https를 인식한다(<code>TRUST_PROXY_HOPS=1</code> 정합). HSTS로 이후 브라우저가 https를 강제한다.</p>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>8001(sample_service)은 nginx로 프록시하지 않는다.</strong> sample_service 컨테이너가 호스트 <code class="loc">0.0.0.0:8001</code>을 직접 publish 하므로, nginx에 <code>listen 8001</code> server 블록을 두면 같은 포트를 두고 <strong>bind 충돌</strong>(<code>98: Address already in use</code>)이 나서 nginx가 기동 실패한다. 외부에서 샘플에 접근하려면 nginx를 거치지 않고 <strong>방화벽/보안그룹에서 8001 인바운드만 열면</strong> <code>http://&lt;도메인&gt;:8001</code>로 컨테이너에 직결된다(평문 http). 자세한 건 <code>sample_service/README.md</code>의 "외부에서 접속하기" 참고.</p>
+</div></blockquote>
 <p>설치·발급·적용 — 위 파일은 인증서 경로를 참조하므로 <strong>certbot 발급을 먼저</strong> 해야 <code>nginx -t</code>가 통과한다.</p>
 <pre><code class="language-bash">sudo apt-get update
 sudo apt-get install -y nginx certbot python3-certbot-nginx

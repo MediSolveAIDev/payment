@@ -66,16 +66,16 @@ payment_system 구독서버의 **외부 서비스 역할을 하는 Django 참고
    .venv/bin/python manage.py runserver 8001
    ```
 
-### 외부에서 접속하기 (nginx 8001 경유)
+### 외부에서 접속하기 (docker 8001 직결 — nginx 거치지 않음)
 
 기본은 로컬/도커 전용이다. 외부 도메인으로 열려면 두 가지가 필요하다.
 
-1. **호스트 nginx 8001 통과 프록시** — `docker/nginx/host/payment-host.conf`의 8001 server 블록이
-   외부 `:8001` → `127.0.0.1:8001`(이 컨테이너의 publish 포트)로 프록시한다. VM 방화벽/보안그룹에서
-   8001 인바운드를 열어야 한다. (docker compose가 호스트 `0.0.0.0:8001`에 이미 바인딩하므로
-   nginx 없이 `http://<vm-ip>:8001` 직접 접속도 방화벽만 열면 가능)
+1. **포트 노출 + 방화벽** — docker compose가 호스트 **`0.0.0.0:8001`** 에 이미 바인딩하므로,
+   VM 방화벽/보안그룹(Azure NSG 등)에서 **8001 인바운드만 열면** `http://<도메인-or-vm-ip>:8001`로
+   컨테이너에 **직결**된다. **nginx로 프록시하지 않는다** — sample이 이미 호스트 8001을 점유하므로
+   nginx에 `listen 8001`을 두면 bind 충돌(`98: Address already in use`)로 nginx가 기동 실패한다.
 2. **Django 허용 설정** — 외부 Host/Origin을 허용해야 한다. `docker-compose.yml`이 기본값으로
-   nginx 도메인을 넣어 둔다(아래는 `.env`·셸 env로 덮어쓸 수 있음).
+   접속 도메인을 넣어 둔다(아래는 `.env`·셸 env로 덮어쓸 수 있음).
 
    | 환경변수 | 기본값 | 역할 |
    |---|---|---|
@@ -83,7 +83,7 @@ payment_system 구독서버의 **외부 서비스 역할을 하는 Django 참고
    | `CSRF_TRUSTED_ORIGINS` | `http://api-stg-pay.medisolveai.com:8001` | 폼(구독·결제·카드 POST) 제출 origin. 누락 시 외부 origin POST는 403 |
 
    접속: `http://api-stg-pay.medisolveai.com:8001` (다른 도메인/IP면 위 두 값을 그 주소로 교체).
-   8001 블록은 평문 http다 — https가 필요하면 별도 도메인·인증서를 구성한다.
+   8001은 평문 http다 — https가 필요하면 별도 도메인·인증서·프록시를 구성한다.
 
 ## 실결제 테스트 시나리오 (수동) — 카드 보관함 흐름
 
