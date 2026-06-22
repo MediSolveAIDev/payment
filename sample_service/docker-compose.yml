@@ -23,6 +23,10 @@ services:
       DEBUG: "True"
       # SQLite를 볼륨에 둬서 컨테이너를 내려도(down) 데이터 유지(아래 sample-db 볼륨).
       SQLITE_PATH: /app/data/db.sqlite3
+      # 외부 접근 — 기본은 nginx 8001 통과 프록시 경유 도메인. .env(또는 셸 env)로 덮어쓸 수 있다.
+      #   ALLOWED_HOSTS: 콤마 구분 / CSRF_TRUSTED_ORIGINS: 스킴+호스트[:포트] 콤마 구분
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-api-stg-pay.medisolveai.com}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://api-stg-pay.medisolveai.com:8001}
     networks:
       - payment_net
     ports:
