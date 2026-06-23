@@ -1,0 +1,1 @@
+docker compose -f docker-compose.stg.yml up -d --build
