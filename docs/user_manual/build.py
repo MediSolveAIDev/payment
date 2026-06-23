@@ -21,6 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DOCS = [
     ("00-overview.md", "사용자 매뉴얼"),
     ("01-admin-console.md", "사용자 매뉴얼"),
+    ("19-admin-services.md", "사용자 매뉴얼"),   # 서비스 관리(목록·등록·키) — 콘솔 다음에 배치
     ("02-admin-card.md", "사용자 매뉴얼"),
     ("03-admin-subscription.md", "사용자 매뉴얼"),
     ("04-admin-plan.md", "사용자 매뉴얼"),

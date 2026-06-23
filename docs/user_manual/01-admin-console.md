@@ -4,7 +4,7 @@
 
 > 쉽게 말하면, 이 콘솔은 "구독·결제를 눈으로 보고 손으로 관리하는 관제실"입니다.
 
-> 함께 보기: [카드 관리](02-admin-card.md) · [구독 관리](03-admin-subscription.md)
+> 함께 보기: [서비스 관리](19-admin-services.md) · [카드 관리](02-admin-card.md) · [구독 관리](03-admin-subscription.md)
 
 ---
 
