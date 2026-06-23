@@ -5,6 +5,9 @@ api 레이어를 import하는 형태였다(레이어 방향성 흐림). DB·Redi
 주입은 특정 레이어 소유가 아닌 앱 공통 인프라이므로 core로 내린다.
 app/api/deps.py는 인증(authenticate_service 등) 전용으로 남고, 호환을 위해
 이 모듈의 이름들을 재export한다.
+
+T7 컷오버: get_toss(전역 TossClient) 제거. 모든 토스 호출은 get_toss_provider +
+for_service(service)로 서비스별 키를 사용한다. 전역 폴백 없음.
 """
 
 from collections.abc import AsyncIterator
@@ -16,8 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings
 from app.core.crypto import AesGcmCipher
 from app.notifications.email import EmailSender
-from app.toss.client import TossClient
-from app.toss.provider import TossClientProvider
+from app.toss.provider import TossClientProvider  # 서비스별 토스 클라이언트 해석기
 
 
 def get_settings(request: Request) -> Settings:
@@ -39,11 +41,6 @@ def get_redis(request: Request) -> Redis:
 def get_cipher(request: Request) -> AesGcmCipher:
     """AES-GCM 암복호화 객체를 반환한다. HMAC 시크릿·빌링키 등의 복호화에 사용된다."""
     return request.app.state.cipher
-
-
-def get_toss(request: Request) -> TossClient:
-    """토스페이먼트 API 클라이언트를 반환한다."""
-    return request.app.state.toss
 
 
 def get_toss_provider(request: Request) -> TossClientProvider:

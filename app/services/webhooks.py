@@ -40,9 +40,10 @@ from app.models import (
     WebhookEvent,
     WebhookStatus,
 )
+from app.core.errors import TossKeyNotConfiguredError  # T7: 서비스 키 미설정 예외
 from app.notifications.email import EmailSender
-from app.toss.client import TossClient
 from app.toss.errors import TossError
+from app.toss.provider import TossClientProvider  # T7: 서비스별 토스 클라이언트 해석기
 
 logger = logging.getLogger("payment.webhooks")
 
@@ -53,7 +54,8 @@ def _sanitize(value: str, *, limit: int = 200) -> str:
     return cleaned[:limit]
 
 
-async def handle_webhook(db: AsyncSession, toss: TossClient, email_sender: EmailSender,
+async def handle_webhook(db: AsyncSession, toss_provider: TossClientProvider,
+                         email_sender: EmailSender,
                          *, transmission_id: str | None, payload: dict) -> WebhookEvent:
     """토스 웹훅 단일 진입점. 멱등 + 재전송 정책을 여기서 결정한다.
 
@@ -65,6 +67,9 @@ async def handle_webhook(db: AsyncSession, toss: TossClient, email_sender: Email
     - TossError(일시적) → 롤백 후 재발생 → HTTP 4xx/5xx 반환 → 토스 재전송 유도
     - 일반 Exception(영구) → FAILED 기록 + HTTP 200 반환 → 무한 재전송 방지
       (재전송해도 같은 실패가 반복되는 이벤트는 200으로 토스 큐에서 제거)
+
+    T7 컷오버: toss(전역) → toss_provider(서비스별). PAYMENT_STATUS_CHANGED 처리 시
+    payment.service_id로 서비스를 조회해 for_service()로 클라이언트를 해석한다.
     """
     event_type = str(payload.get("eventType", "UNKNOWN"))
     # transmission_id가 없으면 멱등 식별이 불가능 — 토스는 항상 보낸다.
@@ -96,7 +101,8 @@ async def handle_webhook(db: AsyncSession, toss: TossClient, email_sender: Email
             await _handle_billing_deleted(db, email_sender, payload)
             event.status = WebhookStatus.PROCESSED
         elif event_type == "PAYMENT_STATUS_CHANGED":
-            await _handle_payment_status_changed(db, toss, payload)
+            # T7: toss_provider 전달 — 내부에서 payment.service_id 기반으로 클라이언트 해석
+            await _handle_payment_status_changed(db, toss_provider, payload)
             event.status = WebhookStatus.PROCESSED
         else:
             event.status = WebhookStatus.IGNORED
@@ -163,7 +169,7 @@ async def _handle_billing_deleted(db: AsyncSession, email_sender: EmailSender,
         f"다음 갱신 결제가 실패할 수 있으니 카드 재등록을 안내해주세요.")
 
 
-async def _handle_payment_status_changed(db: AsyncSession, toss: TossClient,
+async def _handle_payment_status_changed(db: AsyncSession, toss_provider: TossClientProvider,
                                          payload: dict) -> None:
     """페이로드는 신뢰하지 않는다 — orderId만 취해 토스 API 재조회로 상태 확정.
 
@@ -176,6 +182,8 @@ async def _handle_payment_status_changed(db: AsyncSession, toss: TossClient,
     - 그 외 상태 변경(예: PARTIAL_CANCELED)은 현재 미처리.
 
     우리 DB에 없는 orderId이면 조용히 반환 — 타 서비스 결제이거나 위조.
+    T7 컷오버: toss(전역) → toss_provider. payment.service_id로 서비스를 로드해
+    for_service()로 해당 서비스의 토스 클라이언트를 해석한다.
     """
     data = payload.get("data") or {}
     order_id = str(data.get("orderId", ""))
@@ -186,6 +194,15 @@ async def _handle_payment_status_changed(db: AsyncSession, toss: TossClient,
     payment = await db.scalar(select(Payment).where(Payment.toss_order_id == order_id))
     if payment is None:
         return  # 우리 주문이 아님
+    # T7: 결제에 연결된 서비스를 로드해 서비스별 토스 클라이언트 해석
+    # Payment.service_id는 NON-NULLABLE이므로 None 방어 불필요
+    service = await db.get(Service, payment.service_id)
+    if service is None:
+        return  # 데이터 정합성 오류 — 서비스 없으면 조용히 무시
+    try:
+        toss = toss_provider.for_service(service)
+    except TossKeyNotConfiguredError:
+        return  # 서비스 키 미설정 — 조회 불가, 조용히 무시
     verified = await toss.get_payment_by_order_id(order_id)
     if verified is None:
         return  # 토스에서 확인 불가 — 위조 의심, 무시

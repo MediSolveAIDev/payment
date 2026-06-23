@@ -150,6 +150,7 @@ async def test_payment_status_refetch_error_triggers_retry(db, cipher, fake_toss
     """
     from app.services.webhooks import handle_webhook
     from app.toss.errors import TossError as TE
+    from app.toss.provider import TossClientProvider  # T7: handle_webhook은 TossClientProvider를 받음
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
     sub = await create_subscription(db, cipher, svc, plan)
@@ -160,8 +161,10 @@ async def test_payment_status_refetch_error_triggers_retry(db, cipher, fake_toss
     await db.commit()
     fake_toss.fail_lookup_with = TE("NETWORK_ERROR", "일시 오류", 0)
 
+    # T7: handle_webhook은 TossClientProvider를 요구 — fake_toss를 override로 주입
+    provider = TossClientProvider(cipher, "http://fake", override_client=fake_toss)
     with pytest.raises(TE):
-        await handle_webhook(db, fake_toss, email_sender,
+        await handle_webhook(db, provider, email_sender,
                              transmission_id="wh-retry",
                              payload={"eventType": "PAYMENT_STATUS_CHANGED",
                                       "data": {"orderId": "order-retry",

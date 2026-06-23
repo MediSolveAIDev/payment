@@ -132,20 +132,14 @@ async def _reconcile_one_payment(session_factory, redis, toss_provider, cipher, 
             # ── 2단계: 외부(토스) 조회 — DB 트랜잭션/커넥션 비점유 ──
             # 서비스별 토스 클라이언트 해석 — 토스 호출 직전에 for_service()로 해석 (Task 6).
             # rollback 후라 별도 세션에서 서비스를 조회하고, for_service()로 클라이언트 해석.
+            # Payment.service_id는 NON-NULLABLE이므로 None 분기는 도달 불가(T7: 데드 else 제거).
             # 키 미설정(TossKeyNotConfiguredError)이면 조회 불가 → 다음 주기에 재시도.
-            if payment_service_id is not None:
-                async with session_factory() as svc_db:
-                    _svc = await svc_db.get(Service, payment_service_id)
-                try:
-                    toss = toss_provider.for_service(_svc)
-                except TossKeyNotConfiguredError:
-                    return  # 키 미설정 — 다음 주기에 재시도(결과 불명 유지)
-            else:
-                # 단건 결제(service_id=None)는 전역 provider override 또는 에러
-                try:
-                    toss = toss_provider.for_service(None)
-                except (TossKeyNotConfiguredError, Exception):
-                    return  # 해석 불가 — 다음 주기에 재시도
+            async with session_factory() as svc_db:
+                _svc = await svc_db.get(Service, payment_service_id)
+            try:
+                toss = toss_provider.for_service(_svc)
+            except TossKeyNotConfiguredError:
+                return  # 키 미설정 — 다음 주기에 재시도(결과 불명 유지)
             try:
                 found = await toss.get_payment_by_order_id(order_id)
             except TossError:

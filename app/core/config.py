@@ -1,8 +1,11 @@
 """애플리케이션 전역 설정 모듈.
 
 환경변수(.env 또는 OS 환경)를 pydantic-settings로 읽어 단일 ``Settings`` 인스턴스로
-공급한다. 모든 비밀값(encryption_key, toss_secret_key 등)은 .env에만 보관하며
-소스에는 기본값을 빈 문자열로 유지해 실수로 하드코딩되지 않도록 한다.
+공급한다. 비밀값(encryption_key 등)은 .env에만 보관하며 소스에는 기본값을
+빈 문자열로 유지해 실수로 하드코딩되지 않도록 한다.
+
+T7 컷오버: 전역 toss_secret_key 제거. 각 서비스의 토스 시크릿 키는 Service 모델의
+toss_secret_key_encrypted 컬럼(AES-GCM 암호화)에 서비스별로 저장한다.
 
 환경(dev/prod) 분리:
   OS 환경변수 ``APP_ENV``(없으면 ``ENVIRONMENT``, 기본 "dev")로 실행 환경을 정하고,
@@ -69,8 +72,7 @@ class Settings(BaseSettings):
     db_pool_recycle: int = 1800
     # AES-256-GCM 키: base64 인코딩된 32바이트. 빌링키·HMAC secret DB 저장 시 암호화에 사용.
     encryption_key: str = ""
-    # 토스페이먼트 시크릿 키. Basic 인증 헤더에 base64(secret_key:) 형태로 전송.
-    toss_secret_key: str = ""
+    # T7 컷오버: 전역 toss_secret_key 제거 — 서비스별 키는 Service.toss_secret_key_encrypted에 저장.
     toss_api_base_url: str = "https://api.tosspayments.com"
     # 토스 API HTTP 타임아웃(초). 자동결제 승인은 토스 명세상 최대 60초 → read에 여유,
     # connect는 짧게. 운영 중 토스 지연 양상에 맞춰 조정 가능.

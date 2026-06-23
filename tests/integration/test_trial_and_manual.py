@@ -338,6 +338,7 @@ async def test_recurring_discount_applied_on_create_and_renewal(
     from app.core.clock import utcnow
     from app.services.renewals import process_due
     from app.notifications.email import RecordingEmailSender
+    from app.toss.provider import TossClientProvider  # T7: process_due는 TossClientProvider를 받음
 
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH",
@@ -358,7 +359,9 @@ async def test_recurring_discount_applied_on_create_and_renewal(
     sub.current_period_end = utcnow() - timedelta(minutes=1)
     sub.next_billing_at = sub.current_period_end
     await db.commit()
-    await process_due(session_factory, redis_client, fake, cipher,
+    # T7: process_due는 TossClientProvider를 요구 — fake를 override로 주입
+    provider = TossClientProvider(cipher, "http://fake", override_client=fake)
+    await process_due(session_factory, redis_client, provider, cipher,
                       RecordingEmailSender())
     assert fake.charges[-1]["amount"] == 9000
 

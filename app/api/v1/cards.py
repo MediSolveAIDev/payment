@@ -17,9 +17,9 @@ from app.api.deps import (
     get_cipher,
     get_db,
     get_notifier,
-    get_toss,
     payment_rate_limit,
 )
+from app.core.deps import get_toss_provider  # 서비스별 토스 클라이언트 해석기(T7 컷오버)
 from app.api.openapi import (
     AUTH_RESPONSES,
     CONFLICT_RESPONSE,
@@ -32,7 +32,7 @@ from app.core.errors import NotFoundError
 from app.models import Service
 from app.schemas.api import CardRegisterRequest, CardResponse
 from app.services import cards as card_service
-from app.toss.client import TossClient
+from app.toss.provider import TossClientProvider  # 서비스별 토스 클라이언트 해석기 타입(T7)
 
 router = APIRouter()
 
@@ -54,7 +54,7 @@ async def register_card(
     # 빌링키 발급(토스 API 호출) 수반 → 결제 전용 처리율 제한 적용
     service: Service = Depends(payment_rate_limit),
     db: AsyncSession = Depends(get_db),
-    toss: TossClient = Depends(get_toss),
+    toss_provider: TossClientProvider = Depends(get_toss_provider),  # T7: 서비스별 해석기
     cipher: AesGcmCipher = Depends(get_cipher),
     notifier=Depends(get_notifier),
 ):
@@ -63,7 +63,10 @@ async def register_card(
     (service, external_user_id)당 1건을 유지한다.
     이미 카드가 있으면 기존 행을 교체하고 이전 빌링키를 best-effort 삭제한다.
     응답에는 마스킹된 카드 정보만 포함되며 billingKey는 절대 반환하지 않는다.
+    T7 컷오버: 전역 toss 제거 — 서비스별 키로 toss_provider.for_service(service) 해석.
     """
+    # T7: 서비스에 등록된 toss_secret_key로 클라이언트 해석
+    toss = toss_provider.for_service(service)
     # 카드 등록 또는 교체 서비스 호출 — 등록/교체 시 서비스 알림 발송(notifier)
     card = await card_service.register_or_replace_card(
         db, toss, cipher,
@@ -124,7 +127,7 @@ async def delete_card(
     # 읽기+삭제 → 일반 HMAC 인증으로 충분(결제 API 호출 없음)
     service: Service = Depends(authenticate_service),
     db: AsyncSession = Depends(get_db),
-    toss: TossClient = Depends(get_toss),
+    toss_provider: TossClientProvider = Depends(get_toss_provider),  # T7: 서비스별 해석기
     cipher: AesGcmCipher = Depends(get_cipher),
     notifier=Depends(get_notifier),
 ):
@@ -134,7 +137,10 @@ async def delete_card(
     billing-active 상태(TRIAL/ACTIVE/PAST_DUE/SUSPENDED/EXTENDED)의 구독이
     이 카드를 사용 중이면 409(CONFLICT)를 반환한다.
     카드가 없으면 404를 반환한다.
+    T7 컷오버: 전역 toss 제거 — 서비스별 키로 toss_provider.for_service(service) 해석.
     """
+    # T7: 서비스에 등록된 toss_secret_key로 클라이언트 해석
+    toss = toss_provider.for_service(service)
     # 카드 삭제 — cipher 필요(빌링키 복호화 후 토스 best-effort 삭제). 삭제 시 서비스 알림.
     await card_service.delete_card(
         db, toss, cipher,

@@ -151,6 +151,7 @@ async def test_reconcile_confirms_one_off(db, session_factory, redis_client, cip
     from app.services.renewals import process_due
     from app.toss.errors import TossTimeoutError
     from app.toss.fake import FakeTossClient
+    from app.toss.provider import TossClientProvider  # T7: process_due는 TossClientProvider를 받음
     svc, _, _ = await create_service(db, cipher)
     await create_card(db, fake, cipher, svc, external_user_id="u-1")
     fake.fail_charge_with = TossTimeoutError()                  # 타임아웃 → PENDING
@@ -168,7 +169,9 @@ async def test_reconcile_confirms_one_off(db, session_factory, redis_client, cip
     row.requested_at = utcnow() - timedelta(minutes=15)
     await db.commit()
     # 정산 스윕 실행
-    await process_due(session_factory, redis_client, fake, cipher, email, now=utcnow())
+    # T7: process_due는 TossClientProvider를 요구 — fake를 override로 주입
+    provider = TossClientProvider(cipher, "http://fake", override_client=fake)
+    await process_due(session_factory, redis_client, provider, cipher, email, now=utcnow())
     db.expire_all()
     row = await db.scalar(select(Payment).where(Payment.order_id == "oo-recon"))
     assert row.status == PaymentStatus.DONE

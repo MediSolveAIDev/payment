@@ -28,8 +28,8 @@ from app.core.deps import (  # noqa: F401 — 재export
     get_notifier,
     get_redis,
     get_settings,
-    get_toss,
 )
+# T7 컷오버: get_toss 제거 — 전역 토스 클라이언트 불필요. 서비스별 해석은 get_toss_provider 사용.
 from app.core.crypto import AesGcmCipher
 from app.core.errors import AuthenticationError, PermissionDeniedError, RateLimitedError
 from app.core.security import constant_time_equals, sha256_hex, sign_request

@@ -25,7 +25,7 @@ from app.core.db import create_engine, create_session_factory
 from app.notifications.email import ConsoleEmailSender, EmailSender, GmailEmailSender
 from app.notifications.service_notify import HttpServiceNotifier, ServiceNotifier
 from app.scheduler.runner import start_scheduler
-from app.toss.client import HttpTossClient, TossClient
+from app.toss.client import TossClient
 from app.toss.provider import TossClientProvider
 
 # ── Swagger(OpenAPI) 문서 메타데이터 ────────────────────────────────────────
@@ -215,7 +215,7 @@ def create_app(settings: Settings | None = None, *,
                engine: AsyncEngine | None = None) -> FastAPI:
     app_settings = settings or Settings()
     own_engine = engine is None
-    own_toss = toss_client is None
+    # T7 컷오버: own_toss 제거 — 전역 HttpTossClient를 앱이 직접 소유하지 않음
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -231,10 +231,10 @@ def create_app(settings: Settings | None = None, *,
             pool_recycle=app_settings.db_pool_recycle)
         app.state.session_factory = create_session_factory(app.state.engine)
         app.state.redis = Redis.from_url(app_settings.redis_url, decode_responses=True)
-        app.state.toss = toss_client or HttpTossClient(
-            app_settings.toss_secret_key, app_settings.toss_api_base_url)
+        # T7 컷오버: app.state.toss(전역 HttpTossClient) 제거.
         # 서비스별 토스 클라이언트 해석기. 테스트가 toss_client(Fake)를 주입하면
         # override로 사용해 모든 서비스에 동일 Fake를 반환한다(키 불필요).
+        # 운영은 override_client=None → 서비스별 암호화 키로 HttpTossClient 생성.
         app.state.toss_provider = TossClientProvider(
             app.state.cipher, app_settings.toss_api_base_url,
             override_client=toss_client)
@@ -250,9 +250,8 @@ def create_app(settings: Settings | None = None, *,
             scheduler.shutdown(wait=False)
         await app.state.redis.aclose()
         # provider 캐시 내 모든 HttpTossClient를 정리한다(override는 provider가 소유하지 않으므로 건드리지 않음).
+        # T7 컷오버: app.state.toss(전역 HttpTossClient) 제거 — aclose 블록도 삭제.
         await app.state.toss_provider.aclose()
-        if own_toss and isinstance(app.state.toss, HttpTossClient):
-            await app.state.toss.aclose()
         if own_engine:
             await app.state.engine.dispose()
 

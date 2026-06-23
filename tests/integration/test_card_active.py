@@ -17,6 +17,7 @@ from app.services import subscriptions as subs
 from app.services.cards import register_or_replace_card, set_card_active
 from app.services.renewals import process_due
 from app.toss.fake import FakeTossClient
+from app.toss.provider import TossClientProvider  # T7: process_due는 TossClientProvider를 받음
 from tests.factories import create_card, create_plan, create_service, create_subscription
 
 
@@ -132,7 +133,9 @@ async def test_inactive_card_blocks_renewal_to_past_due(
                                     period_end=end, next_billing_at=end)
     await set_card_active(db, card_id=card.id, is_active=False)
 
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    # T7: process_due는 TossClientProvider를 요구 — fake를 override로 주입
+    provider = TossClientProvider(cipher, "http://fake", override_client=fake)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
 
     assert stats["failed"] == 1
     await db.refresh(sub)

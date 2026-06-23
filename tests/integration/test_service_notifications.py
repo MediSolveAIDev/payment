@@ -184,6 +184,7 @@ async def test_renewal_notifies(db, session_factory, redis_client, cipher, fake)
     from app.notifications.email import RecordingEmailSender
     from app.notifications.service_notify import EVENT_SUBSCRIPTION_RENEWED
     from app.services.renewals import process_due
+    from app.toss.provider import TossClientProvider  # T7: process_due는 TossClientProvider를 받음
     from tests.factories import create_subscription
     svc = await _svc_with_url(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
@@ -193,7 +194,9 @@ async def test_renewal_notifies(db, session_factory, redis_client, cipher, fake)
                               card_id=card.id, period_start=utcnow() - timedelta(days=31),
                               period_end=end, next_billing_at=end)
     rec = _rec()
-    stats = await process_due(session_factory, redis_client, fake, cipher,
+    # T7: process_due는 TossClientProvider를 요구 — fake를 override로 주입
+    provider = TossClientProvider(cipher, "http://fake", override_client=fake)
+    stats = await process_due(session_factory, redis_client, provider, cipher,
                               RecordingEmailSender(), notifier=rec)
     assert stats["renewed"] == 1
     assert any(m["EVENT"] == EVENT_SUBSCRIPTION_RENEWED for m in rec.sent)

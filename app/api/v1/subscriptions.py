@@ -15,9 +15,9 @@ from app.api.deps import (
     get_cipher,
     get_db,
     get_notifier,
-    get_toss,
     payment_rate_limit,
 )
+from app.core.deps import get_toss_provider  # 서비스별 토스 클라이언트 해석기(컷오버 T7)
 from app.api.openapi import (
     AUTH_RESPONSES,
     CONFLICT_RESPONSE,
@@ -36,7 +36,7 @@ from app.schemas.api import (
 # Task 10: CardChangeRequest 제거 — 카드 교체는 POST /api/v1/cards(재등록)로 통합됨
 from app.services import cards as card_service  # 카드 보관함 조회 — 응답에 card_info 포함용
 from app.services import subscriptions as subscription_service
-from app.toss.client import TossClient
+from app.toss.provider import TossClientProvider  # 서비스별 토스 클라이언트 해석기 타입(T7)
 
 router = APIRouter()
 
@@ -71,7 +71,7 @@ async def create_subscription(
     payload: SubscriptionCreateRequest,
     service: Service = Depends(payment_rate_limit),
     db: AsyncSession = Depends(get_db),
-    toss: TossClient = Depends(get_toss),
+    toss_provider: TossClientProvider = Depends(get_toss_provider),  # T7: 전역 toss 제거, 서비스별 해석기 사용
     cipher: AesGcmCipher = Depends(get_cipher),
     notifier=Depends(get_notifier),
 ):
@@ -81,7 +81,10 @@ async def create_subscription(
     카드를 먼저 등록해야 한다. 빌링키는 등록된 카드(cards 테이블)에서 서버가 조회한다.
     payment_rate_limit: 첫 결제(토스 API 호출)가 수반되므로 결제 전용 처리율 제한 유지.
     trial=True이면 체험 기간 동안 결제 없이 TRIAL 상태로 시작한다.
+    T7 컷오버: 전역 toss(app.state.toss) 제거 — 서비스별 키로 toss_provider.for_service(service) 해석.
     """
+    # T7: 전역 get_toss 대신 서비스에 등록된 toss_secret_key로 클라이언트 해석
+    toss = toss_provider.for_service(service)
     sub = await subscription_service.create_subscription(
         db, toss, cipher, service=service, plan_id=payload.plan_id,
         external_user_id=payload.external_user_id,
@@ -100,7 +103,7 @@ async def manual_pay(
     external_user_id: str,
     service: Service = Depends(payment_rate_limit),
     db: AsyncSession = Depends(get_db),
-    toss: TossClient = Depends(get_toss),
+    toss_provider: TossClientProvider = Depends(get_toss_provider),  # T7: 서비스별 해석기
     cipher: AesGcmCipher = Depends(get_cipher),
     notifier=Depends(get_notifier),
 ):
@@ -108,7 +111,10 @@ async def manual_pay(
 
     payment_rate_limit: 실제 빌링키 청구(토스 API 호출)가 발생하므로
     결제 전용 처리율 제한을 적용한다.
+    T7 컷오버: 전역 toss 제거 — 서비스별 키로 toss_provider.for_service(service) 해석.
     """
+    # T7: 서비스에 등록된 toss_secret_key로 클라이언트 해석
+    toss = toss_provider.for_service(service)
     sub = await subscription_service.manual_charge_subscription(
         db, toss, cipher, service=service, external_user_id=external_user_id,
         notifier=notifier)
