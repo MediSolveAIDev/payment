@@ -26,6 +26,7 @@ from app.notifications.email import ConsoleEmailSender, EmailSender, GmailEmailS
 from app.notifications.service_notify import HttpServiceNotifier, ServiceNotifier
 from app.scheduler.runner import start_scheduler
 from app.toss.client import HttpTossClient, TossClient
+from app.toss.provider import TossClientProvider
 
 # ── Swagger(OpenAPI) 문서 메타데이터 ────────────────────────────────────────
 # 외부 서비스 개발자가 /docs(Swagger UI)만 보고도 인증·호출 방법을 알 수 있도록
@@ -232,6 +233,11 @@ def create_app(settings: Settings | None = None, *,
         app.state.redis = Redis.from_url(app_settings.redis_url, decode_responses=True)
         app.state.toss = toss_client or HttpTossClient(
             app_settings.toss_secret_key, app_settings.toss_api_base_url)
+        # 서비스별 토스 클라이언트 해석기. 테스트가 toss_client(Fake)를 주입하면
+        # override로 사용해 모든 서비스에 동일 Fake를 반환한다(키 불필요).
+        app.state.toss_provider = TossClientProvider(
+            app.state.cipher, app_settings.toss_api_base_url,
+            override_client=toss_client)
         app.state.email_sender = email_sender or _default_email_sender(app_settings)
         # 서비스 알림 발송기(아웃고잉 웹훅) — 기본은 실 전송(HTTP), 테스트는 Recording 주입.
         app.state.notifier = notifier or HttpServiceNotifier(app.state.cipher)
@@ -243,6 +249,8 @@ def create_app(settings: Settings | None = None, *,
         if scheduler is not None:
             scheduler.shutdown(wait=False)
         await app.state.redis.aclose()
+        # provider 캐시 내 모든 HttpTossClient를 정리한다(override는 provider가 소유하지 않으므로 건드리지 않음).
+        await app.state.toss_provider.aclose()
         if own_toss and isinstance(app.state.toss, HttpTossClient):
             await app.state.toss.aclose()
         if own_engine:

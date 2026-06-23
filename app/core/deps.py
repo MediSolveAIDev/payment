@@ -17,6 +17,7 @@ from app.core.config import Settings
 from app.core.crypto import AesGcmCipher
 from app.notifications.email import EmailSender
 from app.toss.client import TossClient
+from app.toss.provider import TossClientProvider
 
 
 def get_settings(request: Request) -> Settings:
@@ -43,6 +44,11 @@ def get_cipher(request: Request) -> AesGcmCipher:
 def get_toss(request: Request) -> TossClient:
     """토스페이먼트 API 클라이언트를 반환한다."""
     return request.app.state.toss
+
+
+def get_toss_provider(request: Request) -> TossClientProvider:
+    """서비스별 토스 클라이언트 해석기를 반환한다."""
+    return request.app.state.toss_provider
 
 
 def get_email_sender(request: Request) -> EmailSender:
