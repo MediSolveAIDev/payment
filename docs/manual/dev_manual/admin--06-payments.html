@@ -229,11 +229,6 @@
 <td>페이지 헤더에도 표시(모노스페이스)</td>
 </tr>
 <tr>
-<td>상품명</td>
-<td><code>payment.order_name</code></td>
-<td>토스 orderName. 단건결제=클라이언트 전달값, 구독결제=요금제명(<code>plan.name</code>). 과거 데이터는 <code>-</code></td>
-</tr>
-<tr>
 <td>종류</td>
 <td><code>payment.kind</code></td>
 <td>구독/일반 뱃지</td>
@@ -252,11 +247,6 @@
 <td>사용자</td>
 <td><code>payment.external_user_id</code></td>
 <td></td>
-</tr>
-<tr>
-<td>결제 카드</td>
-<td><code>raw_response.card.number</code> 우선 / <code>card.card_info.number</code> 폴백</td>
-<td>실제 충전 카드(토스 응답)를 우선 표시, 없으면 현재 보관함 카드. 카드 상세(<code>/admin/cards/{id}</code>) 링크 동반. <code>payment_detail</code>이 <code>get_card(service_id, external_user_id)</code>로 로드</td>
 </tr>
 <tr>
 <td>금액</td>
@@ -301,8 +291,11 @@
 </tbody>
 </table>
 <p><strong>원본 응답 카드</strong> — <code>payment.raw_response</code>가 있으면 토스페이먼츠 API 응답 JSON을 <code>&lt;pre&gt;</code>로 표시한다.</p>
-<p><strong>결제 취소 카드</strong> — <code>kind == ONE_OFF</code> AND 잔여 환불가능액(<code>amount − canceled_amount</code>) &gt; 0일 때 표시(어드민은 항상 허용 — <code>cancellation_enabled</code> 무시). 취소 금액(원) 또는 비율(%) 입력 → 미리보기 → 취소 실행. 비우면 잔여 전액. 자세한 동작은 3-4 참조.</p>
-<p><strong>취소·환불 내역 카드</strong> — <code>canceled_amount &gt; 0</code>이면 표시(전액취소 CANCELED·부분취소 DONE 모두). 총 결제금액(<code>amount</code>) · <strong>누적 환불액</strong>(<code>canceled_amount</code>, 빨강) · 잔여 환불가능액 + 부분/전액취소 뱃지 · (외부 취소 시) 취소 수수료(<code>cancel_fee</code>) · 최근 취소 시각(<code>canceled_at</code>). 상단 상태 셀에는 부분취소면 "부분취소" 뱃지가 병기된다.</p>
+<p><strong>취소 카드</strong> — <code>kind == ONE_OFF</code> AND <code>status == DONE</code>일 때만 표시 (구독 결제·이미 취소된 결제는 카드 자체가 없음):
+- <code>service.cancellation_enabled == True</code> → 결제 취소 버튼 + <code>confirm()</code> 팝업
+- <code>service.cancellation_enabled == False</code> → "취소 불가(서비스 정책)" 뱃지만 표시</p>
+<p><strong>취소·환불 내역 카드</strong> — <code>status == CANCELED</code>일 때 표시. 다음을 표로 보여준다:
+- 총 결제금액(<code>amount</code>) · 환불액(<code>canceled_amount</code>, 빨강) · 취소 수수료(<code>cancel_fee</code>, 서비스 보유) · 취소 시각(<code>canceled_at</code>)</p>
 <hr />
 <h2 id="3">3. 할 수 있는 동작</h2>
 <h3 id="3-1">3-1. 검색·필터·정렬</h3>
@@ -321,59 +314,39 @@
 <h3 id="3-3">3-3. 엑셀 내보내기</h3>
 <p>"엑셀" 버튼 클릭 → <code>GET /admin/payments/export.xlsx?{현재 필터 파라미터}</code> 호출. 현재 검색/필터 조건이 쿼리스트링으로 그대로 전달된다. 다운로드되는 파일은 <code>payments_{timestamp}.xlsx</code>이며 시트명은 "결제".</p>
 <p>엑셀 컬럼 순서: 주문번호 · 서비스 · 종류(구독/일반) · 사용자 · 유형 · 금액 · 상태 · 실패코드 · 요청시각.</p>
-<h3 id="3-4-vs">3-4. 단건 결제 취소 — 어드민(전액/부분, 수수료 없음) vs 외부(수수료)</h3>
-<p>취소는 <strong>행위자에 따라 두 갈래</strong>다.</p>
-<table>
-<thead>
-<tr>
-<th>경로</th>
-<th>함수</th>
-<th>수수료</th>
-<th>게이트(cancellation_enabled)</th>
-<th>부분/누적</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>어드민(관리자)</strong></td>
-<td><code>admin_cancel_one_off_payment()</code></td>
-<td><strong>없음</strong>(지정 금액 그대로 환불)</td>
-<td><strong>무시</strong>(항상 허용)</td>
-<td>전액 또는 부분, <strong>여러 번 누적</strong></td>
-</tr>
-<tr>
-<td><strong>외부 서비스(API/사용자)</strong></td>
-<td><code>cancel_one_off_payment()</code></td>
-<td><strong>수수료율 적용</strong>(<code>compute_cancel_fee</code>)</td>
-<td>적용(꺼져 있으면 취소 불가)</td>
-<td>단발 전액(수수료 공제)</td>
-</tr>
-</tbody>
-</table>
-<h4 id="_1">어드민 취소 (결제 상세 "결제 취소" 카드)</h4>
-<ul>
-<li>노출 조건: <code>payment.kind == ONE_OFF</code> AND <strong>잔여 환불가능액(<code>amount − canceled_amount</code>) &gt; 0</strong>. (구독·전액취소 완료 건은 미노출)</li>
-<li>입력: <strong>취소 금액(원)</strong> 또는 <strong>비율(%)</strong> — % 입력 시 JS가 <code>floor(잔여 × %/100)</code>로 취소금액을 계산해 미리보기에 표시한다. 비우면 <strong>잔여 전액</strong> 취소.</li>
-<li>흐름: <code>confirm()</code> → <code>POST /admin/payments/{id}/cancel</code>(form <code>cancel_amount</code>, 빈값=전액) → CSRF·스코프 검증 → <code>admin_cancel_one_off_payment()</code>.</li>
-<li>처리(<code>app/services/payments.py</code>):</li>
-<li><code>0 &lt; cancel_amount ≤ 잔여</code> 검증(초과 시 <code>InputValidationError</code>).</li>
-<li>토스 <code>cancel_payment(cancel_amount=환불액)</code>(최초 전액취소만 생략).</li>
-<li><code>canceled_amount</code>에 <strong>누적</strong>, 잔여 0이면 <code>status=CANCELED</code>, 아니면 <strong><code>DONE</code> 유지(추가 취소 가능)</strong>. <code>cancel_fee</code>는 0(무수수료).</li>
-<li>토스 실패 시 상태·누적액 보존 + <code>payment.cancel_failed</code> 감사.</li>
-<li>상태 표현: 부분취소된 결제는 <code>status=DONE</code>이며 화면에서 <strong>"부분취소" 뱃지</strong>로 표시(<code>canceled_amount&gt;0</code>로 파생). 전용 <code>PARTIAL_CANCELED</code> enum은 도입하지 않는다.</li>
-</ul>
-<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
-<p>어드민이 이미 부분취소한 결제는 외부(사용자) 전액취소가 차단된다(<code>canceled_amount&gt;0</code>이면 <code>ConflictError</code> — 이중환불 방지).</p>
-</div></blockquote>
-<h4 id="_2">외부 서비스(사용자) 취소 — 기존 동작</h4>
+<h3 id="3-4">3-4. 단건 결제 취소</h3>
+<p>결제 상세 화면의 "취소" 카드에서 "결제 취소" 버튼을 클릭한다.</p>
+<p><strong>취소 가능 조건</strong> (조건 하나라도 맞지 않으면 버튼 자체가 없거나 서버에서 오류 반환):</p>
+<ol>
+<li><code>payment.kind == ONE_OFF</code> — 구독 결제는 취소 불가</li>
+<li><code>payment.status == DONE</code> — PENDING·FAILED·CANCELED 상태는 취소 불가</li>
+<li><code>service.cancellation_enabled == True</code> — 서비스 정책에서 취소가 켜져 있어야 함</li>
+</ol>
+<p><strong>취소 수수료 미리보기</strong>: 취소 카드에는 버튼 위에 "지금 취소하면 수수료 <strong>N원</strong>(수수료율 X%)이 차감되고 <strong>M원</strong>이 환불됩니다." 안내가 표시된다. 라우트 <code>payment_detail</code>이 <code>compute_cancel_fee(payment.amount, service.cancellation_fee_percent)</code>로 예상 수수료/환불액을 계산해 템플릿에 전달한다(<code>cancel_fee</code>/<code>cancel_refund</code>).</p>
+<p><strong>버튼 클릭 시 흐름:</strong></p>
+<ol>
+<li>브라우저 <code>confirm()</code> 팝업: "이 결제를 취소(환불)하시겠습니까? 수수료 {N}원 차감 후 {M}원 환불" — <strong>수수료/환불액을 금액(원)으로</strong> 안내.</li>
+<li>확인 → <code>POST /admin/payments/{id}/cancel</code> (CSRF 토큰 hidden 포함).</li>
+<li>서버: CSRF 검증 → 결제 조회 → 스코프 확인 → <code>cancel_one_off_payment()</code> 호출.</li>
+<li>성공 → 303 리다이렉트 → 결제 상세 페이지 + 완료 모달("결제가 취소되었습니다").</li>
+<li>실패(토스 오류 등) → 에러 토스트.</li>
+</ol>
+<p><strong>환불액 계산:</strong></p>
 <pre><code># app/services/billing_math.py — compute_cancel_fee() 공유
 수수료 = payment.amount × service.cancellation_fee_percent // 100
 환불액 = payment.amount − 수수료
 </code></pre>
 <ul>
-<li><code>cancellation_enabled</code>가 꺼져 있으면 취소 불가. 수수료율 0%면 전액, &gt;0이면 수수료 공제 부분취소.</li>
+<li>외부 API 응답·취소 미리보기·실제 취소가 모두 <code>compute_cancel_fee()</code> 한 함수를 공유한다.</li>
+<li>수수료율 0%이면 전액 환불(토스 cancelAmount 생략 = 전액취소).</li>
+<li>수수료율 &gt; 0이면 부분취소(토스 cancelAmount = 환불액).</li>
+<li><code>refund == 0</code>이면 토스 취소 API를 호출하지 않는다.</li>
 </ul>
-<p><strong>감사 로그 actor 분기</strong>: 어드민 취소 <code>actor_type="USER"</code>(actor_user_id), 외부 취소 <code>actor_type="SERVICE"</code>(actor_service_id). 액션은 둘 다 <code>payment.canceled</code>/<code>payment.cancel_failed</code>.</p>
+<p><strong>감사 로그 actor 분기</strong> (<code>payments.py:225–232</code>):</p>
+<ul>
+<li>어드민에서 취소: <code>actor_type="USER"</code>, <code>actor_user_id=ctx.user.id</code> (실제 관리자 계정 기록)</li>
+<li>외부 API에서 취소: <code>actor_type="SERVICE"</code>, <code>actor_service_id=service.id</code></li>
+</ul>
 <hr />
 <h2 id="4">4. 개발 참조</h2>
 <h3 id="appadminroutespaymentspy">라우트 함수 (<code>app/admin/routes/payments.py</code>)</h3>
@@ -427,7 +400,7 @@
     &quot;requested_at&quot;: Payment.requested_at,  # 기본 내림차순
 }
 </code></pre>
-<h3 id="_3">템플릿</h3>
+<h3 id="_1">템플릿</h3>
 <table>
 <thead>
 <tr>
@@ -492,7 +465,7 @@
 </table>
 <p><strong>새 코드 추가 방법:</strong></p>
 <p><code>PAYMENT_ERROR_LABELS</code> 딕셔너리에 <code>"코드": "한글 의미"</code> 항목을 추가한다. 매핑에 없는 코드는 <code>payment_error_meaning(code)</code>가 빈 문자열을 반환하고, 템플릿이 <code>payment.failure_message</code>로 폴백한다(<code>payment_error_labels.py:51–55</code>).</p>
-<h3 id="_4">툴팁 동작 흐름 (운영자 문의 대응용)</h3>
+<h3 id="_2">툴팁 동작 흐름 (운영자 문의 대응용)</h3>
 <pre><code>템플릿(list.html:36 / detail.html:22)
   └─ &lt;span class=&quot;code-tip&quot; data-tip=&quot;{ payment_error_meaning(code) or failure_message or code }&quot;&gt;
         ↓ mouseover
@@ -503,7 +476,7 @@ admin.js:245  hideTop() → div.remove()
 admin.css:427 .code-tip { border-bottom: 1px dotted } ← 호버 가능 시각 힌트
 admin.css:429 .tip-pop { position:absolute; z-index:1200; max-width:280px }
 </code></pre>
-<h3 id="_5">관련 서비스·모델 파일</h3>
+<h3 id="_3">관련 서비스·모델 파일</h3>
 <table>
 <thead>
 <tr>
@@ -572,15 +545,15 @@ admin.css:429 .tip-pop { position:absolute; z-index:1200; max-width:280px }
 <a class="toc-h3" href="#3-1">3-1. 검색·필터·정렬</a>
 <a class="toc-h3" href="#3-2">3-2. 실패 코드 툴팁 확인</a>
 <a class="toc-h3" href="#3-3">3-3. 엑셀 내보내기</a>
-<a class="toc-h3" href="#3-4-vs">3-4. 단건 결제 취소 — 어드민(전액/부분, 수수료 없음) vs 외부(수수료)</a>
+<a class="toc-h3" href="#3-4">3-4. 단건 결제 취소</a>
 <a class="toc-h2" href="#4">4. 개발 참조</a>
 <a class="toc-h3" href="#appadminroutespaymentspy">라우트 함수 (app/admin/routes/payments.py)</a>
 <a class="toc-h3" href="#join-_build_payments_query-paymentspy3586">JOIN 전략 (_build_payments_query, payments.py:35–86)</a>
 <a class="toc-h3" href="#paymentspy2932">정렬 가능 컬럼 (payments.py:29–32)</a>
-<a class="toc-h3" href="#_3">템플릿</a>
+<a class="toc-h3" href="#_1">템플릿</a>
 <a class="toc-h3" href="#appadminpayment_error_labelspy">실패 코드 의미 매핑 (app/admin/payment_error_labels.py)</a>
-<a class="toc-h3" href="#_4">툴팁 동작 흐름 (운영자 문의 대응용)</a>
-<a class="toc-h3" href="#_5">관련 서비스·모델 파일</a>
+<a class="toc-h3" href="#_2">툴팁 동작 흐름 (운영자 문의 대응용)</a>
+<a class="toc-h3" href="#_3">관련 서비스·모델 파일</a>
 <a class="toc-h2" href="#5">5. 주의사항 / 자주 하는 실수</a>
   </aside>
 </main>

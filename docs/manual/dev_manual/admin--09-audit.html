@@ -107,7 +107,7 @@
 <ul>
 <li><strong>검색 입력란</strong>: placeholder "행위자·대상·상세 검색". <code>q</code> 파라미터로 전달된다.</li>
 <li><strong>행위자 유형 필터</strong> (<code>actor_type</code>): 전체 행위자 / 관리자(<code>USER</code>) / 외부 서비스(<code>SERVICE</code>) / 시스템(<code>SYSTEM</code>)</li>
-<li><strong>활동 유형 필터</strong> (<code>action</code>): 전체 활동 + <code>ACTION_LABELS</code>에 정의된 한글 항목(인증·계정·서비스·요금제·구독·결제·<strong>카드</strong>·전역설정 등) (<code>app/admin/audit_labels.py</code>)</li>
+<li><strong>활동 유형 필터</strong> (<code>action</code>): 전체 활동 + <code>ACTION_LABELS</code>에 정의된 57개 한글 항목 (<code>app/admin/audit_labels.py</code>, line 3-57)</li>
 <li><strong>엑셀 내보내기 버튼</strong>: 현재 필터·검색을 그대로 유지하여 <code>/admin/audit/export.xlsx</code>로 이동</li>
 </ul>
 <h3 id="_3">테이블 컬럼</h3>
@@ -305,7 +305,7 @@
 </tbody>
 </table>
 <p>정렬 가능 컬럼 맵: <code>_AUDIT_SORT = {"created_at": AuditLog.created_at, "action": AuditLog.action, "actor_type": AuditLog.actor_type}</code> (<code class="loc">audit.py:42-43</code>)</p>
-<p>target → DB 테이블 맵: <code>_TARGET_TABLE = {"service": "services", "plan": "plans", "user": "users", "subscription": "subscriptions", "payment": "payments", "card": "cards"}</code>. 카드 대상은 <code>external_user_id</code>로 이름을 표시한다(<code>_resolve_names</code>에 <code>Card</code> 추가).</p>
+<p>target → DB 테이블 맵: <code>_TARGET_TABLE = {"service": "services", "plan": "plans", "user": "users", "subscription": "subscriptions", "payment": "payments"}</code> (<code class="loc">audit.py:89-90</code>)</p>
 <h3 id="4-3-auditlog-appmodelsaudit_logpy">4-3. 모델 — <code>AuditLog</code> (<code>app/models/audit_log.py</code>)</h3>
 <table>
 <thead>
@@ -715,44 +715,6 @@
 </tr>
 </tbody>
 </table>
-<h4 id="appservicescardspy">카드 (<code>app/services/cards.py</code>)</h4>
-<table>
-<thead>
-<tr>
-<th>action</th>
-<th>actor</th>
-<th>설명</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>card.register</code></td>
-<td>SERVICE</td>
-<td>카드(빌링키) 신규 등록</td>
-</tr>
-<tr>
-<td><code>card.replace</code></td>
-<td>SERVICE</td>
-<td>카드 교체(재등록)</td>
-</tr>
-<tr>
-<td><code>card.delete</code></td>
-<td>SERVICE</td>
-<td>카드 삭제</td>
-</tr>
-<tr>
-<td><code>card.activate</code></td>
-<td>USER(관리자)</td>
-<td>카드 활성화</td>
-</tr>
-<tr>
-<td><code>card.deactivate</code></td>
-<td>USER(관리자)</td>
-<td>카드 비활성화(결제 차단)</td>
-</tr>
-</tbody>
-</table>
-<p>모든 카드 이벤트의 <code>detail</code>은 공통 빌더 <code>_card_audit_detail()</code>로 <strong>사용자(<code>external_user_id</code>)·마스킹 카드번호(<code>card_number</code>)·발급사(<code>issuer</code>)</strong>를 남긴다. <code>service_id</code>도 detail에 기록하지만 화면에는 표시하지 않고(원시 UUID), 서비스 상세 “이벤트” 섹션의 스코프 필터에만 쓰인다. 자세한 흐름은 <code>16-card-vault</code> 참조.</p>
 <h4 id="appservicesapp_settingspy">전체 설정 (<code>app/services/app_settings.py</code>)</h4>
 <table>
 <thead>

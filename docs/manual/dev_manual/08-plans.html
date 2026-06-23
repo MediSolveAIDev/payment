@@ -338,12 +338,22 @@ if count:
 <tr>
 <td><code>billing_cycle</code></td>
 <td>String(10)</td>
-<td><code>YEAR</code>/<code>MONTH</code>/<code>WEEK</code>/<code>DAY</code></td>
+<td><code>YEAR</code>/<code>MONTH</code>/<code>WEEK</code>/<code>DAY</code>/<code>MINUTE</code></td>
 </tr>
 <tr>
 <td><code>cycle_days</code></td>
 <td>Integer(nullable)</td>
 <td>DAY 주기일 때 실제 일수; 나머지는 NULL</td>
+</tr>
+<tr>
+<td><code>cycle_minutes</code></td>
+<td>Integer(nullable)</td>
+<td>MINUTE 주기일 때 실제 분수(최소 5); 나머지는 NULL</td>
+</tr>
+<tr>
+<td><code>environment</code></td>
+<td>String(20)</td>
+<td><code>PRODUCTION</code>(기본) / <code>DEVELOPMENT</code> / <code>STAGING</code>. MINUTE 주기는 비운영 환경(<code>DEVELOPMENT</code>·<code>STAGING</code>)에서만 생성 가능</td>
 </tr>
 <tr>
 <td><code>first_payment_type</code></td>
@@ -580,6 +590,11 @@ if count:
 <td><code>start + timedelta(days=cycle_days)</code></td>
 <td><code>cycle_days</code> 필수</td>
 </tr>
+<tr>
+<td><code>MINUTE</code></td>
+<td><code>start + timedelta(minutes=cycle_minutes)</code></td>
+<td><strong>자동연장 테스트용, 비운영(개발·스테이징) 환경 전용</strong>, 최소 5분. <code>cycle_minutes</code> 필수. 스케줄러 기본 스윕이 5분이므로 그 주기로 갱신됨. 더 빠른 관찰이 필요하면 테스트 환경에서 <code>scheduler_interval_minutes</code>를 낮출 것</td>
+</tr>
 </tbody>
 </table>
 <h3 id="75-formhtml">7.5 화면 미리보기 (form.html)</h3>
@@ -670,6 +685,18 @@ if count:
 <td><code class="loc">plans.py:56</code></td>
 <td><code>InputValidationError</code></td>
 <td>"cycle_days는 DAY 주기에서만 사용합니다"</td>
+</tr>
+<tr>
+<td>MINUTE 주기에 cycle_minutes 없음 또는 5 미만</td>
+<td><code>plans.py</code></td>
+<td><code>InputValidationError</code></td>
+<td>"MINUTE 주기는 cycle_minutes(5 이상)가 필요합니다"</td>
+</tr>
+<tr>
+<td>MINUTE 주기를 운영(PRODUCTION) 환경에서 생성 시도</td>
+<td><code>plans.py</code></td>
+<td><code>InputValidationError</code></td>
+<td>"MINUTE 주기는 비운영 환경(개발·스테이징)에서만 사용할 수 있습니다"</td>
 </tr>
 <tr>
 <td>첫구독 할인율 &gt; 100</td>

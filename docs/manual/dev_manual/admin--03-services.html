@@ -159,11 +159,8 @@ SERVICE_MANAGER 는 이 화면에 <strong>접근 불가</strong> (403 Permission
 </tr>
 </tbody>
 </table>
-<p><strong>취소 정책 카드 + 서비스 알림 카드</strong>(나란히 배치): 왼쪽은 일반결제 취소 허용 체크박스 + 수수료율(%), 오른쪽은 <strong>서비스 알림 URL</strong> 입력(요청 016).
-- 알림 URL을 등록하면 구독·결제·카드·요금제 이벤트를 그 URL로 POST한다(비우면 끔). 저장 <code>POST /admin/services/{id}/notification-url</code>(감사 <code>service.notification_url_updated</code>).
-- <strong>‘테스트 알림 전송’ 버튼</strong>: 저장된 URL로 샘플 알림(<code>notification.test</code>)을 동기 전송하고 수신 응답을 토스트로 표시(<code>POST /admin/services/{id}/notification-test</code>). URL 미저장이면 비활성.
-- ‘상세’ 버튼 → 이벤트 설명 모달(<code>services/_notify_help_modal.html</code>). 발송 이벤트·payload·서명은 <code>17-service-notifications</code> 참조.</p>
-<p><strong>하단 탭 4개</strong> (htmx 부분 갱신, 각 partial)</p>
+<p><strong>취소 정책 카드</strong>: 일반결제 취소 허용 체크박스 + 수수료율(%) 입력</p>
+<p><strong>하단 탭 3개</strong> (htmx 부분 갱신, 각 partial)</p>
 <table>
 <thead>
 <tr>
@@ -184,11 +181,6 @@ SERVICE_MANAGER 는 이 화면에 <strong>접근 불가</strong> (403 Permission
 <td><code>services/_subs_table.html</code></td>
 </tr>
 <tr>
-<td>등록 카드</td>
-<td><code>list-svc-cards</code></td>
-<td><code>services/_cards_table.html</code></td>
-</tr>
-<tr>
 <td>일반결제</td>
 <td><code>list-svc-oneoff</code></td>
 <td><code>services/_oneoff_table.html</code></td>
@@ -207,19 +199,9 @@ SERVICE_MANAGER 는 이 화면에 <strong>접근 불가</strong> (403 Permission
 <li>검색(<code>q</code>: external_user_id) + 상태 필터(TRIAL/ACTIVE/PAST_DUE/SUSPENDED/CANCELED/EXPIRED)</li>
 <li>행 클릭 → <code>/admin/subscriptions/{id}</code> 상세</li>
 </ul>
-<h4 id="_cards_tablehtml">등록 카드 탭 컬럼 (<code>_cards_table.html</code>)</h4>
-<p>사용자(external_user_id) / 카드번호(마스킹) / 발급사코드 / <strong>상태</strong> / customerKey / 빌링키 해시(앞 12자) / 등록일 / 변경일 / <strong>토글 버튼</strong></p>
-<ul>
-<li>이 서비스에 결제수단(빌링키)을 등록한 <strong>사용자별 1행</strong>(<code>cards</code> 테이블, <code>(service_id, external_user_id)</code>당 1건)을 보여준다(<code>services.py</code> <code>_cards_tab()</code>).</li>
-<li><strong>상태</strong> 컬럼은 활성/비활성 뱃지, 마지막 컬럼의 <strong>활성화/비활성화 버튼</strong>(htmx <code>POST /admin/cards/{id}/toggle</code> → <code>list-svc-cards</code> 갱신)으로 토글한다. <strong>비활성 카드는 모든 결제가 차단</strong>된다(<code>16-card-vault</code> 10-1 참조).</li>
-<li><strong>행 클릭 → 카드 상세</strong>(<code>/admin/cards/{card_id}</code>): 카드 정보 전체 + 토글 + <strong>이 카드로 결제한 내역</strong>(구독+일반).</li>
-<li>검색(<code>q</code>: external_user_id) 지원, 정렬 가능 컬럼: 사용자 / 등록일 / 변경일. 페이징 파라미터는 <code>kpage</code>(10건/페이지)로 다른 탭과 분리된다.</li>
-<li>카드번호·발급사코드는 토스 응답 <code>card_info</code>(JSONB)에서 표시하며, <strong>빌링키 암호문은 노출하지 않는다</strong>(해시 일부만 표시). 카드 등록/삭제는 외부 API(<code>/api/v1/cards</code>) 또는 구독 상세에서 처리한다.</li>
-</ul>
 <h4 id="_oneoff_tablehtml">일반결제 탭 컬럼 (<code>_oneoff_table.html</code>)</h4>
 <p>승인시각 / 사용자 / 주문번호 / 금액 / <strong>환불 / 수수료</strong> / 상태(한글)</p>
 <ul>
-<li><strong>행 클릭 → 결제 상세</strong>(<code>/admin/payments/{id}</code>). 주문번호 셀은 링크색으로 강조된다.</li>
 <li>취소(CANCELED) 건은 환불액(<code>canceled_amount</code>)·취소 수수료(<code>cancel_fee</code>)를 함께 표시(취소 아닌 건은 <code>-</code>), 상태는 <code>payment_status_ko()</code>로 한글 표기.</li>
 <li>엑셀 다운로드(<code>/oneoff.xlsx</code>)도 동일하게 환불·수수료 컬럼을 포함한다.</li>
 </ul>
@@ -227,8 +209,7 @@ SERVICE_MANAGER 는 이 화면에 <strong>접근 불가</strong> (403 Permission
 <p>서비스 상세 맨 아래 <strong>이벤트</strong> 카드가 이 서비스 관련 감사 이력(최근 50건)을 보여준다(<code>_service_events()</code> in <code>services.py</code>). 컬럼: 시각 / 활동(한글) / 상세 / 행위자. 포함 범위:
 - 서비스 자체 동작: <code>target_type='service'</code> (등록·상태변경·키재발급·키복사·IP갱신·취소정책·대표지정)
 - 요금제 CRUD: 이 서비스의 <code>target_type='plan'</code> 이벤트
-- 담당자 추가/해제: <code>account.(un)assign_service</code> 중 <code>detail.service_id</code>가 이 서비스
-- <strong>카드 이벤트</strong>: <code>target_type='card'</code> 중 <code>detail.service_id</code>가 이 서비스 — 카드 등록/교체/삭제/활성화/비활성화. 상세에 사용자·마스킹 카드번호·발급사가 표시된다.</p>
+- 담당자 추가/해제: <code>account.(un)assign_service</code> 중 <code>detail.service_id</code>가 이 서비스</p>
 <p>각 동작은 <strong>변경 전 → 변경 후</strong>(<code>detail_summary()</code>)로 표시된다. 예: "상태 ACTIVE → INACTIVE", "허용 IP 10.0.0.1 → 10.0.0.1, 10.0.0.2", "취소 수수료율(%) 0 → 10". 우상단 "감사로그" 버튼은 서비스명으로 검색된 <code>/admin/audit</code>로 이동.</p>
 <hr />
 <h2 id="3">3. 할 수 있는 동작</h2>
@@ -295,8 +276,8 @@ SERVICE_MANAGER 는 이 화면에 <strong>접근 불가</strong> (403 Permission
 <tr>
 <td>허용 IP</td>
 <td>옥텟 입력 UI (숫자만, 줄당 1개)</td>
-<td>선택</td>
-<td>IPv4 전용, IPv6·CIDR 불가. <strong>비우면 IP 제한 없음(모든 IP 허용, HMAC로만 보호)</strong></td>
+<td>필수 1개↑</td>
+<td>IPv4 전용, IPv6·CIDR 불가</td>
 </tr>
 <tr>
 <td>일반결제 취소 허용</td>
@@ -373,7 +354,7 @@ SERVICE_MANAGER 는 이 화면에 <strong>접근 불가</strong> (403 Permission
 <li>상세 허용 IP 카드 → 옥텟 UI로 IP 추가/삭제 → <strong>"IP 갱신"</strong> 버튼</li>
 <li><code>POST /admin/services/{id}/ips</code> (폼 필드: <code>allowed_ips</code> — 줄바꿈/콤마 구분 평문)</li>
 <li><code>_parse_ips()</code> 가 줄바꿈과 콤마 모두 처리 (<code class="loc">services.py:57-60</code>)</li>
-<li>IPv4 전용. <strong>빈 목록 허용</strong>(= IP 제한 없음, 모든 IP 허용). 형식 위반 시 오류 → <code>?error=</code> 리다이렉트</li>
+<li>IPv4 전용, 최소 1개 필수. 위반 시 오류 → <code>?error=</code> 리다이렉트</li>
 </ul>
 <hr />
 <h3 id="3-9">3-9. 취소 정책 설정</h3>
@@ -602,7 +583,7 @@ SERVICE_MANAGER 는 이 화면에 <strong>접근 불가</strong> (403 Permission
 <tr>
 <td><code>registry.update_allowed_ips</code></td>
 <td><code class="loc">app/services/registry.py:193</code></td>
-<td>IP 목록 전체 교체 (빈 목록 허용 = IP 제한 없음)</td>
+<td>IP 목록 전체 교체 (최소 1개 IPv4 필수)</td>
 </tr>
 <tr>
 <td><code>registry.update_cancel_policy</code></td>
@@ -711,8 +692,8 @@ ONEOFF_SORT = {&quot;requested_at&quot;: Payment.requested_at}
 </ul>
 <h3 id="ip">IP 관련</h3>
 <ul>
-<li>허용 IP는 <strong>선택</strong>이다. <strong>빈 목록 = IP 제한 없음(모든 IP 허용)</strong> — 이 경우 API는 HMAC 서명으로만 보호된다 (<code>api/deps.py</code>).</li>
-<li>값이 있으면 IPv4 형식만 허용(IPv6·CIDR 불가) — <code>_validate_ips()</code> (<code>registry.py</code>).</li>
+<li>허용 IP는 <strong>최소 1개 이상 IPv4 주소</strong> 필수. 빈 목록은 서비스 레이어에서 거부된다 (<code class="loc">registry.py:65-66</code>).</li>
+<li>IPv6·CIDR 형식은 지원하지 않는다 (<code class="loc">registry.py:68-70</code>).</li>
 </ul>
 <h3 id="_4">취소 정책</h3>
 <ul>
