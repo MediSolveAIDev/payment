@@ -32,6 +32,7 @@ from app.core.errors import (
     InputValidationError,
     NotFoundError,
     PaymentFailedError,
+    TossKeyNotConfiguredError,  # 키 미설정 오류 — for_service 실패 시 리다이렉트 처리(final-review F1)
 )
 from app.models import AuditLog, Payment, PaymentStatus, Plan, Service, Subscription, User
 from app.services.billing_math import plan_recurring_amount
@@ -238,13 +239,15 @@ async def subscription_retry_payment(sub_id: uuid.UUID, request: Request,
     # admin_retry_payment가 내부에서 sub을 다시 로드하므로 여기서는 service 확보 목적으로만 조회.
     sub = await db.get(Subscription, sub_id)
     if sub is None:
-        # 구독이 없으면 admin_retry_payment에서 NotFoundError가 발생한다 — 아무 클라이언트나 전달
-        # (도달하기 전에 서비스 레이어가 NotFoundError를 발생시킨다).
-        from app.core.errors import NotFoundError as _NFE
-        raise _NFE("구독을 찾을 수 없습니다")
+        # 구독이 없으면 NotFoundError를 직접 발생시킨다(모듈 상단 import 사용, final-review F3)
+        raise NotFoundError("구독을 찾을 수 없습니다")
     service = await db.get(Service, sub.service_id)
-    # 서비스별 토스 클라이언트 해석 — 키 미설정 시 TossKeyNotConfiguredError 발생
-    toss = toss_provider.for_service(service)
+    # 서비스별 토스 클라이언트 해석 — 키 미설정 시 raw JSON 422가 아닌 구독 상세 ?error= 리다이렉트(final-review F1)
+    try:
+        toss = toss_provider.for_service(service)
+    except TossKeyNotConfiguredError as exc:
+        return RedirectResponse(
+            f"/admin/subscriptions/{sub_id}?error={quote(exc.message)}", status_code=303)
     try:
         await admin_retry_payment(db, toss, cipher, subscription_id=sub_id,
                                   service_scope=service_scope(ctx),

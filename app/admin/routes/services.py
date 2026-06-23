@@ -26,8 +26,7 @@ from app.core.errors import DomainError, NotFoundError
 from app.models import (AuditLog, Card, Payment, PaymentKind, PaymentStatus, Plan, Service,
                         Subscription, User, UserRole, UserService, UserStatus)
 from app.services import accounts as account_service
-from app.services import registry
-from app.services.registry import set_toss_secret_key  # 서비스별 토스 시크릿 키 설정(Task 8)
+from app.services import registry  # registry.* 형태로 통일 호출(final-review F3)
 from app.services.audit import record_audit
 from app.services.billing_math import (first_amount_breakdown, plan_first_amount,
                                        plan_recurring_amount,
@@ -433,9 +432,9 @@ async def services_set_toss_secret_key(service_id: uuid.UUID, request: Request,
     # 빈 값이면 변경 없음 — 폼을 빈 채로 저장해도 기존 키는 유지된다
     new_key = str(form.get("toss_secret_key", "")).strip()
     if new_key:
-        await set_toss_secret_key(db, cipher, service_id=service_id,
-                                  toss_secret_key=new_key,
-                                  actor_user_id=ctx.user.id)
+        await registry.set_toss_secret_key(db, cipher, service_id=service_id,
+                                           toss_secret_key=new_key,
+                                           actor_user_id=ctx.user.id)
     return saved_redirect(f"/admin/services/{service_id}", "저장되었습니다")
 
 

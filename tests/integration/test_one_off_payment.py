@@ -5,6 +5,9 @@ Task 9 변경: 단건결제가 카드 보관함 기반으로 전환됨.
 - 각 테스트에서 create_card()로 카드를 먼저 등록한 뒤 결제를 호출한다.
 - 카드 미등록 시 NotFoundError 검증 테스트 추가.
 - 단건결제 성공/실패/타임아웃 후 카드가 삭제되지 않음(영속) 검증 추가.
+
+final-review F2: 토스 키 미설정 서비스에서 API 단건결제 요청 시 422/TOSS_KEY_NOT_CONFIGURED 검증 추가.
+- override_client 없는 앱(실제 키 체크 경로)으로 테스트한다.
 """
 import pytest
 from sqlalchemy import select
@@ -16,7 +19,7 @@ from app.services import payments as payment_service
 from app.services.cards import get_card
 from app.toss.errors import TossError, TossTimeoutError
 from app.toss.fake import FakeTossClient
-from tests.factories import create_card, create_service
+from tests.factories import create_card, create_card_direct, create_service
 
 
 @pytest.fixture
@@ -175,3 +178,58 @@ async def test_reconcile_confirms_one_off(db, session_factory, redis_client, cip
     db.expire_all()
     row = await db.scalar(select(Payment).where(Payment.order_id == "oo-recon"))
     assert row.status == PaymentStatus.DONE
+
+
+# ── final-review F2: 키 미설정 서비스 → API 요청경로 422 검증 ──────────────────
+
+async def test_keyless_service_payment_returns_422(settings, engine, db, cipher):
+    """토스 시크릿 키 미설정 서비스에서 단건결제 API 요청 시 422/TOSS_KEY_NOT_CONFIGURED 반환.
+
+    override_client를 주입하지 않은 앱(실제 키 체크 경로)을 직접 구성한다.
+    create_service는 toss_secret_key_encrypted를 설정하지 않으므로
+    for_service()가 TossKeyNotConfiguredError를 발생시켜 422로 변환된다.
+    카드는 create_card_direct로 DB에 직접 삽입해 카드 등록 API(= for_service 호출)를 우회한다.
+    """
+    from asgi_lifespan import LifespanManager
+    from httpx import ASGITransport, AsyncClient
+
+    from app.main import create_app
+    from app.notifications.email import RecordingEmailSender
+    from app.notifications.service_notify import RecordingServiceNotifier
+    from tests.helpers import api_request
+
+    # override 없는 앱 — for_service가 실제 키 체크 경로로 동작
+    application = create_app(
+        settings,
+        toss_client=None,           # override 없음 → 키 체크 활성화
+        email_sender=RecordingEmailSender(),
+        notifier=RecordingServiceNotifier(),
+        engine=engine,
+    )
+
+    # 키 없는 서비스 생성(create_service는 toss_secret_key_encrypted를 설정하지 않음)
+    svc, api_key, secret = await create_service(db, cipher)
+
+    # 카드를 DB에 직접 삽입(카드 등록 API도 for_service를 호출하므로 우회)
+    await create_card_direct(db, cipher, svc, external_user_id="u-keyless",
+                             billing_key="bk-direct-keyless")
+
+    async with LifespanManager(application):
+        async with AsyncClient(transport=ASGITransport(app=application),
+                               base_url="http://test") as c:
+            resp = await api_request(
+                c, "POST", "/api/v1/payments", api_key, secret,
+                json_body={
+                    "external_user_id": "u-keyless",
+                    "order_id": "oo-keyless-001",
+                    "order_name": "키없음테스트",
+                    "amount": 1000,
+                },
+            )
+
+    # 토스 키가 없으므로 for_service()가 422를 반환해야 한다
+    assert resp.status_code == 422, f"예상 422, 실제 {resp.status_code}: {resp.text}"
+    body = resp.json()
+    assert body["error"]["code"] == "TOSS_KEY_NOT_CONFIGURED", (
+        f"예상 TOSS_KEY_NOT_CONFIGURED, 실제: {body}"
+    )

@@ -6,8 +6,10 @@ SYSTEM_ADMIN은 전체, SERVICE_MANAGER는 service_scope(ctx)의 담당 서비�
 """
 
 import uuid
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,7 +20,7 @@ from app.admin.filters import plan_name_options, service_options as build_servic
 from app.admin.pagination import PageParams, date_range, paginate
 from app.core.deps import get_db, get_notifier, get_toss_provider  # Task 5: 전역 get_toss → 서비스별 해석기
 from app.core.clock import kst_format
-from app.core.errors import InputValidationError, NotFoundError
+from app.core.errors import InputValidationError, NotFoundError, TossKeyNotConfiguredError  # 키 미설정 오류
 from app.models import Payment, PaymentKind, PaymentStatus, Plan, Service, Subscription
 from app.services import cards as card_service  # 결제 카드 표시용 cards 테이블 조회
 from app.services import payments as payment_service
@@ -134,7 +136,12 @@ async def payment_cancel(payment_id: uuid.UUID, request: Request,
         raise NotFoundError("결제를 찾을 수 없습니다")
     # Task 5: payment.service_id로 서비스를 로드해 서비스별 토스 클라이언트 해석
     service = await db.get(Service, payment.service_id)
-    toss = toss_provider.for_service(service)
+    # 키 미설정 시 raw JSON 422가 아닌 결제 상세 ?error= 리다이렉트로 처리(final-review F1)
+    try:
+        toss = toss_provider.for_service(service)
+    except TossKeyNotConfiguredError as exc:
+        return RedirectResponse(
+            f"/admin/payments/{payment_id}?error={quote(exc.message)}", status_code=303)
     form = await request.form()
     # 부분취소 금액 — 빈값/미입력이면 전액 취소(None). 숫자가 아니면 입력 오류.
     raw = (form.get("cancel_amount") or "").strip()
