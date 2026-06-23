@@ -111,7 +111,7 @@ def render_list(request, full_name, partial_name, ctx=None, **extra):
 | `GET /admin/services/{id}/keys-modal` | `services_keys_modal` `app/admin/routes/services.py:138` | `services/_keys_modal.html` |
 | `POST /admin/services/{id}/rotate-keys` | `services_rotate` `app/admin/routes/services.py:347` | `services/keys.html` |
 
-하는 일: 등록 성공 시 평문 API 키·HMAC 시크릿을 **일회성**으로 `keys.html`에 표시합니다(키는 암호화 저장되므로 평문을 볼 수 있는 유일한 기회). 키 복사 모달과 재발급은 감사 로그를 남기고 `Cache-Control: no-store`로 캐시를 막습니다.
+하는 일: 등록 성공 시 평문 API 키·HMAC 시크릿을 **일회성**으로 `keys.html`에 표시합니다(키는 암호화 저장되므로 평문을 볼 수 있는 유일한 기회). 키 복사 모달과 재발급은 감사 로그를 남기고 `Cache-Control: no-store`로 캐시를 막습니다. 등록 폼(`new.html`)·상세(`detail.html`)에서 **서비스별 토스 시크릿 키**를 입력할 수 있으며(쓰기 전용 — 저장 후 재표시 안 함, 상세엔 "설정됨/미설정"만), AES 암호화 저장됩니다(아래 설정 변경 표의 `toss-secret-key` 참조).
 
 ### 상세 (탭)
 
@@ -144,6 +144,7 @@ def render_list(request, full_name, partial_name, ctx=None, **extra):
 | `POST /admin/services/{id}/cancel-policy` | `services_cancel_policy` `app/admin/routes/services.py:385` | 단건결제 취소 허용·수수료율 |
 | `POST /admin/services/{id}/notification-url` | `services_notification_url` `app/admin/routes/services.py:416` | 아웃고잉 웹훅 URL 저장(빈값=NULL) |
 | `POST /admin/services/{id}/notification-test` | `services_notification_test` `app/admin/routes/services.py:445` | 테스트 알림 동기 전송 |
+| `POST /admin/services/{id}/toss-secret-key` | `services_set_toss_secret_key` `app/admin/routes/services.py:419` | 서비스별 토스 시크릿 키 설정/교체(AES 암호화 저장). 빈 값이면 변경 없음. 감사: `service.toss_secret_key.set`/`.changed`(값 미기록). 키 미설정 서비스는 결제 시 `TOSS_KEY_NOT_CONFIGURED`(422) |
 | `POST /admin/services/{id}/status` | `services_set_status` `app/admin/routes/services.py:468` | 서비스 상태(ACTIVE/INACTIVE) |
 | `POST /admin/services/{id}/delete` | `services_delete` `app/admin/routes/services.py:481` | 삭제(구독 있으면 DomainError 거부) |
 
@@ -184,7 +185,7 @@ def render_list(request, full_name, partial_name, ctx=None, **extra):
 
 하는 일: 목록은 각 Plan에 표시용 금액·툴팁(`plan_first_amount`/`plan_recurring_amount`/`*_breakdown`)을 동적으로 주입합니다(`:207`). 폼 파싱은 `_form_plan_fields`(`:86`)와 추가정보 수집 `_collect_extra_info`(`:62`)가 담당합니다. 권한 분기: `require_manager`(SERVICE_MANAGER) 진입점은 본인 주 서비스에 추가하는 기존 플로우, 서비스 상세 경유는 `require_any` + `_can_manage`(`:37`)로 담당 여부를 추가 검사합니다. `_authorize_plan`(`:50`)은 비담당 요금제를 **404**로 처리합니다.
 
-> 주의: 결제 주기(`billing_cycle`/`cycle_days`)는 수정 불가입니다 — 폼이 보내지 않고 `update_plan`도 인자를 받지 않아 기존 주기가 유지됩니다. 삭제/보너스일은 next URL을 `_safe_next`(`:42`)로 open redirect 방어합니다(반드시 `/admin/`로 시작).
+> 주의: 결제 주기(`billing_cycle`/`cycle_days`/`cycle_minutes`)는 수정 불가입니다 — 폼이 보내지 않고 `update_plan`도 인자를 받지 않아 기존 주기가 유지됩니다. `MINUTE`(분) 주기는 자동연장 테스트용으로 **비운영(`environment != prod`)에서만** 선택칸이 노출되며 `cycle_minutes`(최소 5)를 받습니다. 삭제/보너스일은 next URL을 `_safe_next`(`:42`)로 open redirect 방어합니다(반드시 `/admin/`로 시작).
 
 ---
 
@@ -216,7 +217,7 @@ def render_list(request, full_name, partial_name, ctx=None, **extra):
 | `GET /admin/payments/{id}` | `payment_detail` `app/admin/routes/payments.py:151` | `payments/detail.html` | `require_any`(스코프) |
 | `POST /admin/payments/{id}/cancel` | `payment_cancel` `app/admin/routes/payments.py:115` | — | `require_any` + CSRF |
 
-하는 일: 목록은 partial이 없어 `render`로 전체 페이지만 렌더합니다(htmx 부분 갱신 대상 아님). 공유 쿼리 `_build_payments_query`(`:36`)는 단건(ONE_OFF) 결제를 포함하려고 Subscription/Plan을 **OUTER JOIN**, Service는 INNER JOIN합니다. 상세는 구독 결제면 Subscription을 추가 조회하고, 결제 카드(`card_service.get_card`)·누적 환불액·잔여 환불가능액을 계산해 전달합니다(`:178`). 취소는 단건(ONE_OFF) 결제 대상이며 폼 `cancel_amount`가 비면 전액, 숫자면 부분(누적) 취소입니다. 어드민 취소는 수수료 없이 항상 허용되며 상태(DONE)·잔여 한도 검증은 도메인이 합니다.
+하는 일: 목록은 partial이 없어 `render`로 전체 페이지만 렌더합니다(htmx 부분 갱신 대상 아님). 목록 각 행에는 **매출전표** 열이 있어, 저장된 `raw_response.receipt.url`이 있으면 토스 매출전표(영수증)로 가는 새 탭 링크를, 없으면 `-`를 표시합니다(`receipt_url(p)` 템플릿 전역, `app/admin/__init__.py`). 공유 쿼리 `_build_payments_query`(`:36`)는 단건(ONE_OFF) 결제를 포함하려고 Subscription/Plan을 **OUTER JOIN**, Service는 INNER JOIN합니다. 상세는 구독 결제면 Subscription을 추가 조회하고, 결제 카드(`card_service.get_card`)·누적 환불액·잔여 환불가능액을 계산해 전달합니다(`:178`). 취소는 단건(ONE_OFF) 결제 대상이며 폼 `cancel_amount`가 비면 전액, 숫자면 부분(누적) 취소입니다. 어드민 취소는 수수료 없이 항상 허용되며 상태(DONE)·잔여 한도 검증은 도메인이 합니다.
 
 ---
 

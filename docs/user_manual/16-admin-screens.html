@@ -260,7 +260,7 @@
 </tr>
 </tbody>
 </table>
-<p>하는 일: 등록 성공 시 평문 API 키·HMAC 시크릿을 <strong>일회성</strong>으로 <code>keys.html</code>에 표시합니다(키는 암호화 저장되므로 평문을 볼 수 있는 유일한 기회). 키 복사 모달과 재발급은 감사 로그를 남기고 <code>Cache-Control: no-store</code>로 캐시를 막습니다.</p>
+<p>하는 일: 등록 성공 시 평문 API 키·HMAC 시크릿을 <strong>일회성</strong>으로 <code>keys.html</code>에 표시합니다(키는 암호화 저장되므로 평문을 볼 수 있는 유일한 기회). 키 복사 모달과 재발급은 감사 로그를 남기고 <code>Cache-Control: no-store</code>로 캐시를 막습니다. 등록 폼(<code>new.html</code>)·상세(<code>detail.html</code>)에서 <strong>서비스별 토스 시크릿 키</strong>를 입력할 수 있으며(쓰기 전용 — 저장 후 재표시 안 함, 상세엔 "설정됨/미설정"만), AES 암호화 저장됩니다(아래 설정 변경 표의 <code>toss-secret-key</code> 참조).</p>
 <h3 id="_3">상세 (탭)</h3>
 <figure class="shot">
   <img src="assets/img/service-detail.png" alt="서비스 상세 화면 (키·카드·요금제 탭)" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
@@ -352,6 +352,11 @@
 <td><code>POST /admin/services/{id}/notification-test</code></td>
 <td><code>services_notification_test</code> <code class="loc">app/admin/routes/services.py:445</code></td>
 <td>테스트 알림 동기 전송</td>
+</tr>
+<tr>
+<td><code>POST /admin/services/{id}/toss-secret-key</code></td>
+<td><code>services_set_toss_secret_key</code> <code class="loc">app/admin/routes/services.py:419</code></td>
+<td>서비스별 토스 시크릿 키 설정/교체(AES 암호화 저장). 빈 값이면 변경 없음. 감사: <code>service.toss_secret_key.set</code>/<code>.changed</code>(값 미기록). 키 미설정 서비스는 결제 시 <code>TOSS_KEY_NOT_CONFIGURED</code>(422)</td>
 </tr>
 <tr>
 <td><code>POST /admin/services/{id}/status</code></td>
@@ -484,7 +489,7 @@
 </table>
 <p>하는 일: 목록은 각 Plan에 표시용 금액·툴팁(<code>plan_first_amount</code>/<code>plan_recurring_amount</code>/<code>*_breakdown</code>)을 동적으로 주입합니다(<code>:207</code>). 폼 파싱은 <code>_form_plan_fields</code>(<code>:86</code>)와 추가정보 수집 <code>_collect_extra_info</code>(<code>:62</code>)가 담당합니다. 권한 분기: <code>require_manager</code>(SERVICE_MANAGER) 진입점은 본인 주 서비스에 추가하는 기존 플로우, 서비스 상세 경유는 <code>require_any</code> + <code>_can_manage</code>(<code>:37</code>)로 담당 여부를 추가 검사합니다. <code>_authorize_plan</code>(<code>:50</code>)은 비담당 요금제를 <strong>404</strong>로 처리합니다.</p>
 <blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
-<p>주의: 결제 주기(<code>billing_cycle</code>/<code>cycle_days</code>)는 수정 불가입니다 — 폼이 보내지 않고 <code>update_plan</code>도 인자를 받지 않아 기존 주기가 유지됩니다. 삭제/보너스일은 next URL을 <code>_safe_next</code>(<code>:42</code>)로 open redirect 방어합니다(반드시 <code>/admin/</code>로 시작).</p>
+<p>주의: 결제 주기(<code>billing_cycle</code>/<code>cycle_days</code>/<code>cycle_minutes</code>)는 수정 불가입니다 — 폼이 보내지 않고 <code>update_plan</code>도 인자를 받지 않아 기존 주기가 유지됩니다. <code>MINUTE</code>(분) 주기는 자동연장 테스트용으로 <strong>비운영(<code>environment != prod</code>)에서만</strong> 선택칸이 노출되며 <code>cycle_minutes</code>(최소 5)를 받습니다. 삭제/보너스일은 next URL을 <code>_safe_next</code>(<code>:42</code>)로 open redirect 방어합니다(반드시 <code>/admin/</code>로 시작).</p>
 </div></blockquote>
 <hr />
 <h2 id="166">16.6 구독</h2>
@@ -581,7 +586,7 @@
 </tr>
 </tbody>
 </table>
-<p>하는 일: 목록은 partial이 없어 <code>render</code>로 전체 페이지만 렌더합니다(htmx 부분 갱신 대상 아님). 공유 쿼리 <code>_build_payments_query</code>(<code>:36</code>)는 단건(ONE_OFF) 결제를 포함하려고 Subscription/Plan을 <strong>OUTER JOIN</strong>, Service는 INNER JOIN합니다. 상세는 구독 결제면 Subscription을 추가 조회하고, 결제 카드(<code>card_service.get_card</code>)·누적 환불액·잔여 환불가능액을 계산해 전달합니다(<code>:178</code>). 취소는 단건(ONE_OFF) 결제 대상이며 폼 <code>cancel_amount</code>가 비면 전액, 숫자면 부분(누적) 취소입니다. 어드민 취소는 수수료 없이 항상 허용되며 상태(DONE)·잔여 한도 검증은 도메인이 합니다.</p>
+<p>하는 일: 목록은 partial이 없어 <code>render</code>로 전체 페이지만 렌더합니다(htmx 부분 갱신 대상 아님). 목록 각 행에는 <strong>매출전표</strong> 열이 있어, 저장된 <code>raw_response.receipt.url</code>이 있으면 토스 매출전표(영수증)로 가는 새 탭 링크를, 없으면 <code>-</code>를 표시합니다(<code>receipt_url(p)</code> 템플릿 전역, <code>app/admin/__init__.py</code>). 공유 쿼리 <code>_build_payments_query</code>(<code>:36</code>)는 단건(ONE_OFF) 결제를 포함하려고 Subscription/Plan을 <strong>OUTER JOIN</strong>, Service는 INNER JOIN합니다. 상세는 구독 결제면 Subscription을 추가 조회하고, 결제 카드(<code>card_service.get_card</code>)·누적 환불액·잔여 환불가능액을 계산해 전달합니다(<code>:178</code>). 취소는 단건(ONE_OFF) 결제 대상이며 폼 <code>cancel_amount</code>가 비면 전액, 숫자면 부분(누적) 취소입니다. 어드민 취소는 수수료 없이 항상 허용되며 상태(DONE)·잔여 한도 검증은 도메인이 합니다.</p>
 <hr />
 <h2 id="168">16.8 카드 상세/토글</h2>
 <blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
