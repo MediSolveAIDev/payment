@@ -53,6 +53,7 @@
 | 상태 | Y | `PaymentStatus` 한글 뱃지: 대기 / 완료 / 실패 / **취소** (`payment_status_ko()` 전역) |
 | 실패 코드 | — | 있으면 점선 밑줄(`code-tip`), **마우스 올리면 의미 툴팁** |
 | 요청 시각 | Y (기본 내림차순) | KST `YYYY-MM-DD HH:MM` |
+| 매출전표 | — | 저장된 `raw_response.receipt.url`이 있으면 새 탭 링크(`target=_blank rel=noopener`), 없으면 `-`. `receipt_url(p)` 전역(`app/admin/__init__.py`)이 안전 추출(raw_response None·receipt 없음·url 비문자열 → None). 추가 토스 호출 없음. 토스 테스트 환경은 링크만 생성되고 실제 발행 안 됨 |
 
 **페이지네이션** — 기본 15건/페이지(`PER_PAGE_DEFAULT = 15`, `pagination.py:18`). 총 건수·범위 표시.
 

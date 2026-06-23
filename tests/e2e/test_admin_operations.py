@@ -739,6 +739,33 @@ async def test_payments_kind_and_service_filter(client, db, redis_client, cipher
     assert "oo-user" in html        # 단건(구독 없음) 사용자 표시
 
 
+async def test_payments_list_sales_statement_link(client, db, redis_client, cipher):
+    """결제 목록 매출전표 링크: raw_response.receipt.url이 있는 결제 행에만 링크가 보인다."""
+    from app.core.clock import utcnow
+    from app.models import Payment, PaymentKind, PaymentStatus
+    svc, _, _ = await create_service(db, cipher, name="매출전표서비스")
+    # receipt URL 보유 결제(카드 DONE)
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="rcpt-user",
+                   order_id="rcpt-yes", amount=1000, payment_type="ONE_OFF",
+                   kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
+                   idempotency_key="rcpt-yes", requested_at=utcnow(),
+                   raw_response={"receipt": {"url": "https://dashboard.tosspayments.com/receipt/RCPT1"}}))
+    # receipt 미보유 결제(raw_response 없음)
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="norcpt-user",
+                   order_id="rcpt-no", amount=2000, payment_type="ONE_OFF",
+                   kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
+                   idempotency_key="rcpt-no", requested_at=utcnow(), raw_response=None))
+    await db.commit()
+    admin, pw = await create_user(db, role="SYSTEM_ADMIN")
+    await admin_login(client, admin.email, pw)
+
+    html = (await client.get("/admin/payments")).text
+    assert "<th>매출전표</th>" in html                                   # 열 헤더 존재
+    assert 'href="https://dashboard.tosspayments.com/receipt/RCPT1"' in html  # 보유 건 링크
+    assert "rcpt-no" in html                                             # 미보유 건도 목록에는 존재
+    assert html.count(">매출전표</a>") == 1                              # 링크는 보유 건 1개뿐(미보유는 -)
+
+
 async def test_payments_filter_order(client, db, redis_client, cipher):
     """필터 순서: 서비스 → 요금제 → 종류 → 상태 → 기간."""
     admin, pw = await create_user(db, role="SYSTEM_ADMIN")

@@ -1,0 +1,44 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>테스트 실행 리포트 — 2026-06-23 22:08:48 KST</title>
+<style>
+ :root{--primary:#476CFF;--g200:#F3F3F3;--g300:#E3E3E3;--g600:#9F9F9F;--g800:#3E3E3E;
+   --green:#1FA463;--red:#FF4E51;--font:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+ body{font-family:var(--font);color:#1a1a1a;max-width:980px;margin:0 auto;padding:28px;line-height:1.6}
+ h1{font-size:24px;margin:0 0 4px} .sub{color:var(--g600);font-size:13px;margin-bottom:20px}
+ .cards{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0 24px}
+ .card{flex:1;min-width:120px;border:1px solid var(--g300);border-radius:12px;padding:14px 16px}
+ .card .n{font-size:26px;font-weight:700} .card .l{font-size:12px;color:var(--g600)}
+ .status{display:inline-block;padding:6px 14px;border-radius:8px;font-weight:700;font-size:15px}
+ .status.ok{background:#E7F7EF;color:var(--green)} .status.bad{background:#FFEFEF;color:var(--red)}
+ .bar{height:10px;border-radius:6px;background:var(--g200);overflow:hidden;margin:6px 0 18px}
+ .bar>i{display:block;height:100%;background:var(--green)}
+ .n.pass{color:var(--green)} .n.fail{color:var(--red)}
+ h2{font-size:17px;margin:26px 0 10px;border-bottom:2px solid var(--primary);padding-bottom:6px}
+ details{border:1px solid var(--g300);border-radius:8px;padding:8px 12px;margin:8px 0}
+ summary{cursor:pointer} code{font-family:ui-monospace,Menlo,monospace;font-size:13px}
+ pre{background:#1e2233;color:#e6e9f0;padding:12px;border-radius:8px;overflow-x:auto;font-size:12.5px}
+ .tag{display:inline-block;padding:1px 7px;border-radius:5px;font-size:11px;font-weight:700;margin-right:6px}
+ .tag.failed,.tag.error{background:#FFEFEF;color:var(--red)}
+ table{border-collapse:collapse;width:100%;font-size:13.5px}
+ td{border:1px solid var(--g300);padding:6px 10px} td:first-child{white-space:nowrap;color:var(--g800)}
+ .ok{color:var(--green)}
+</style></head><body>
+ <h1>테스트 실행 리포트</h1>
+ <div class="sub">2026-06-23 22:08:48 KST · <span class="status ok">✅ 성공</span> (exit status 0)
+   · 소요시간 0.6s</div>
+ <div class="cards">
+   <div class="card"><div class="n">2</div><div class="l">전체</div></div>
+   <div class="card"><div class="n pass">2</div><div class="l">통과</div></div>
+   <div class="card"><div class="n fail">0</div><div class="l">실패</div></div>
+   <div class="card"><div class="n fail">0</div><div class="l">에러</div></div>
+   <div class="card"><div class="n">0</div><div class="l">스킵</div></div>
+   <div class="card"><div class="n">100.0%</div><div class="l">통과율</div></div>
+ </div>
+ <div class="bar"><i style="width:100.0%"></i></div>
+ <h2>실패 / 에러 (0)</h2>
+ <p class="ok">없음 — 전부 통과했습니다. 🎉</p>
+ <h2>가장 느린 테스트 (상위 10)</h2>
+ <table><tr><td>0.16s</td><td><code>tests/e2e/test_admin_operations.py::test_payments_kind_and_service_filter</code></td></tr><tr><td>0.09s</td><td><code>tests/e2e/test_admin_operations.py::test_payments_list_sales_statement_link</code></td></tr></table>
+ <p class="sub" style="margin-top:24px">생성: tests/conftest.py 의 리포트 훅 · 매 <code>uv run pytest</code> 실행 시 갱신</p>
+</body></html>

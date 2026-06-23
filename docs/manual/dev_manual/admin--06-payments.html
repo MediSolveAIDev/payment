@@ -207,6 +207,11 @@
 <td>Y (기본 내림차순)</td>
 <td>KST <code>YYYY-MM-DD HH:MM</code></td>
 </tr>
+<tr>
+<td>매출전표</td>
+<td>—</td>
+<td>저장된 <code>raw_response.receipt.url</code>이 있으면 새 탭 링크(<code>target=_blank rel=noopener</code>), 없으면 <code>-</code>. <code>receipt_url(p)</code> 전역(<code>app/admin/__init__.py</code>)이 안전 추출(raw_response None·receipt 없음·url 비문자열 → None). 추가 토스 호출 없음. 토스 테스트 환경은 링크만 생성되고 실제 발행 안 됨</td>
+</tr>
 </tbody>
 </table>
 <p><strong>페이지네이션</strong> — 기본 15건/페이지(<code>PER_PAGE_DEFAULT = 15</code>, <code class="loc">pagination.py:18</code>). 총 건수·범위 표시.</p>
