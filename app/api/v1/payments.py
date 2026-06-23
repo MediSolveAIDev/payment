@@ -16,9 +16,9 @@ from app.api.deps import (
     get_cipher,
     get_db,
     get_notifier,
-    get_toss,
     payment_rate_limit,
 )
+from app.core.deps import get_toss_provider  # 서비스별 토스 클라이언트 해석기(Task 5)
 from app.api.openapi import AUTH_RESPONSES, NOT_FOUND_RESPONSE, PAYMENT_RESPONSES, VALIDATION_RESPONSE
 from app.core.crypto import AesGcmCipher
 from app.models import Payment, Service
@@ -29,7 +29,7 @@ from app.schemas.api import (
     PaymentResponse,
 )
 from app.services import payments as payment_service
-from app.toss.client import TossClient
+from app.toss.provider import TossClientProvider  # 서비스별 토스 클라이언트 해석기 타입(Task 5)
 
 router = APIRouter()
 
@@ -74,7 +74,7 @@ async def create_payment(
     payload: OneOffPaymentRequest,
     service: Service = Depends(payment_rate_limit),
     db: AsyncSession = Depends(get_db),
-    toss: TossClient = Depends(get_toss),
+    toss_provider: TossClientProvider = Depends(get_toss_provider),  # Task 5: 서비스별 해석기
     cipher: AesGcmCipher = Depends(get_cipher),
     notifier=Depends(get_notifier),
 ):
@@ -85,7 +85,10 @@ async def create_payment(
     payment_rate_limit: 결제 승인(토스 API 호출)이 수반되므로 결제 전용 처리율 제한 적용.
     HMAC 본문 서명이 amount를 포함하므로 중간자 금액 변조는 서명 오류로 차단된다.
     타임아웃(결과 불명) 시 PENDING 유지 — 이중 결제 방지.
+    Task 5: get_toss(전역) → get_toss_provider + for_service(service)로 서비스별 클라이언트 사용.
     """
+    # Task 5: 서비스에 등록된 toss_secret_key로 클라이언트 해석(키 미설정 시 TossKeyNotConfiguredError)
+    toss = toss_provider.for_service(service)
     # Task 9: auth_key/customer_key 제거 — 카드 보관함에서 서버가 자동 조회
     payment = await payment_service.create_one_off_payment(
         db, toss, cipher,
@@ -111,7 +114,7 @@ async def cancel_payment(
     payload: OneOffCancelRequest,
     service: Service = Depends(payment_rate_limit),
     db: AsyncSession = Depends(get_db),
-    toss: TossClient = Depends(get_toss),
+    toss_provider: TossClientProvider = Depends(get_toss_provider),  # Task 5: 서비스별 해석기
     notifier=Depends(get_notifier),
 ):
     """단건 결제 취소 — 서비스 정책에 따라 환불(수수료 공제). 문서 11 참조.
@@ -119,7 +122,10 @@ async def cancel_payment(
     payment_rate_limit: 토스 취소(환불) API 호출이 수반된다.
     취소 성공 시 status=CANCELED와 canceled_amount/cancel_fee를 포함한 결과 반환.
     서비스 정책(cancellation_enabled=False) 또는 DONE 아닌 결제는 오류 반환.
+    Task 5: get_toss(전역) → get_toss_provider + for_service(service)로 서비스별 클라이언트 사용.
     """
+    # Task 5: 서비스에 등록된 toss_secret_key로 클라이언트 해석(키 미설정 시 TossKeyNotConfiguredError)
+    toss = toss_provider.for_service(service)
     payment = await payment_service.cancel_one_off_payment(
         db, toss, service=service, order_id=order_id, reason=payload.reason,
         notifier=notifier)

@@ -23,9 +23,10 @@ from app.admin.filters import (
     subscription_query,
 )
 from app.admin.pagination import PageParams, paginate
-from app.core.deps import get_cipher, get_db, get_notifier, get_toss
+from app.core.deps import get_cipher, get_db, get_notifier, get_toss_provider  # Task 5: 전역 get_toss → 서비스별 해석기
 from app.core.clock import kst_format
 from app.core.crypto import AesGcmCipher
+from app.toss.provider import TossClientProvider  # Task 5: 서비스별 해석기 타입
 from app.core.errors import (
     ConflictError,
     InputValidationError,
@@ -40,7 +41,7 @@ from app.services.subscriptions import (
     extend_subscription,
     force_cancel_subscription,
 )
-from app.toss.client import TossClient
+# TossClient import 제거 — Task 5에서 TossClientProvider로 교체됨
 
 router = APIRouter()
 
@@ -222,15 +223,28 @@ async def subscription_extend(sub_id: uuid.UUID, request: Request,
 async def subscription_retry_payment(sub_id: uuid.UUID, request: Request,
                                      ctx: AdminContext = Depends(require_any),
                                      db: AsyncSession = Depends(get_db),
-                                     toss: TossClient = Depends(get_toss),
+                                     toss_provider: TossClientProvider = Depends(get_toss_provider),  # Task 5: 서비스별 해석기
                                      cipher: AesGcmCipher = Depends(get_cipher),
                                      notifier=Depends(get_notifier)):
     """결제 실패(PAST_DUE)·정지(SUSPENDED) 구독을 담당자가 즉시 재결제.
 
     CSRF 검증 후 admin_retry_payment에 스코프를 전달한다(스코프 검사·감사 기록은 서비스 레이어).
     성공 → 완료 모달, 실패(결제 거절·상태 불가·결제수단 없음) → ?error= 로 상세 페이지에 메시지 표시.
+    Task 5: get_toss(전역) → get_toss_provider + for_service(sub.service)로 서비스별 클라이언트 사용.
     """
     await validate_csrf(request, ctx)
+    # Task 5: 구독을 먼저 로드해 service_id로 서비스 조회 후 서비스별 토스 클라이언트 해석.
+    # sub이 없으면 admin_retry_payment가 NotFoundError를 발생시키므로 toss 해석은 건너뛴다.
+    # admin_retry_payment가 내부에서 sub을 다시 로드하므로 여기서는 service 확보 목적으로만 조회.
+    sub = await db.get(Subscription, sub_id)
+    if sub is None:
+        # 구독이 없으면 admin_retry_payment에서 NotFoundError가 발생한다 — 아무 클라이언트나 전달
+        # (도달하기 전에 서비스 레이어가 NotFoundError를 발생시킨다).
+        from app.core.errors import NotFoundError as _NFE
+        raise _NFE("구독을 찾을 수 없습니다")
+    service = await db.get(Service, sub.service_id)
+    # 서비스별 토스 클라이언트 해석 — 키 미설정 시 TossKeyNotConfiguredError 발생
+    toss = toss_provider.for_service(service)
     try:
         await admin_retry_payment(db, toss, cipher, subscription_id=sub_id,
                                   service_scope=service_scope(ctx),

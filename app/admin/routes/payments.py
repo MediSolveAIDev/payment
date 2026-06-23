@@ -16,13 +16,13 @@ from app.admin.deps import AdminContext, require_any, service_scope, validate_cs
 from app.admin.export import EXPORT_MAX_ROWS, xlsx_response
 from app.admin.filters import plan_name_options, service_options as build_service_options
 from app.admin.pagination import PageParams, date_range, paginate
-from app.core.deps import get_db, get_notifier, get_toss
+from app.core.deps import get_db, get_notifier, get_toss_provider  # Task 5: 전역 get_toss → 서비스별 해석기
 from app.core.clock import kst_format
 from app.core.errors import InputValidationError, NotFoundError
 from app.models import Payment, PaymentKind, PaymentStatus, Plan, Service, Subscription
 from app.services import cards as card_service  # 결제 카드 표시용 cards 테이블 조회
 from app.services import payments as payment_service
-from app.toss.client import TossClient
+from app.toss.provider import TossClientProvider  # Task 5: 서비스별 해석기 타입
 
 router = APIRouter()
 
@@ -116,7 +116,7 @@ async def payments_export(request: Request, ctx: AdminContext = Depends(require_
 async def payment_cancel(payment_id: uuid.UUID, request: Request,
                          ctx: AdminContext = Depends(require_any),
                          db: AsyncSession = Depends(get_db),
-                         toss: TossClient = Depends(get_toss),
+                         toss_provider: TossClientProvider = Depends(get_toss_provider),  # Task 5: 서비스별 해석기
                          notifier=Depends(get_notifier)):
     """Admin에서 단건 결제 취소(운영자) — 수수료 없이 전액/부분(누적) 취소.
 
@@ -125,12 +125,16 @@ async def payment_cancel(payment_id: uuid.UUID, request: Request,
     취소 허용 게이트(cancellation_enabled)는 어드민 취소에서 무시된다(항상 허용).
     상태(DONE)·잔여 한도 검증은 도메인 레이어에서 수행한다.
     취소 성공 시 결제 상세로 303 리다이렉트.
+    Task 5: get_toss(전역) → get_toss_provider + for_service(service)로 서비스별 클라이언트 사용.
     """
     await validate_csrf(request, ctx)
     payment = await db.get(Payment, payment_id)
     scope = service_scope(ctx)
     if payment is None or (scope is not None and payment.service_id not in scope):
         raise NotFoundError("결제를 찾을 수 없습니다")
+    # Task 5: payment.service_id로 서비스를 로드해 서비스별 토스 클라이언트 해석
+    service = await db.get(Service, payment.service_id)
+    toss = toss_provider.for_service(service)
     form = await request.form()
     # 부분취소 금액 — 빈값/미입력이면 전액 취소(None). 숫자가 아니면 입력 오류.
     raw = (form.get("cancel_amount") or "").strip()
