@@ -44,6 +44,14 @@
   </div>
   <button type="button" class="btn btn-sm btn-ghost" data-ip-add style="margin-top:8px">
     <span data-lucide="plus"></span>IP 추가</button>
+  {# 토스 시크릿 키 — 선택 입력; AES 암호화 저장, 저장 후 재표시 금지(Task 8) #}
+  <div style="margin-top:16px">
+    <label for="toss_secret_key">토스 시크릿 키 <span class="muted" style="font-weight:400">— 선택</span></label>
+    <input id="toss_secret_key" name="toss_secret_key" type="password" autocomplete="off"
+           placeholder="미설정 — 입력 시 저장">
+    <p class="muted" style="font-size:12px;margin-top:4px">
+      AES 암호화 저장. 저장 후에는 다시 표시되지 않습니다(변경 시 재입력).</p>
+  </div>
   {# 취소 정책 — 단건(일반) 결제 취소 허용 여부 + 수수료율 (요청 012) #}
   <div style="margin-top:16px;padding:12px;background:var(--bg-2,#f5f5f7);border-radius:8px">
     <div class="block-head" style="margin-bottom:8px">

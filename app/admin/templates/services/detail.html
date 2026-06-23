@@ -155,6 +155,31 @@
   </form>
 </div>
 </div>
+{# 토스 시크릿 키 카드 — 설정됨/미설정 상태 표시 + 쓰기 전용 입력(평문 재표시 절대 금지, Task 8) #}
+<div class="card" style="max-width:480px">
+  <h3>토스 시크릿 키</h3>
+  <div class="kv" style="margin-bottom:10px">
+    <span class="muted">현재 상태</span>
+    <span>
+      {% if service.toss_secret_key_encrypted %}
+        <span class="badge badge-ACTIVE">설정됨</span>
+      {% else %}
+        <span class="badge badge-INACTIVE">미설정</span>
+      {% endif %}
+    </span>
+  </div>
+  <form method="post" action="/admin/services/{{ service.id }}/toss-secret-key"
+        style="display:flex;align-items:center;gap:8px">
+    <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+    {# type="password" autocomplete="off" — 쓰기 전용, 저장값 재표시 금지 #}
+    <input id="toss_secret_key" name="toss_secret_key" type="password" autocomplete="off"
+           placeholder="{% if service.toss_secret_key_encrypted %}설정됨 — 변경 시에만 입력{% else %}미설정 — 입력 시 저장{% endif %}"
+           style="flex:1">
+    <button class="btn btn-sm btn-danger" type="submit">저장</button>
+  </form>
+  <p class="muted" style="font-size:12px;margin-top:6px">
+    AES 암호화 저장. 저장 후에는 다시 표시되지 않습니다(변경 시 재입력).</p>
+</div>
 {# 알림 이벤트 설명 모달 — '상세' 버튼으로 열림 #}
 {% include "services/_notify_help_modal.html" %}
 {% set in_detail_page = true %}

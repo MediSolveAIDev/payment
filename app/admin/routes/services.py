@@ -27,6 +27,7 @@ from app.models import (AuditLog, Card, Payment, PaymentKind, PaymentStatus, Pla
                         Subscription, User, UserRole, UserService, UserStatus)
 from app.services import accounts as account_service
 from app.services import registry
+from app.services.registry import set_toss_secret_key  # 서비스별 토스 시크릿 키 설정(Task 8)
 from app.services.audit import record_audit
 from app.services.billing_math import (first_amount_breakdown, plan_first_amount,
                                        plan_recurring_amount,
@@ -120,6 +121,8 @@ async def services_create(request: Request,
         cancellation_enabled, cancellation_fee_percent = _parse_cancel_policy(form)
     except (ValueError, TypeError):
         return await form_error("취소 수수료율은 숫자여야 합니다")
+    # 토스 시크릿 키 — 빈 값이면 None(등록 시 미설정); AES 암호화 저장은 서비스 레이어가 처리(Task 8)
+    toss_secret_key = str(form.get("toss_secret_key", "")).strip() or None
     try:
         creds = await registry.register_service(
             db, cipher,
@@ -128,6 +131,7 @@ async def services_create(request: Request,
             manager_user_ids=manager_ids, primary_user_id=primary_id,
             cancellation_enabled=cancellation_enabled,
             cancellation_fee_percent=cancellation_fee_percent,
+            toss_secret_key=toss_secret_key,
             actor_user_id=ctx.user.id)
     except DomainError as exc:
         return await form_error(exc.message)
@@ -410,6 +414,28 @@ async def services_cancel_policy(service_id: uuid.UUID, request: Request,
         return RedirectResponse(f"/admin/services/{service_id}?error={quote(exc.message)}",
                                 status_code=303)
     # 취소 정책 저장 성공 → 완료 모달 트리거
+    return saved_redirect(f"/admin/services/{service_id}", "저장되었습니다")
+
+
+@router.post("/services/{service_id}/toss-secret-key")
+async def services_set_toss_secret_key(service_id: uuid.UUID, request: Request,
+                                       ctx: AdminContext = Depends(require_admin),
+                                       db: AsyncSession = Depends(get_db),
+                                       cipher: AesGcmCipher = Depends(get_cipher)):
+    """서비스별 토스 시크릿 키 설정/교체(Task 8).
+
+    폼 필드 toss_secret_key — 빈 값이면 변경 없음(기존 키 유지).
+    평문은 화면·로그·감사에 절대 노출하지 않는다; AES 암호화 저장은 서비스 레이어가 처리.
+    감사 액션: 최초 설정 → service.toss_secret_key.set, 교체 → service.toss_secret_key.changed.
+    """
+    await validate_csrf(request, ctx)
+    form = await request.form()
+    # 빈 값이면 변경 없음 — 폼을 빈 채로 저장해도 기존 키는 유지된다
+    new_key = str(form.get("toss_secret_key", "")).strip()
+    if new_key:
+        await set_toss_secret_key(db, cipher, service_id=service_id,
+                                  toss_secret_key=new_key,
+                                  actor_user_id=ctx.user.id)
     return saved_redirect(f"/admin/services/{service_id}", "저장되었습니다")
 
 

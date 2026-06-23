@@ -22,6 +22,9 @@ ACTION_LABELS: dict[str, str] = {
     "service.set_primary_manager": "대표 담당자 지정",
     "service.cancel_policy_updated": "취소 정책 변경",
     "service.notification_url_updated": "알림 URL 변경",
+    # 토스 시크릿 키 설정/변경 — 평문은 감사 detail에 절대 기록하지 않음(Task 8)
+    "service.toss_secret_key.set": "토스 시크릿 키 설정",
+    "service.toss_secret_key.changed": "토스 시크릿 키 변경",
     "plan.create": "요금제 생성",
     "plan.update": "요금제 수정",
     "plan.archive": "요금제 비활성화",
