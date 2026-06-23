@@ -286,3 +286,43 @@ def test_collect_extra_info_duplicate_key_last_wins():
     from app.admin.routes.plans import _collect_extra_info
     form = _FakeForm(extra_key=["용량", "용량"], extra_value=["10GB", "20GB"])
     assert _collect_extra_info(form) == {"용량": "20GB"}
+
+
+# ─── Task 3: MINUTE 검증(최소 5분·비운영 가드) ───────────────────────────────
+
+
+async def test_create_minute_plan_dev(db, cipher):
+    """비운영(dev) 환경에서 MINUTE + cycle_minutes>=5 요금제 생성 허용."""
+    svc, _, _ = await create_service(db, cipher)
+    # environment="dev"이면 MINUTE 주기 허용, cycle_minutes=5(최솟값)로 정상 생성 확인
+    plan = await create_plan(db, service_id=svc.id, name="분테스트", price=1000,
+                             billing_cycle="MINUTE", cycle_minutes=5, environment="dev")
+    assert plan.billing_cycle == "MINUTE"
+    assert plan.cycle_minutes == 5
+
+
+async def test_create_minute_plan_min_5(db, cipher):
+    """MINUTE 주기에서 cycle_minutes가 5 미만이면 InputValidationError."""
+    svc, _, _ = await create_service(db, cipher)
+    # cycle_minutes=4 → 최솟값(5) 미달 → 거부
+    with pytest.raises(InputValidationError):
+        await create_plan(db, service_id=svc.id, name="x", price=1000,
+                          billing_cycle="MINUTE", cycle_minutes=4, environment="dev")
+
+
+async def test_create_minute_plan_rejected_in_prod(db, cipher):
+    """MINUTE 주기는 운영(prod) 환경에서 InputValidationError — 비운영 전용 가드."""
+    svc, _, _ = await create_service(db, cipher)
+    # environment="prod" → MINUTE 거부
+    with pytest.raises(InputValidationError):
+        await create_plan(db, service_id=svc.id, name="x", price=1000,
+                          billing_cycle="MINUTE", cycle_minutes=5, environment="prod")
+
+
+async def test_cycle_minutes_forbidden_on_non_minute(db, cipher):
+    """MINUTE 이외 주기에 cycle_minutes 전달 시 InputValidationError."""
+    svc, _, _ = await create_service(db, cipher)
+    # MONTH 주기에 cycle_minutes 전달 → 금지
+    with pytest.raises(InputValidationError):
+        await create_plan(db, service_id=svc.id, name="x", price=1000,
+                          billing_cycle="MONTH", cycle_minutes=5, environment="dev")

@@ -20,6 +20,7 @@ from datetime import timedelta
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import default_settings  # MINUTE 비운영 가드: environment 기본값 조회용(Task 3)
 from app.core.errors import ConflictError, InputValidationError, NotFoundError
 from app.models import (
     BillingCycle,
@@ -71,14 +72,19 @@ def _discount_text(dtype: str | None, value: int | None) -> str:
 
 
 def _validate_plan_fields(*, price: int, billing_cycle: str, cycle_days: int | None,
-                          first_payment_type: str, first_payment_value: int | None) -> None:
+                          cycle_minutes: int | None,
+                          first_payment_type: str, first_payment_value: int | None,
+                          environment: str) -> None:
     """기본 요금제 필드 검증.
 
-    규칙:
+    규칙(주기 관련):
     - price: 1원 이상(0·음수 불가)
     - billing_cycle: BillingCycle 열거값에 없으면 거부
-    - cycle_days: DAY 주기일 때만 1 이상 필수; 다른 주기에서는 전달 금지
-      (WEEK/MONTH/YEAR는 timedelta/relativedelta 고정값으로 계산하므로 days 불필요)
+    - DAY: cycle_days 1 이상 필수, cycle_minutes 전달 금지
+    - MINUTE: cycle_minutes 5 이상 필수, cycle_days 전달 금지
+             + 비운영 전용 — environment == "prod"이면 거부(테스트용 주기, Task 3)
+    - 그 외(YEAR/MONTH/WEEK): cycle_days·cycle_minutes 둘 다 전달 금지
+      (WEEK/MONTH/YEAR는 timedelta/relativedelta 고정값으로 계산하므로 days/minutes 불필요)
     - first_payment_type: FirstPaymentType 열거값
       - NONE/FREE → first_payment_value 전달 금지(값 없음 의미)
       - DISCOUNT_AMOUNT/DISCOUNT_PERCENT → first_payment_value 1 이상 필수
@@ -89,10 +95,28 @@ def _validate_plan_fields(*, price: int, billing_cycle: str, cycle_days: int | N
     if billing_cycle not in tuple(BillingCycle):
         raise InputValidationError(f"지원하지 않는 결제 주기입니다: {billing_cycle}")
     if billing_cycle == BillingCycle.DAY:
+        # DAY: cycle_days 1 이상 필수, cycle_minutes는 MINUTE 전용이므로 금지
         if not cycle_days or cycle_days < 1:
             raise InputValidationError("DAY 주기는 cycle_days(1 이상)가 필요합니다")
-    elif cycle_days is not None:
-        raise InputValidationError("cycle_days는 DAY 주기에서만 사용합니다")
+        if cycle_minutes is not None:
+            raise InputValidationError("cycle_minutes는 MINUTE 주기에서만 사용합니다")
+    elif billing_cycle == BillingCycle.MINUTE:
+        # MINUTE: 비운영 전용 — prod 환경에서 생성 시도하면 거부(Task 3)
+        if environment == "prod":
+            raise InputValidationError("MINUTE 주기는 비운영 환경에서만 사용합니다")
+        # MINUTE: cycle_minutes 5 이상 필수(최소 5분 가드, Task 3)
+        if not cycle_minutes or cycle_minutes < 5:
+            raise InputValidationError("MINUTE 주기는 cycle_minutes(5 이상)가 필요합니다")
+        # MINUTE: cycle_days는 DAY 전용이므로 금지
+        if cycle_days is not None:
+            raise InputValidationError("cycle_days는 DAY 주기에서만 사용합니다")
+    else:
+        # YEAR/MONTH/WEEK: cycle_days·cycle_minutes 둘 다 금지
+        if cycle_days is not None:
+            raise InputValidationError("cycle_days는 DAY 주기에서만 사용합니다")
+        if cycle_minutes is not None:
+            raise InputValidationError("cycle_minutes는 MINUTE 주기에서만 사용합니다")
+    # ── first_payment 검증(기존 로직 그대로 유지) ──
     if first_payment_type not in tuple(FirstPaymentType):
         raise InputValidationError(f"지원하지 않는 첫결제 유형입니다: {first_payment_type}")
     if first_payment_type in (FirstPaymentType.NONE, FirstPaymentType.FREE):
@@ -144,39 +168,47 @@ def _validate_recurring_discount(discount_type: str, discount_value: int | None)
 
 async def create_plan(db: AsyncSession, *, service_id: uuid.UUID, name: str, price: int,
                       billing_cycle: str, cycle_days: int | None = None,
+                      cycle_minutes: int | None = None,   # MINUTE 주기 분 수(5 이상); 비운영 전용(Task 3)
                       first_payment_type: str = "NONE",
                       first_payment_value: int | None = None,
                       recurring_discount_type: str = "NONE",
                       recurring_discount_value: int | None = None,
                       trial_enabled: bool = False, trial_days: int | None = None,
-                      auto_renew: bool = True,           # 자동결제 여부(요청 013): False=첫 주기 후 만료
-                      extra_info: dict | None = None,    # 추가정보(요청 013): 서비스 측 설명 key/value
+                      auto_renew: bool = True,            # 자동결제 여부(요청 013): False=첫 주기 후 만료
+                      extra_info: dict | None = None,     # 추가정보(요청 013): 서비스 측 설명 key/value
+                      environment: str | None = None,     # MINUTE 비운영 가드용(None=현재 실행 환경, Task 3)
                       actor_user_id: uuid.UUID | None = None) -> Plan:
     """요금제 생성.
 
     흐름:
     1. 이름 공백 검증
-    2. 기본 필드 검증(_validate_plan_fields) — 주기/할인 규칙
-    3. 상시 할인 검증(_validate_recurring_discount) — FREE 거부
-    4. 체험 검증(_validate_trial)
-    5. Plan 객체 생성 — trial_enabled=False 이면 trial_days는 None으로 저장
+    2. environment 결정 — 명시 전달 시 그대로, None이면 default_settings().environment 사용
+    3. 기본 필드 검증(_validate_plan_fields) — 주기/할인 규칙(MINUTE 가드 포함, Task 3)
+    4. 상시 할인 검증(_validate_recurring_discount) — FREE 거부
+    5. 체험 검증(_validate_trial)
+    6. Plan 객체 생성 — trial_enabled=False 이면 trial_days는 None으로 저장
        (enabled=False에 days가 남아 있으면 조회 시 혼란을 일으키므로)
-    6. 감사 로그 기록 → 커밋(단일 트랜잭션)
+    7. 감사 로그 기록 → 커밋(단일 트랜잭션)
 
     가격은 다음 갱신부터 반영되므로, 생성 후 update_plan으로 수정하면
     이미 구독 중인 사용자의 현재 주기는 영향받지 않는다.
     auto_renew=False(자동결제 안함)는 체험과 공존 가능 — 체험 만료 후 첫 결제가 일어나고
     그 주기 종료 시 만료(체험 없으면 첫 주기 종료 시 만료).
+    MINUTE 주기는 비운영(dev/test) 환경 전용이며 prod에서 생성 시 InputValidationError(Task 3).
     """
     if not name or not name.strip():
         raise InputValidationError("요금제 이름은 필수입니다")
+    # environment 미전달 시 현재 실행 환경(APP_ENV/.env)을 기본값으로 사용(Task 3)
+    env = environment if environment is not None else default_settings().environment
     _validate_plan_fields(price=price, billing_cycle=billing_cycle, cycle_days=cycle_days,
+                          cycle_minutes=cycle_minutes,
                           first_payment_type=first_payment_type,
-                          first_payment_value=first_payment_value)
+                          first_payment_value=first_payment_value, environment=env)
     _validate_recurring_discount(recurring_discount_type, recurring_discount_value)
     _validate_trial(trial_enabled, trial_days)
     plan = Plan(service_id=service_id, name=name.strip(), price=price,
                 billing_cycle=billing_cycle, cycle_days=cycle_days,
+                cycle_minutes=cycle_minutes,               # MINUTE 주기 분 수 저장(Task 3)
                 first_payment_type=first_payment_type,
                 first_payment_value=first_payment_value,
                 recurring_discount_type=recurring_discount_type,
@@ -293,13 +325,18 @@ async def update_plan(db: AsyncSession, *, plan_id: uuid.UUID, service_id: uuid.
         new_extra_info = plan.extra_info
     else:
         new_extra_info = extra_info if extra_info is not None else {}
-    # 결제 주기(billing_cycle/cycle_days)는 수정 불가(요청) — 항상 기존 값 유지.
+    # 결제 주기(billing_cycle/cycle_days/cycle_minutes)는 수정 불가(요청) — 항상 기존 값 유지.
     # 유효성 재검증도 기존 주기 기준으로 수행한다.
+    # environment는 update_plan에서 변경 불가이므로 기존 환경값(dev/test/prod)을 그대로 전달.
     new_billing_cycle = plan.billing_cycle
     new_cycle_days = plan.cycle_days
+    new_cycle_minutes = plan.cycle_minutes  # MINUTE 주기 분 수 — 수정 불가(Task 3)
     _validate_plan_fields(price=new_price, billing_cycle=new_billing_cycle,
-                          cycle_days=new_cycle_days, first_payment_type=new_fpt,
-                          first_payment_value=new_fpv)
+                          cycle_days=new_cycle_days,
+                          cycle_minutes=new_cycle_minutes,  # 기존 값 그대로 재검증(Task 3)
+                          first_payment_type=new_fpt,
+                          first_payment_value=new_fpv,
+                          environment=default_settings().environment)  # 현재 환경으로 재검증(Task 3)
     _validate_recurring_discount(new_rdt, new_rdv)
     _validate_trial(new_trial_enabled, new_trial_days)
     # 요금제 수정 내역을 감사 로그에 상세히 — 모든 항목을 변경 전/후(old_/new_)로 기록(요청).

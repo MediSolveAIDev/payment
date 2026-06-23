@@ -74,15 +74,23 @@
     </ul>
 
     <h3>결제 주기</h3>
-    <p>결제가 반복되는 간격을 정합니다. <strong>년 / 월 / 주 / 일</strong> 중 선택합니다.</p>
+    <p>결제가 반복되는 간격을 정합니다. <strong>년 / 월 / 주 / 일 / 분(개발 전용)</strong> 중 선택합니다.</p>
     <ul>
       <li><strong>년·월·주</strong> — 해당 기간마다 자동 결제</li>
       <li><strong>일(Day)</strong> — 원하는 일수를 직접 입력(예: 30일, 90일)</li>
+      <li><strong>분(Minute)</strong> — 원하는 분 수를 직접 입력(<strong>최소 5분</strong>). <span style="color:var(--danger,#c00)">비운영(dev/test) 환경 전용</span> — 자동 갱신 동작을 빠르게 검증할 때만 사용. 운영(prod)에서는 생성이 거부됩니다.</li>
     </ul>
     <div class="callout danger">
       <span class="ico">⛔</span>
       <div><p><strong>결제 주기는 생성 시에만 설정할 수 있고, 이후 수정이 불가능합니다.</strong>
       주기를 바꾸려면 새 요금제를 만들어야 합니다.</p></div>
+    </div>
+    <div class="callout note">
+      <span class="ico">🔬</span>
+      <div><p><strong>MINUTE 주기 검증 규칙</strong> — <code>billing_cycle=MINUTE</code>로 요금제를 생성할 때 아래 조건을 모두 충족해야 합니다.
+      ① <code>cycle_minutes</code>를 5 이상으로 반드시 전달할 것.
+      ② 서버 실행 환경(<code>APP_ENV</code> 또는 <code>ENVIRONMENT</code>)이 <code>prod</code>가 아닐 것.
+      어기면 <code>InputValidationError</code>(HTTP 422)가 반환됩니다.</p></div>
     </div>
 
     <h3>첫구독 혜택</h3>
