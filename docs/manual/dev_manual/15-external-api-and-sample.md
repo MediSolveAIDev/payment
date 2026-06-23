@@ -807,6 +807,7 @@ cd payment_system && .venv/bin/uvicorn app.main:app --port 8000
 | `VALIDATION_ERROR` | 422 | Pydantic 필드 검증 실패 또는 비즈니스 규칙 위반 | `errors.py:68` |
 | `RATE_LIMITED` | 429 | 분당 요청 한도 초과(일반 120/분, 결제 20/분) | `errors.py:79` |
 | `PAYMENT_FAILED` | 402 | 토스 결제 승인 실패 | `errors.py:89` |
+| `TOSS_KEY_NOT_CONFIGURED` | 422 | 서비스에 토스 시크릿 키 미설정 — 결제 불가 | `errors.py:112` |
 | `SERVER_DISABLED` | 503 | 킬스위치 — 어드민에서 서버 비활성화됨 | `errors.py:100` |
 | `DOMAIN_ERROR` | 400 | 기타 비즈니스 규칙 위반 | `errors.py:10` |
 | `INTERNAL_ERROR` | 500 | 예상하지 못한 서버 오류 | `errors.py:47-52` |

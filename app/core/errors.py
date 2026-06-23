@@ -107,3 +107,18 @@ class ServerDisabledError(DomainError):
 
     code = "SERVER_DISABLED"
     http_status = 503
+
+
+class TossKeyNotConfiguredError(DomainError):
+    """서비스에 toss_secret_key가 설정되지 않아 토스 호출을 할 수 없음 (HTTP 422).
+
+    서비스별 키 체계에서 키 미등록 서비스의 결제·승인·갱신을 명확히 거부한다.
+    TossClientProvider.for_service()가 toss_secret_key_encrypted 가 비어 있을 때 발생시킨다.
+    """
+
+    code = "TOSS_KEY_NOT_CONFIGURED"
+    http_status = 422
+
+    def __init__(self, message: str = "서비스에 토스 시크릿 키가 설정되지 않았습니다") -> None:
+        # 상위 DomainError.__init__에 message를 전달하고 self.message를 설정한다.
+        super().__init__(message)
