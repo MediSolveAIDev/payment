@@ -32,8 +32,8 @@
 
 - 페이지 제목: **결제 관리 로그인**
 - **오류 메시지 영역** (`.error`): 인증 실패·계정 잠금·비활성화 등 오류 발생 시 폼 상단에 표시됩니다.
-- **개발 모드 안내 배너** (`.notice`): `environment != "prod"` 환경에서만 표시되며 "개발 모드 — 로그인 정보가 자동 입력되었습니다." 문구가 나타납니다.
-- **이메일 입력** (`<input type="email" name="email">`): 운영(prod)에서는 비어 있습니다. 개발 환경에서는 설정값으로 미리 채워집니다.
+- **개발 모드 안내 배너** (`.notice`): `environment == "dev"`(로컬 개발)에서만 표시되며 "개발 모드 — 로그인 정보가 자동 입력되었습니다." 문구가 나타납니다. 스테이징(stg)·운영(prod)에서는 표시되지 않습니다.
+- **이메일 입력** (`<input type="email" name="email">`): 로컬 개발(dev)에서만 설정값으로 미리 채워지고, 스테이징(stg)·운영(prod)에서는 비어 있습니다.
 - **비밀번호 입력** (`<input type="password" name="password">`): 눈 아이콘 버튼(`.eye-btn`)으로 평문 표시 토글이 가능합니다.
 - **로그인 버튼**: 폼 전체 너비 `btn btn-primary`. 클릭 시 `POST /admin/login`으로 제출됩니다.
 - htmx 비동기 없음 — 일반 폼 `method="post"` 제출 방식입니다.
@@ -157,7 +157,7 @@
 
 ### 4-6. 개발 환경 자동입력 (`app/admin/routes/auth.py:31–34`)
 
-`settings.environment != "prod"` 조건으로 개발 환경에서만 `dev_login_email` / `dev_login_password`가 폼에 채워집니다. 운영 환경에서는 절대 채워지지 않습니다.
+`settings.environment == "dev"` 조건으로 **로컬 개발에서만** `dev_login_email` / `dev_login_password`가 폼에 채워집니다. 스테이징(stg)·운영(prod) 등 외부에 노출되는 환경에서는 자격증명이 화면에 보이지 않도록 절대 채워지지 않습니다.
 
 ### 4-7. htmx 연동
 

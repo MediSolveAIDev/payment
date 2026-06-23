@@ -139,7 +139,8 @@ class Settings(BaseSettings):
     # 비워두면(기본) docs는 비활성화(404)된다.
     swagger_id: str = ""
     swagger_pw: str = ""
-    # 개발 편의: 로그인 폼 기본값 자동 채움. environment != prod 일 때만 노출된다.
+    # 개발 편의: 로그인 폼 기본값 자동 채움. 로컬 개발(environment == "dev")에서만 노출되며
+    # stg·prod 등 외부 노출 환경에서는 채우지 않는다(자격증명 화면 노출 방지).
     dev_login_email: str = ""
     dev_login_password: str = ""
     # Gmail SMTP 발송(요청 003). 앱 비밀번호 사용. 둘 다 설정 시 실제 발송.

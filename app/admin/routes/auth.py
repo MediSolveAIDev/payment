@@ -46,12 +46,13 @@ async def _login_rate_limited(redis: Redis, ip: str) -> bool:
 async def login_page(request: Request, settings: Settings = Depends(get_settings)):
     """로그인 폼 렌더.
 
-    개발 환경(environment != "prod")에서는 설정의 dev_login_email / dev_login_password로
+    로컬 개발(environment == "dev")에서만 설정의 dev_login_email / dev_login_password로
     입력 필드를 미리 채워 개발 편의를 돕는다.
-    운영 환경에서는 절대 기본값을 채우지 않는다(보안 사고 방지).
+    스테이징(stg)·운영(prod) 등 그 외 환경에서는 절대 기본값을 채우지 않는다
+    (외부에 노출되는 환경에서 자격증명이 화면에 보이지 않도록 보안 사고 방지).
     """
-    # 운영(prod)에서는 절대 기본값을 채우지 않는다.
-    dev = settings.environment != "prod"
+    # 로컬 개발(dev)에서만 자동입력. stg·prod 등은 제외한다.
+    dev = settings.environment == "dev"
     return render(request, "login.html", error=None,
                   prefill_email=settings.dev_login_email if dev else "",
                   prefill_password=settings.dev_login_password if dev else "")

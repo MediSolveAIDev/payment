@@ -459,7 +459,7 @@ uv run uvicorn app.main:app --reload  # http://localhost:8000/admin</code></pre>
           <tr><td><code>GMAIL_ID</code> · <code>GMAIL_PW</code></td><td>(빈값)</td><td>둘 다 설정 시 Gmail SMTP로 <strong>실제 발송</strong>(앱 비밀번호). 비우면 메일 내용을 로그 출력.</td></tr>
           <tr><td><code>SMTP_HOST</code> · <code>SMTP_PORT</code></td><td><code>smtp.gmail.com</code> · <code>587</code></td><td>SMTP 서버·포트.</td></tr>
           <tr><td><code>MAIL_FROM_NAME</code></td><td><code>결제시스템</code></td><td>보내는 사람 표시 이름.</td></tr>
-          <tr><td><code>DEV_LOGIN_EMAIL</code> · <code>DEV_LOGIN_PASSWORD</code></td><td>(빈값)</td><td>로그인 폼 기본값 자동 채움. <code>prod</code>에서는 무시.</td></tr>
+          <tr><td><code>DEV_LOGIN_EMAIL</code> · <code>DEV_LOGIN_PASSWORD</code></td><td>(빈값)</td><td>로그인 폼 기본값 자동 채움. 로컬 개발(<code>dev</code>)에서만 적용되고 <code>stg</code>·<code>prod</code>에서는 무시.</td></tr>
         </tbody>
       </table>
     </div>

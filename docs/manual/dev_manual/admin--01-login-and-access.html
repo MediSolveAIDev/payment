@@ -124,8 +124,8 @@
 <ul>
 <li>페이지 제목: <strong>결제 관리 로그인</strong></li>
 <li><strong>오류 메시지 영역</strong> (<code>.error</code>): 인증 실패·계정 잠금·비활성화 등 오류 발생 시 폼 상단에 표시됩니다.</li>
-<li><strong>개발 모드 안내 배너</strong> (<code>.notice</code>): <code>environment != "prod"</code> 환경에서만 표시되며 "개발 모드 — 로그인 정보가 자동 입력되었습니다." 문구가 나타납니다.</li>
-<li><strong>이메일 입력</strong> (<code>&lt;input type="email" name="email"&gt;</code>): 운영(prod)에서는 비어 있습니다. 개발 환경에서는 설정값으로 미리 채워집니다.</li>
+<li><strong>개발 모드 안내 배너</strong> (<code>.notice</code>): <code>environment == "dev"</code>(로컬 개발)에서만 표시되며 "개발 모드 — 로그인 정보가 자동 입력되었습니다." 문구가 나타납니다. 스테이징(stg)·운영(prod)에서는 표시되지 않습니다.</li>
+<li><strong>이메일 입력</strong> (<code>&lt;input type="email" name="email"&gt;</code>): 로컬 개발(dev)에서만 설정값으로 미리 채워지고, 스테이징(stg)·운영(prod)에서는 비어 있습니다.</li>
 <li><strong>비밀번호 입력</strong> (<code>&lt;input type="password" name="password"&gt;</code>): 눈 아이콘 버튼(<code>.eye-btn</code>)으로 평문 표시 토글이 가능합니다.</li>
 <li><strong>로그인 버튼</strong>: 폼 전체 너비 <code>btn btn-primary</code>. 클릭 시 <code>POST /admin/login</code>으로 제출됩니다.</li>
 <li>htmx 비동기 없음 — 일반 폼 <code>method="post"</code> 제출 방식입니다.</li>
@@ -436,7 +436,7 @@
 </tbody>
 </table>
 <h3 id="4-6-appadminroutesauthpy3134">4-6. 개발 환경 자동입력 (<code>app/admin/routes/auth.py:31–34</code>)</h3>
-<p><code>settings.environment != "prod"</code> 조건으로 개발 환경에서만 <code>dev_login_email</code> / <code>dev_login_password</code>가 폼에 채워집니다. 운영 환경에서는 절대 채워지지 않습니다.</p>
+<p><code>settings.environment == "dev"</code> 조건으로 <strong>로컬 개발에서만</strong> <code>dev_login_email</code> / <code>dev_login_password</code>가 폼에 채워집니다. 스테이징(stg)·운영(prod) 등 외부에 노출되는 환경에서는 자격증명이 화면에 보이지 않도록 절대 채워지지 않습니다.</p>
 <h3 id="4-7-htmx">4-7. htmx 연동</h3>
 <p>로그인·로그아웃·비밀번호 설정 화면은 <strong>htmx를 사용하지 않습니다</strong> — 모두 일반 HTML <code>&lt;form method="post"&gt;</code> 제출입니다.</p>
 <p>단, 로그인이 필요한 경로를 htmx 요청(HX-Request 헤더 포함)으로 호출할 때 세션이 없으면 303 리다이렉트 대신 <code>HX-Redirect</code> 헤더(204 No Content)로 응답합니다(<code class="loc">app/admin/deps.py:118</code>). 이를 받은 htmx가 클라이언트 측에서 전체 페이지 이동을 수행합니다.</p>
