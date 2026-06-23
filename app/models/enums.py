@@ -29,12 +29,16 @@ class UserStatus(StrEnum):
 
 
 class BillingCycle(StrEnum):
-    """요금제 결제 주기. DAY 선택 시 Plan.cycle_days에 원하는 일수를 함께 지정."""
+    """요금제 결제 주기. DAY 선택 시 Plan.cycle_days, MINUTE 선택 시 Plan.cycle_minutes(5 이상)를 함께 지정.
 
-    YEAR = "YEAR"    # 연 단위 결제
-    MONTH = "MONTH"  # 월 단위 결제
-    WEEK = "WEEK"    # 주 단위 결제
-    DAY = "DAY"      # 일 단위 결제(cycle_days로 실제 일수 지정)
+    MINUTE는 자동연장 테스트용이며 비운영 환경(environment != prod)에서만 생성 가능하다.
+    """
+
+    YEAR = "YEAR"      # 연 단위 결제
+    MONTH = "MONTH"    # 월 단위 결제
+    WEEK = "WEEK"      # 주 단위 결제
+    DAY = "DAY"        # 일 단위 결제(cycle_days로 실제 일수 지정)
+    MINUTE = "MINUTE"  # 분 단위 결제(cycle_minutes로 실제 분 지정, 최소 5분; 테스트용·비운영 전용)
 
 
 class FirstPaymentType(StrEnum):

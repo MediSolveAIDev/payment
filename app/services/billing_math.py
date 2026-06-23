@@ -36,8 +36,13 @@ from app.core.errors import InputValidationError
 from app.models.enums import BillingCycle, DiscountType, FirstPaymentType
 
 
-def compute_period_end(start: datetime, cycle: str, cycle_days: int | None = None) -> datetime:
-    """구독 기간 종료일 계산. MONTH/YEAR는 월말 클램프(relativedelta)."""
+def compute_period_end(start: datetime, cycle: str, cycle_days: int | None = None,
+                       cycle_minutes: int | None = None) -> datetime:
+    """구독 기간 종료일 계산. MONTH/YEAR는 월말 클램프(relativedelta).
+
+    DAY는 cycle_days(1 이상), MINUTE는 cycle_minutes(5 이상)를 사용한다.
+    MINUTE는 자동연장 테스트용 주기다(비운영 전용 — 생성 검증에서 운영 차단).
+    """
     if cycle == BillingCycle.YEAR:
         return start + relativedelta(years=1)
     if cycle == BillingCycle.MONTH:
@@ -48,6 +53,11 @@ def compute_period_end(start: datetime, cycle: str, cycle_days: int | None = Non
         if not cycle_days or cycle_days < 1:
             raise InputValidationError("DAY 주기는 cycle_days(1 이상)가 필요합니다")
         return start + timedelta(days=cycle_days)
+    if cycle == BillingCycle.MINUTE:
+        # MINUTE 주기: cycle_minutes(분, 최소 5) 만큼 더한다
+        if not cycle_minutes or cycle_minutes < 5:
+            raise InputValidationError("MINUTE 주기는 cycle_minutes(5 이상)가 필요합니다")
+        return start + timedelta(minutes=cycle_minutes)
     raise InputValidationError(f"지원하지 않는 결제 주기입니다: {cycle}")
 
 

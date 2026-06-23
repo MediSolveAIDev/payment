@@ -43,6 +43,17 @@ class TestPeriodEnd:
         with pytest.raises(InputValidationError):
             compute_period_end(dt(2026, 6, 5), "HOUR")
 
+    def test_minute_cycle_adds_minutes(self):
+        # MINUTE 주기: cycle_minutes 분 만큼 더한다
+        assert compute_period_end(dt(2026, 6, 5), "MINUTE", cycle_minutes=5) == datetime(2026, 6, 5, 0, 5, tzinfo=UTC)
+
+    def test_minute_cycle_requires_min_5(self):
+        # cycle_minutes 누락/5 미만이면 오류
+        with pytest.raises(InputValidationError):
+            compute_period_end(dt(2026, 6, 5), "MINUTE", cycle_minutes=None)
+        with pytest.raises(InputValidationError):
+            compute_period_end(dt(2026, 6, 5), "MINUTE", cycle_minutes=4)
+
 
 class TestFirstAmount:
     def test_none_is_full_price(self):
