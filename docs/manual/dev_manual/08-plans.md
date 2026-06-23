@@ -171,7 +171,6 @@ if count:
 | `billing_cycle` | String(10) | `YEAR`/`MONTH`/`WEEK`/`DAY`/`MINUTE` |
 | `cycle_days` | Integer(nullable) | DAY 주기일 때 실제 일수; 나머지는 NULL |
 | `cycle_minutes` | Integer(nullable) | MINUTE 주기일 때 실제 분수(최소 5); 나머지는 NULL |
-| `environment` | String(20) | `PRODUCTION`(기본) / `DEVELOPMENT` / `STAGING`. MINUTE 주기는 비운영 환경(`DEVELOPMENT`·`STAGING`)에서만 생성 가능 |
 | `first_payment_type` | String(20) | 첫구독 할인 유형 (`FirstPaymentType`) |
 | `first_payment_value` | BigInteger(nullable) | 첫구독 할인 값 (원 또는 %) |
 | `recurring_discount_type` | String(20) | 상시 할인 유형 (`DiscountType`) |
@@ -274,7 +273,7 @@ if count:
 | `MONTH` | `start + relativedelta(months=1)` | 월말 클램프(1/31 + 1개월 = 2/28 또는 2/29) |
 | `WEEK` | `start + timedelta(weeks=1)` | 7일 고정 |
 | `DAY` | `start + timedelta(days=cycle_days)` | `cycle_days` 필수 |
-| `MINUTE` | `start + timedelta(minutes=cycle_minutes)` | **자동연장 테스트용, 비운영(개발·스테이징) 환경 전용**, 최소 5분. `cycle_minutes` 필수. 스케줄러 기본 스윕이 5분이므로 그 주기로 갱신됨. 더 빠른 관찰이 필요하면 테스트 환경에서 `scheduler_interval_minutes`를 낮출 것 |
+| `MINUTE` | `start + timedelta(minutes=cycle_minutes)` | **자동연장 테스트용, 비운영 전용**. 서버 실행 환경 `settings.environment`가 `prod`이면 요금제 생성이 거부된다(검증 계층). update(수정)는 기존 MINUTE 요금제를 막지 않는다. 최소 5분(`cycle_minutes` 필수). 스케줄러 기본 스윕이 5분이므로 그 주기로 갱신됨(값: dev/test/prod). 더 빠른 관찰이 필요하면 테스트 환경에서 `scheduler_interval_minutes`를 낮출 것 |
 
 ### 7.5 화면 미리보기 (form.html)
 
@@ -328,7 +327,7 @@ if count:
 | DAY 주기에 cycle_days 없음 | `plans.py:53` | `InputValidationError` | "DAY 주기는 cycle_days(1 이상)가 필요합니다" |
 | MONTH/WEEK/YEAR에 cycle_days 전달 | `plans.py:56` | `InputValidationError` | "cycle_days는 DAY 주기에서만 사용합니다" |
 | MINUTE 주기에 cycle_minutes 없음 또는 5 미만 | `plans.py` | `InputValidationError` | "MINUTE 주기는 cycle_minutes(5 이상)가 필요합니다" |
-| MINUTE 주기를 운영(PRODUCTION) 환경에서 생성 시도 | `plans.py` | `InputValidationError` | "MINUTE 주기는 비운영 환경(개발·스테이징)에서만 사용할 수 있습니다" |
+| MINUTE 주기를 `prod` 환경(`settings.environment == "prod"`)에서 생성 시도 | `plans.py` | `InputValidationError` | "MINUTE 주기는 비운영 환경에서만 사용합니다" |
 | 첫구독 할인율 > 100 | `plans.py:65` | `InputValidationError` | "할인율은 1~100 사이여야 합니다" |
 | 상시 할인에 FREE 시도 | `plans.py:93-99` | `InputValidationError` | "지원하지 않는 상시 할인 유형입니다" |
 | 체험 활성화+일수 없음 | `plans.py:76` | `InputValidationError` | "체험을 사용하려면 체험 일수(1 이상)가 필요합니다" |

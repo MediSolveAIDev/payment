@@ -593,3 +593,44 @@ async def test_minute_subscription_period_end(db, cipher):
     sub = await create_subscription(db, cipher, svc, plan)
     delta = sub.current_period_end - sub.current_period_start
     assert delta.total_seconds() == 5 * 60  # 정확히 5분(300초)
+
+
+async def test_minute_subscription_auto_renew(db, session_factory, redis_client,
+                                              cipher, fake, email):
+    """MINUTE 요금제의 핵심 사용 사례: 자동갱신(process_due) 경로 검증.
+
+    MINUTE 주기 구독의 next_billing_at이 이미 도래했을 때 process_due를 실행하면
+    current_period_end / next_billing_at이 정확히 cycle_minutes(5분) 앞으로 전진해야 한다.
+    이것이 MINUTE 주기를 추가한 근본 이유 — 빠른 자동갱신 사이클 테스트.
+    """
+    svc, _, _ = await create_service(db, cipher)
+    # MINUTE 주기, 5분 단위 요금제 생성 (price=1원: 결제 성공 시 next_billing_at 전진 확인)
+    plan = await create_plan(db, svc, billing_cycle="MINUTE", cycle_minutes=5, price=1000)
+
+    # 이미 만료된 기간을 가진 ACTIVE 구독 생성 (next_billing_at이 과거여야 process_due 대상)
+    period_start = utcnow() - timedelta(minutes=10)
+    period_end = utcnow() - timedelta(minutes=5)  # 5분 전에 만료됨
+    sub = await _sub_with_card(
+        db, fake, cipher, svc, plan,
+        external_user_id="u-minute-renew",
+        period_start=period_start,
+        period_end=period_end,
+        next_billing_at=period_end,   # 만료 시점 = 갱신 대상
+    )
+    old_period_end = sub.current_period_end  # 갱신 전 종료일 저장
+
+    # 자동갱신 실행
+    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+
+    assert stats["renewed"] == 1, f"갱신 실패: stats={stats}"
+    await db.refresh(sub)
+
+    # 핵심 검증: 새 기간이 정확히 5분(cycle_minutes) 앞으로 전진했는가
+    expected_new_period_end = old_period_end + timedelta(minutes=5)
+    assert sub.current_period_start == old_period_end, "기간 연속성 깨짐: 새 시작이 이전 종료와 다름"
+    assert sub.current_period_end == expected_new_period_end, (
+        f"MINUTE 주기 갱신 오류: 예상 {expected_new_period_end}, 실제 {sub.current_period_end}"
+    )
+    assert sub.next_billing_at == sub.current_period_end, "next_billing_at이 새 period_end와 불일치"
+    assert sub.status == "ACTIVE"
+    assert fake.charges[0]["amount"] == 1000
