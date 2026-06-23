@@ -30,7 +30,7 @@
 
 - **검색 입력란**: placeholder "행위자·대상·상세 검색". `q` 파라미터로 전달된다.
 - **행위자 유형 필터** (`actor_type`): 전체 행위자 / 관리자(`USER`) / 외부 서비스(`SERVICE`) / 시스템(`SYSTEM`)
-- **활동 유형 필터** (`action`): 전체 활동 + `ACTION_LABELS`에 정의된 57개 한글 항목 (`app/admin/audit_labels.py`, line 3-57)
+- **활동 유형 필터** (`action`): 전체 활동 + `ACTION_LABELS`에 정의된 64개 한글 항목 (`app/admin/audit_labels.py`, line 3-70) — 서비스별 토스 시크릿 키 설정/변경(`service.toss_secret_key.set`/`.changed`) 포함
 - **엑셀 내보내기 버튼**: 현재 필터·검색을 그대로 유지하여 `/admin/audit/export.xlsx`로 이동
 
 ### 테이블 컬럼
@@ -41,7 +41,7 @@
 |------|------|------|
 | **시각** | 정렬 가능(`created_at`) | KST `YYYY-MM-DD HH:MM:SS` 형식으로 표시. 저장은 UTC. |
 | **행위자** | 정렬 가능(`actor_type`) | USER이면 이메일, SERVICE이면 "외부 서비스 (서비스명)" 링크, SYSTEM이면 "시스템" |
-| **활동** | 정렬 가능(`action`) | `ACTION_LABELS` 한글 변환값 (`audit_labels.py`, `action_label()`, line 74-75). 미등록 코드는 원문 그대로 표시. |
+| **활동** | 정렬 가능(`action`) | `ACTION_LABELS` 한글 변환값 (`audit_labels.py`, `action_label()`, line 131). 미등록 코드는 원문 그대로 표시. |
 | **대상** | 정렬 불가 | `target_type` + 이름(서비스명/요금제명/이메일/external_user_id). `target_label()` (`audit_labels.py`, line 84-88) |
 | **상세** | 정렬 불가 | `detail` JSONB를 `detail_summary()`로 요약 (`audit_labels.py`). 설정·요금제 등 **값이 바뀌는 동작은 "라벨 변경전 → 변경후"로 표시** (아래 참조) |
 | **IP** | 정렬 불가 | 요청 출처 IPv4/IPv6 (없으면 `-`) |
@@ -295,7 +295,7 @@ async def record_audit(db, *, actor_type, action,
 
 | 심볼 | 라인 | 역할 |
 |------|------|------|
-| `ACTION_LABELS` | `audit_labels.py:3` | action 코드 → 한글 (57개 항목) |
+| `ACTION_LABELS` | `audit_labels.py:3` | action 코드 → 한글 (64개 항목) |
 | `ACTOR_TYPE_LABELS` | `audit_labels.py:59` | `USER`/`SERVICE`/`SYSTEM` → 한글 |
 | `TARGET_TYPE_LABELS` | `audit_labels.py:60` | target_type → 한글 |
 | `_DETAIL_FIELDS` | `audit_labels.py:66` | detail 키 → 화면 요약 라벨 맵 |
@@ -319,7 +319,7 @@ async def record_audit(db, *, actor_type, action,
 ### 개발자
 
 - **`record_audit`은 commit하지 않는다**: `app/services/audit.py:3-6`. 비즈니스 로직과 같은 트랜잭션 안에서 호출해야 원자성이 보장된다. 별도 트랜잭션에서 단독 commit하면 비즈니스 로직 롤백 후에도 감사 기록만 남는 문제가 생긴다.
-- **새 action 추가 시 `ACTION_LABELS` 등록**: `app/admin/audit_labels.py:3-57`. 등록하지 않으면 화면에 코드 원문이 표시되고 활동 필터 드롭다운에도 나타나지 않는다.
+- **새 action 추가 시 `ACTION_LABELS` 등록**: `app/admin/audit_labels.py:3-70`. 등록하지 않으면 화면에 코드 원문이 표시되고 활동 필터 드롭다운에도 나타나지 않는다.
 - **`detail` JSONB 키 추가 시 `_DETAIL_FIELDS` 검토**: 화면 요약에 표시할 키는 `audit_labels.py:66-71`에 추가한다.
 - **`_TARGET_TABLE` 맵**: `target_type` 값 추가 시 `audit.py:89-90` 맵도 함께 확장해야 `_resolve_names`가 이름을 조회한다.
 - **CSRF 검증**: `POST /audit/purge`는 `validate_csrf(request, ctx)` 로 검증(`audit.py:177`). form에 `<input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">` 필수.
