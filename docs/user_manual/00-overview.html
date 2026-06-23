@@ -99,27 +99,28 @@
 </div></blockquote>
 <hr />
 <h2 id="0-2">0-2. 전체 프로세스 그림 — 서비스 입장에서</h2>
-<p>신규 서비스를 붙이고 실제 구독·결제가 도는 전체 흐름입니다. 앞쪽(1~4)은 <strong>관리자/담당자가 콘솔에서</strong> 준비하는 단계이고, 뒤쪽(5~8)은 <strong>외부 서비스가 API로</strong> 실제 사용자를 처리하는 단계입니다.</p>
+<p>신규 서비스를 붙이고 실제 구독·결제가 도는 전체 흐름입니다. 앞쪽(1~5)은 <strong>관리자/담당자가 콘솔에서</strong> 준비하는 단계이고, 뒤쪽(6~9)은 <strong>외부 서비스가 API로</strong> 실제 사용자를 처리하는 단계입니다.</p>
 <div class="flow">
   <div class="flow-step"><span class="fn">1</span><b>서비스 등록</b><span>시스템 관리자가 사내 서비스를 콘솔에 등록(서비스명·허용 IP·담당자·취소정책).</span></div>
   <div class="flow-step"><span class="fn">2</span><b>API 키 발급·전달</b><span>등록 직후 API 키·HMAC 시크릿이 1회만 표시 → 안전하게 복사해 담당 개발자에게 전달.</span></div>
-  <div class="flow-step"><span class="fn">3</span><b>담당자 로그인</b><span>서비스 담당자(SERVICE_MANAGER)가 콘솔에 로그인해 자기 서비스를 관리.</span></div>
-  <div class="flow-step"><span class="fn">4</span><b>요금제 생성</b><span>가격·결제주기(년/월/주/일)·첫구독 혜택·체험·자동결제 여부를 정해 활성(ACTIVE) 요금제 생성.</span></div>
-  <div class="flow-step"><span class="fn">5</span><b>카드 등록</b><span>외부 서비스에서 사용자 카드(빌링키)를 먼저 등록. 구독·결제 전 필수.</span></div>
-  <div class="flow-step"><span class="fn">6</span><b>구독 요청·처리</b><span>외부 서비스가 구독을 요청 → 서버가 등록 카드로 첫 결제(또는 체험) 처리, 구독 생성.</span></div>
-  <div class="flow-step"><span class="fn">7</span><b>자동 연장</b><span>만료일이 되면 스케줄러가 등록 카드로 자동결제해 구독을 연장. 실패 시 재시도·미수 처리.</span></div>
-  <div class="flow-step"><span class="fn">8</span><b>정산·대시보드·알림</b><span>결제 결과를 정산·대시보드로 집계하고, 상태 변화는 서비스 알림으로 통지.</span></div>
+  <div class="flow-step"><span class="fn">3</span><b>토스 시크릿 키 등록</b><span>시스템 관리자가 그 서비스의 <b>토스 시크릿 키</b>를 등록(서비스마다 다름, AES 암호화 저장). 등록·수정 폼에서 입력하며, <b>미등록이면 결제가 거부</b>(TOSS_KEY_NOT_CONFIGURED)된다.</span></div>
+  <div class="flow-step"><span class="fn">4</span><b>담당자 로그인</b><span>서비스 담당자(SERVICE_MANAGER)가 콘솔에 로그인해 자기 서비스를 관리.</span></div>
+  <div class="flow-step"><span class="fn">5</span><b>요금제 생성</b><span>가격·결제주기(년/월/주/일)·첫구독 혜택·체험·자동결제 여부를 정해 활성(ACTIVE) 요금제 생성.</span></div>
+  <div class="flow-step"><span class="fn">6</span><b>카드 등록</b><span>외부 서비스에서 사용자 카드(빌링키)를 먼저 등록. 구독·결제 전 필수.</span></div>
+  <div class="flow-step"><span class="fn">7</span><b>구독 요청·처리</b><span>외부 서비스가 구독을 요청 → 서버가 등록 카드로 첫 결제(또는 체험) 처리, 구독 생성.</span></div>
+  <div class="flow-step"><span class="fn">8</span><b>자동 연장</b><span>만료일이 되면 스케줄러가 등록 카드로 자동결제해 구독을 연장. 실패 시 재시도·미수 처리.</span></div>
+  <div class="flow-step"><span class="fn">9</span><b>정산·대시보드·알림</b><span>결제 결과를 정산·대시보드로 집계하고, 상태 변화는 서비스 알림으로 통지.</span></div>
 </div>
 
 <blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
-<p>쉽게 말하면 <strong>1~4는 "가게를 여는 준비"</strong>(서비스·요금제 세팅), <strong>5~8은 "손님이 와서 결제하고 매달 자동결제되는 일상"</strong>입니다.</p>
-<p>함께 보기: 1~4단계를 순서대로 따라 하려면 <a href="01-admin-console.html">관리자 콘솔 시작</a>과 <a href="04-admin-plan.html">요금제 관리</a>를, 5~8단계의 API 연동은 <a href="11-service-api.html">서비스 API 연동</a>을 보세요.</p>
+<p>쉽게 말하면 <strong>1~5는 "가게를 여는 준비"</strong>(서비스·토스 키·요금제 세팅), <strong>6~9는 "손님이 와서 결제하고 매달 자동결제되는 일상"</strong>입니다.</p>
+<p>함께 보기: 1~5단계를 순서대로 따라 하려면 <a href="01-admin-console.html">관리자 콘솔 시작</a>과 <a href="04-admin-plan.html">요금제 관리</a>를, 6~9단계의 API 연동은 <a href="11-service-api.html">서비스 API 연동</a>을 보세요.</p>
 </div></blockquote>
 <h3 id="_1">(개발자용) 서비스가 실제로 호출하는 순서 — 연동 시퀀스</h3>
 <blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
 <p>참고(개발자용): 아래 시퀀스 다이어그램과 엔드포인트(<code>POST /api/v1/...</code>)·HMAC·웹훅은 <strong>연동 개발자</strong>를 위한 내용입니다. 콘솔에서 운영·관리만 한다면 건너뛰고 아래 <strong>0-3 핵심 개념</strong>으로 가도 됩니다. 실제 연동은 <a href="11-service-api.html">서비스 API 연동</a>에서 자세히 다룹니다.</p>
 </div></blockquote>
-<p>준비(1~4)가 끝났다면, <strong>외부 서비스(앱)가 API로</strong> 어떤 순서로 호출하는지를 그림으로 나타내면 다음과 같습니다. 화살표는 "누가 누구를 호출하는지"이며, <strong>파란색</strong>은 서비스가 결제 서버를 호출하는 부분입니다.</p>
+<p>준비(1~5)가 끝났다면, <strong>외부 서비스(앱)가 API로</strong> 어떤 순서로 호출하는지를 그림으로 나타내면 다음과 같습니다. 화살표는 "누가 누구를 호출하는지"이며, <strong>파란색</strong>은 서비스가 결제 서버를 호출하는 부분입니다.</p>
 <div class="seqwrap" role="img" aria-label="서비스 입장 연동 시퀀스: 카드 등록 → 구독 → 자동연장 → 알림">
 <svg viewBox="0 0 760 532" xmlns="http://www.w3.org/2000/svg">
   <defs>

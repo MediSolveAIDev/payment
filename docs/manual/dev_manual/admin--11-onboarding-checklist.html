@@ -80,6 +80,7 @@
 <li>[ ] <strong>구독/결제 담당자 이메일</strong> (로그인 계정이 됨, 1명 이상 — 대표 담당자 1명 지정)</li>
 <li>[ ] <strong>API를 호출할 서버의 공인 IP</strong> (IPv4, 1개 이상 — 허용 IP 화이트리스트)</li>
 <li>[ ] <strong>일반(단건) 결제 취소 정책</strong> — 취소 허용 여부 / 취소 수수료율(0~100%)</li>
+<li>[ ] <strong>토스 시크릿 키</strong> (그 서비스용 — 토스 상점관리자에서 발급한 시크릿 키. 서비스마다 다름)</li>
 <li>[ ] <strong>요금제 안</strong> — 요금제명, 가격, 결제주기(년/월/주/일), 첫구독 할인·무료, 상시 할인, 체험 제공 여부, 자동결제 여부</li>
 </ul>
 <hr />
@@ -102,8 +103,12 @@
 <li>[ ] <strong>허용 IP</strong> (옥텟 4칸·숫자만, 행 추가로 여러 개 — 1개 이상 필수)</li>
 <li>[ ] <strong>담당자 선택</strong> + <strong>대표 담당자 지정</strong>(대표 = 알림 수신처)</li>
 <li>[ ] <strong>취소 정책</strong>: 취소 허용 체크 / 취소 수수료율(%)</li>
+<li>[ ] <strong>토스 시크릿 키</strong>(서비스별, 선택) — 입력하면 AES 암호화 저장(쓰기 전용, 이후 재표시 안 됨). 지금 비워두고 <strong>나중에 서비스 상세에서 설정/교체</strong>해도 됨</li>
 <li>[ ] 등록을 누르면 <strong>키 발급 화면</strong>으로 이동</li>
 </ul>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>중요: 결제가 동작하려면 <strong>그 서비스의 토스 시크릿 키가 반드시 등록</strong>돼 있어야 합니다(서비스마다 다름). 미등록 서비스는 결제·구독 첫 결제·자동연장이 <code>TOSS_KEY_NOT_CONFIGURED</code>(422)로 거부됩니다. 등록 폼에서 바로 넣거나, 등록 후 <strong>서비스 상세 → "토스 시크릿 키"</strong> 에서 설정하세요. (전역 <code>TOSS_SECRET_KEY</code> 환경변수는 제거됨 — 2026-06-23)</p>
+</div></blockquote>
 <hr />
 <h2 id="3-1-03-servicesmd">3단계 — 키 발급·전달 (1회성, 중요)  [→ 03-services.md]</h2>
 <ul>
