@@ -33,13 +33,14 @@ async def create_service(db, cipher: AesGcmCipher, *, name=None,
 
 
 async def create_plan(db, service, *, name="기본 요금제", price=10000,
-                      billing_cycle="MONTH", cycle_days=None,
+                      billing_cycle="MONTH", cycle_days=None, cycle_minutes=None,  # cycle_minutes: MINUTE 주기 요금제용
                       first_payment_type="NONE", first_payment_value=None,
                       recurring_discount_type="NONE", recurring_discount_value=None,
                       status="ACTIVE", trial_enabled=False, trial_days=None,
                       auto_renew=True, extra_info=None):  # 자동결제 여부·추가정보(요청 013)
     plan = Plan(service_id=service.id, name=name, price=price,
                 billing_cycle=billing_cycle, cycle_days=cycle_days,
+                cycle_minutes=cycle_minutes,                        # MINUTE 주기일 때 실제 분 수(Task 2)
                 first_payment_type=first_payment_type,
                 first_payment_value=first_payment_value,
                 recurring_discount_type=recurring_discount_type,

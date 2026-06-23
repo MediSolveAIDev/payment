@@ -31,6 +31,7 @@ class Plan(TimestampMixin, Base):
     currency: Mapped[str] = mapped_column(String(3), default="KRW")  # 통화 코드(현재 KRW만 사용)
     billing_cycle: Mapped[str] = mapped_column(String(10))           # BillingCycle enum 값(YEAR/MONTH/WEEK/DAY)
     cycle_days: Mapped[int | None] = mapped_column(Integer, nullable=True)  # DAY 주기일 때 실제 일수; 나머지는 NULL
+    cycle_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)  # MINUTE 주기일 때 실제 분(5 이상); 나머지는 NULL. 테스트용·비운영 전용
     first_payment_type: Mapped[str] = mapped_column(String(20), default=FirstPaymentType.NONE)      # 첫 결제 혜택 유형
     first_payment_value: Mapped[int | None] = mapped_column(BigInteger, nullable=True)              # 첫 결제 할인 값(원 또는 %)
     # 상시 할인(요청 003): 모든 정기 결제에 적용. 첫 결제는 첫구독 할인과 중첩.
