@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=_env_files(), env_file_encoding="utf-8", extra="ignore")
 
-    environment: Literal["dev", "test", "prod"] = "dev"
+    environment: Literal["dev", "test", "prod" , "stg"] = "dev"
     # 이메일 내 링크 생성 등에 사용되는 서버 공개 URL.
     base_url: str = "http://localhost:8000"
     # asyncpg 드라이버를 사용하는 비동기 PostgreSQL 연결 문자열.
