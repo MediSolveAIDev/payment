@@ -1,4 +1,34 @@
+from types import SimpleNamespace
+
+from app.admin import receipt_url
 from app.admin.routes.services import _parse_ips
+
+
+def _pay(raw):
+    # raw_response만 가진 가짜 결제 객체
+    return SimpleNamespace(raw_response=raw)
+
+
+def test_receipt_url_present():
+    assert receipt_url(_pay({"receipt": {"url": "https://dashboard.tosspayments.com/receipt/abc"}})) \
+        == "https://dashboard.tosspayments.com/receipt/abc"
+
+
+def test_receipt_url_missing_receipt():
+    assert receipt_url(_pay({"approvedAt": "2026-06-23"})) is None
+
+
+def test_receipt_url_receipt_without_url():
+    assert receipt_url(_pay({"receipt": {}})) is None
+
+
+def test_receipt_url_none_raw():
+    assert receipt_url(_pay(None)) is None
+
+
+def test_receipt_url_non_string_url():
+    # url 값이 문자열이 아니면 None (방어)
+    assert receipt_url(_pay({"receipt": {"url": 123}})) is None
 
 
 def test_parse_ips_newline_separated():

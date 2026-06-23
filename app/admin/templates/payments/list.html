@@ -21,6 +21,7 @@
     {{ L.sort_th(pp, '/admin/payments', 'status', '상태') }}
     <th>실패 코드</th>
     {{ L.sort_th(pp, '/admin/payments', 'requested_at', '요청 시각') }}
+    <th>매출전표</th>
   </tr></thead>
   <tbody>
   {% for p, sub, svc in page.items %}
@@ -40,9 +41,11 @@
       {# 실패 코드 — 마우스 올리면 의미 툴팁(코드 의미 맵 → 없으면 저장된 메시지) #}
       <td class="muted">{% if p.failure_code %}<span class="code-tip" data-tip="{{ payment_error_meaning(p.failure_code) or p.failure_message or p.failure_code }}">{{ p.failure_code }}</span>{% else %}-{% endif %}</td>
       <td class="muted">{{ p.requested_at|kst("%Y-%m-%d %H:%M") }}</td>
+      {# 매출전표(영수증) — 저장된 raw_response.receipt.url이 있으면 새 탭 링크, 없으면 - #}
+      <td class="muted">{% set rurl = receipt_url(p) %}{% if rurl %}<a href="{{ rurl }}" target="_blank" rel="noopener">매출전표</a>{% else %}-{% endif %}</td>
     </tr>
   {% else %}
-    <tr><td colspan="9" class="muted">결제 이력이 없습니다</td></tr>
+    <tr><td colspan="10" class="muted">결제 이력이 없습니다</td></tr>
   {% endfor %}
   </tbody>
 </table>

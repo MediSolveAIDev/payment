@@ -29,6 +29,27 @@ _SUB_STATUS_KO = {"TRIAL": "체험", "ACTIVE": "활성", "PAST_DUE": "미수",
 templates.env.globals["sub_status_ko"] = lambda s: _SUB_STATUS_KO.get(s, s)
 
 
+def receipt_url(payment) -> str | None:
+    """결제의 토스 매출전표(영수증) URL을 반환한다(없으면 None).
+
+    승인 시 저장한 raw_response의 receipt.url을 안전하게 읽는다(토스 Payment 객체의
+    receipt.url = 카드결제 매출전표 링크). 카드결제(DONE)면 보통 존재하고,
+    실패·대기·과거 미보유 건은 None이다. 어드민 결제 목록 링크 전용.
+    """
+    raw = getattr(payment, "raw_response", None)
+    if not isinstance(raw, dict):
+        return None
+    receipt = raw.get("receipt")
+    if not isinstance(receipt, dict):
+        return None
+    url = receipt.get("url")
+    return url if isinstance(url, str) and url else None
+
+
+# 매출전표(영수증) 링크. 사용: {{ receipt_url(p) }} (어드민 결제 목록)
+templates.env.globals["receipt_url"] = receipt_url
+
+
 def _asset_version() -> str:
     """정적 파일 캐시버스팅 버전 — admin.css/js의 최신 mtime 정수.
 
