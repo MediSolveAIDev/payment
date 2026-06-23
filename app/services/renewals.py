@@ -47,8 +47,9 @@ from app.services.locks import (
 )
 from app.services.payment_utils import resolve_charge
 from app.services.transitions import transition
-from app.toss.client import TossClient
 from app.toss.errors import TossError, TossTimeoutError
+from app.toss.provider import TossClientProvider  # 서비스별 토스 클라이언트 해석기 (Task 6)
+from app.core.errors import TossKeyNotConfiguredError  # 키 미설정 → per-sub 결제 실패 처리 (Task 6)
 
 logger = logging.getLogger("payment.renewals")
 
@@ -131,7 +132,8 @@ def _advance_period(sub: Subscription, plan: Plan) -> None:
         sub.next_billing_at = None
 
 
-async def process_due(session_factory: async_sessionmaker, redis: Redis, toss: TossClient,
+async def process_due(session_factory: async_sessionmaker, redis: Redis,
+                      toss_provider: TossClientProvider,
                       cipher: AesGcmCipher, email_sender: EmailSender,
                       *, now: datetime | None = None, notifier=None) -> dict:
     """갱신 배치 1회 실행. 스케줄러/관리 명령에서 호출.
@@ -154,6 +156,8 @@ async def process_due(session_factory: async_sessionmaker, redis: Redis, toss: T
     3. reconcile_pending으로 유예 경과 PENDING 결제 정산
     4. stats 딕셔너리 반환 (renewed/failed/suspended/expired/skipped/unresolved/errors)
 
+    toss_provider: 서비스별 토스 클라이언트 해석기 (Task 6). 실제 토스 호출 직전에
+    toss_provider.for_service(service)로 서비스별 클라이언트를 생성한다.
     now를 파라미터로 받는 이유: 테스트에서 시간을 주입하기 위함.
     """
     now = now or utcnow()
@@ -194,18 +198,19 @@ async def process_due(session_factory: async_sessionmaker, redis: Redis, toss: T
                            name, BATCH_LIMIT)
 
     # 카테고리별 처리 함수에 공통 인자를 미리 바인딩 — 작업 항목은 sub_id 하나만 남긴다.
+    # toss → toss_provider로 전환 (Task 6): 실제 토스 호출 직전에 for_service()로 해석한다.
     handlers = {
         "취소 만료": (canceled_due, partial(
-            _expire_canceled, session_factory, redis, toss, cipher,
+            _expire_canceled, session_factory, redis, toss_provider, cipher,
             now=now, stats=stats, notifier=notifier)),
         "정지 만료": (suspended_due, partial(
-            _expire_suspended, session_factory, redis, toss, cipher,
+            _expire_suspended, session_factory, redis, toss_provider, cipher,
             now=now, cfg=cfg, stats=stats, notifier=notifier)),
         "갱신": (renew_due, partial(
-            _renew_one, session_factory, redis, toss, cipher, email_sender,
+            _renew_one, session_factory, redis, toss_provider, cipher, email_sender,
             now=now, cfg=cfg, stats=stats, notifier=notifier)),
         "비자동갱신 만료": (non_renewing_due, partial(
-            _expire_non_renewing, session_factory, redis, toss, cipher,
+            _expire_non_renewing, session_factory, redis, toss_provider, cipher,
             now=now, stats=stats, notifier=notifier)),
     }
     sem = asyncio.Semaphore(BATCH_CONCURRENCY)
@@ -227,12 +232,13 @@ async def process_due(session_factory: async_sessionmaker, redis: Redis, toss: T
         for label, (ids, handler) in handlers.items()
         for sub_id in ids))
     from app.services.reconciliation import reconcile_pending
-    await reconcile_pending(session_factory, redis, toss, cipher, email_sender,
+    # toss_provider를 그대로 전달 — reconcile_pending도 서비스별 클라이언트로 전환 (Task 6)
+    await reconcile_pending(session_factory, redis, toss_provider, cipher, email_sender,
                             now=now, stats=stats)
     return stats
 
 
-async def _expire_subscription(session_factory, redis, toss, cipher, sub_id: uuid.UUID,
+async def _expire_subscription(session_factory, redis, toss_provider, cipher, sub_id: uuid.UUID,
                                *, reason: str, should_expire: Callable[[Subscription], bool],
                                stats: dict, notifier=None) -> None:
     """구독을 EXPIRED로 종료 — 정지/취소 만료 공통 로직.
@@ -243,6 +249,7 @@ async def _expire_subscription(session_factory, redis, toss, cipher, sub_id: uui
     소유한다 — 카드는 영속적 자원이며 삭제는 delete_card(활성 구독 차단 규칙 포함)가
     전담한다. 따라서 구독 만료 시 빌링키를 삭제하지 않는다(카드는 그대로 보존).
     감사 detail.reason은 호출 경위(suspended_timeout / canceled_period_end)를 기록한다.
+    toss_provider: 만료 경로는 실제 토스 호출이 없으므로 for_service()를 호출하지 않는다 (Task 6).
     """
     lock_key = f"lock:renew:{sub_id}"
     token = await acquire_lock(redis, lock_key)
@@ -270,7 +277,7 @@ async def _expire_subscription(session_factory, redis, toss, cipher, sub_id: uui
         await release_lock(redis, lock_key, token)
 
 
-async def _expire_suspended(session_factory, redis, toss, cipher,
+async def _expire_suspended(session_factory, redis, toss_provider, cipher,
                             sub_id: uuid.UUID, *, now, cfg: _Cfg, stats: dict,
                             notifier=None) -> None:
     """SUSPENDED 대기 일수(suspended_grace) 초과 → EXPIRED 전환.
@@ -279,9 +286,10 @@ async def _expire_suspended(session_factory, redis, toss, cipher,
     구독 만료 시 빌링키를 삭제하지 않는다 — 카드는 영속적 자원이며 삭제는 delete_card가 전담.
     판정: 상태가 SUSPENDED이고 suspended_at이 (now - grace) 이하일 때만 만료.
     실제 종료 처리는 _expire_subscription에 위임한다.
+    toss_provider: 만료 경로는 토스 호출 없음 — for_service() 호출 불필요 (Task 6).
     """
     await _expire_subscription(
-        session_factory, redis, toss, cipher, sub_id, reason="suspended_timeout",
+        session_factory, redis, toss_provider, cipher, sub_id, reason="suspended_timeout",
         stats=stats, notifier=notifier,
         should_expire=lambda sub: (
             sub.status == SubscriptionStatus.SUSPENDED
@@ -289,7 +297,7 @@ async def _expire_suspended(session_factory, redis, toss, cipher,
             and sub.suspended_at <= now - cfg.suspended_grace))
 
 
-async def _expire_canceled(session_factory, redis, toss, cipher,
+async def _expire_canceled(session_factory, redis, toss_provider, cipher,
                            sub_id: uuid.UUID, *, now: datetime, stats: dict,
                            notifier=None) -> None:
     """CANCELED 구독의 기간 만료(current_period_end <= now) → EXPIRED 전환.
@@ -297,16 +305,17 @@ async def _expire_canceled(session_factory, redis, toss, cipher,
     취소 후 혜택 유지 기간이 끝난 구독을 최종 종료한다.
     빌링키는 cards 테이블에서 관리하므로 구독 만료 시 삭제하지 않는다.
     처리는 _expire_subscription에 위임.
+    toss_provider: 만료 경로는 토스 호출 없음 — for_service() 호출 불필요 (Task 6).
     """
     await _expire_subscription(
-        session_factory, redis, toss, cipher, sub_id, reason="canceled_period_end",
+        session_factory, redis, toss_provider, cipher, sub_id, reason="canceled_period_end",
         stats=stats, notifier=notifier,
         should_expire=lambda sub: (
             sub.status == SubscriptionStatus.CANCELED
             and sub.current_period_end <= now))
 
 
-async def _expire_non_renewing(session_factory, redis, toss, cipher,
+async def _expire_non_renewing(session_factory, redis, toss_provider, cipher,
                                sub_id: uuid.UUID, *, now: datetime, stats: dict,
                                notifier=None) -> None:
     """자동결제 안함(auto_renew=False) 구독의 기간 종료 → EXPIRED 전환 (요청 013).
@@ -317,9 +326,10 @@ async def _expire_non_renewing(session_factory, redis, toss, cipher,
     CANCELED(next_billing=None) 구독은 _expire_canceled가 이미 처리하므로
     ACTIVE만 대상으로 한정한다.
     처리는 _expire_subscription에 위임한다.
+    toss_provider: 만료 경로는 토스 호출 없음 — for_service() 호출 불필요 (Task 6).
     """
     await _expire_subscription(
-        session_factory, redis, toss, cipher, sub_id, reason="non_renewing_period_end",
+        session_factory, redis, toss_provider, cipher, sub_id, reason="non_renewing_period_end",
         stats=stats, notifier=notifier,
         should_expire=lambda sub: (
             sub.status == SubscriptionStatus.ACTIVE          # 정상 상태
@@ -327,7 +337,7 @@ async def _expire_non_renewing(session_factory, redis, toss, cipher,
             and sub.current_period_end <= now))              # 기간 만료
 
 
-async def _renew_one(session_factory, redis, toss, cipher, email_sender,
+async def _renew_one(session_factory, redis, toss_provider, cipher, email_sender,
                      sub_id: uuid.UUID, *, now: datetime, cfg: _Cfg, stats: dict,
                      notifier=None) -> None:
     """TRIAL/ACTIVE/PAST_DUE 구독 1건 갱신 결제.
@@ -340,6 +350,8 @@ async def _renew_one(session_factory, redis, toss, cipher, email_sender,
     흐름:
     1. Redis 락 획득 — 실패 시 skipped(다른 인스턴스/이전 배치가 처리 중)
     2. [1단계 트랜잭션] with_for_update로 구독 검증 (상태·next_billing_at; 빌링키는 cards 테이블에서 조회)
+       - service 로드 후 toss_provider.for_service(service)로 서비스별 클라이언트 해석 (Task 6)
+         TossKeyNotConfiguredError 발생 시 → 해당 구독을 결제 실패로 처리 후 다음 구독으로 진행
        - 결정적 order_id 생성 — (sub.id, period_end, retry_count) 조합
          → 크래시 후 재실행해도 같은 주문/멱등키로 수렴(이중결제 차단)
        - 같은 order_id의 DONE 결제가 이미 있으면 재결제 없이 기간만 전진(방어적 복구)
@@ -406,6 +418,22 @@ async def _renew_one(session_factory, redis, toss, cipher, email_sender,
                     service_id=sub.service_id,
                     external_user_id=sub.external_user_id)
                 db.add(payment)
+            # 서비스별 토스 클라이언트 해석 — PENDING 결제 생성 직후, 실제 토스 호출 직전 (Task 6).
+            # payment가 이미 존재하므로 키 미설정 시 PENDING 결제를 내구성 있게 남긴 뒤 실패 처리 가능.
+            # TossKeyNotConfiguredError → 해당 구독을 결제 실패로 처리하고 다음 구독으로 진행
+            # (전체 스윕 중단 금지).
+            try:
+                toss = toss_provider.for_service(service)
+            except TossKeyNotConfiguredError as key_err:
+                # 키 미설정을 합성 TossError로 변환해 기존 실패 처리 경로에 위임한다.
+                await db.commit()
+                await db.refresh(payment, with_for_update=True)
+                await db.refresh(sub, with_for_update=True)
+                exc = TossError("TOSS_KEY_NOT_CONFIGURED", str(key_err))
+                await _handle_charge_failure(
+                    db, None, email_sender, sub, service, payment, billing_key="",
+                    exc=exc, now=now, cfg=cfg, stats=stats, notifier=notifier)
+                return
             # 카드(빌링키)가 없으면 청구 자체가 불가능 → 토스 호출 없이 '결제 실패'로
             # 다룬다. 새 상태를 만들지 않고 기존 실패 처리 경로(_handle_charge_failure:
             # PAST_DUE 재시도 / SUSPENDED 정지)를 그대로 재사용한다(이중결제 위험 없음).
@@ -423,7 +451,7 @@ async def _renew_one(session_factory, redis, toss, cipher, email_sender,
                 await db.refresh(payment, with_for_update=True)
                 await db.refresh(sub, with_for_update=True)
                 await _handle_charge_failure(
-                    db, toss, email_sender, sub, service, payment, billing_key="",
+                    db, None, email_sender, sub, service, payment, billing_key="",
                     exc=exc, now=now, cfg=cfg, stats=stats, notifier=notifier)
                 return
             # 빌링키·customerKey는 cards 테이블에서 복호화해 사용(Card Vault)

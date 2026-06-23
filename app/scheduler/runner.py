@@ -87,7 +87,8 @@ async def run_renewals(app: FastAPI) -> dict | None:
     heartbeat = asyncio.create_task(_heartbeat(redis, token))
     try:
         # settings= 인자 제거 — 재시도 설정은 이제 GlobalSettings(DB)에서 로드 (요청 013)
-        stats = await process_due(app.state.session_factory, redis, app.state.toss,
+        # toss → toss_provider로 전환: 서비스별 클라이언트를 갱신 배치에 주입 (Task 6)
+        stats = await process_due(app.state.session_factory, redis, app.state.toss_provider,
                                   app.state.cipher, app.state.email_sender,
                                   notifier=app.state.notifier)
         logger.info("renewal batch done: %s", stats)

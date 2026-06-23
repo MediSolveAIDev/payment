@@ -14,6 +14,7 @@ from app.services.renewals import (
 )
 from app.toss.errors import TossError, TossTimeoutError
 from app.toss.fake import FakeTossClient
+from app.toss.provider import TossClientProvider  # Task 6: provider 래퍼
 from tests.factories import (
     create_card,
     create_plan,
@@ -26,6 +27,12 @@ from tests.factories import (
 @pytest.fixture
 def fake():
     return FakeTossClient()
+
+
+@pytest.fixture
+def provider(fake, cipher):
+    """FakeTossClient를 override로 주입한 TossClientProvider — 키 없이 동작 (Task 6)."""
+    return TossClientProvider(cipher, "http://fake", override_client=fake)
 
 
 @pytest.fixture
@@ -57,13 +64,13 @@ async def _due_subscription(db, cipher, svc, plan, *, toss, **kw):
     return await _sub_with_card(db, toss, cipher, svc, plan, **defaults)
 
 
-async def test_renews_due_subscription(db, session_factory, redis_client, cipher, fake, email):
+async def test_renews_due_subscription(db, session_factory, redis_client, cipher, fake, provider, email):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
     sub = await _due_subscription(db, cipher, svc, plan, toss=fake)
     old_end = sub.current_period_end
 
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
 
     assert stats["renewed"] == 1
     await db.refresh(sub)
@@ -77,38 +84,38 @@ async def test_renews_due_subscription(db, session_factory, redis_client, cipher
 
 
 async def test_renews_extended_subscription_to_active(db, session_factory, redis_client,
-                                                      cipher, fake, email):
+                                                      cipher, fake, provider, email):
     """연장처리(EXTENDED) 구독도 새 만료일 도래 시 자동결제 갱신 → 성공 시 ACTIVE 복귀."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
     sub = await _due_subscription(db, cipher, svc, plan, toss=fake, external_user_id="u-ext-due",
                                   status="EXTENDED")
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["renewed"] == 1
     await db.refresh(sub)
     assert sub.status == "ACTIVE"           # 연장처리 → 갱신 성공 시 정상 복귀
     assert fake.charges[0]["amount"] == 10000
 
 
-async def test_not_due_untouched(db, session_factory, redis_client, cipher, fake, email):
+async def test_not_due_untouched(db, session_factory, redis_client, cipher, fake, provider, email):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
     await create_subscription(db, cipher, svc, plan)  # next_billing 미래
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats == {"renewed": 0, "failed": 0, "suspended": 0, "expired": 0,
                      "skipped": 0, "unresolved": 0, "reconciled": 0, "errors": 0}
     assert fake.charges == []
 
 
 async def test_failure_moves_to_past_due_and_notifies(db, session_factory, redis_client,
-                                                      cipher, fake, email):
+                                                      cipher, fake, provider, email):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
     sub = await _due_subscription(db, cipher, svc, plan, toss=fake)
     fake.fail_charge_with = TossError("INSUFFICIENT_FUNDS", "잔액 부족", 400)
 
     now = utcnow()
-    stats = await process_due(session_factory, redis_client, fake, cipher, email, now=now)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email, now=now)
 
     assert stats["failed"] == 1
     await db.refresh(sub)
@@ -123,7 +130,7 @@ async def test_failure_moves_to_past_due_and_notifies(db, session_factory, redis
 
 
 async def test_retry_success_restores_active_continuous_period(
-        db, session_factory, redis_client, cipher, fake, email):
+        db, session_factory, redis_client, cipher, fake, provider, email):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, billing_cycle="MONTH")
     end = utcnow() - timedelta(days=2)
@@ -131,7 +138,7 @@ async def test_retry_success_restores_active_continuous_period(
                                status="PAST_DUE", retry_count=1,
                                period_start=end - timedelta(days=31), period_end=end,
                                next_billing_at=utcnow() - timedelta(minutes=1))
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["renewed"] == 1
     await db.refresh(sub)
     assert sub.status == "ACTIVE"
@@ -142,7 +149,7 @@ async def test_retry_success_restores_active_continuous_period(
 
 
 async def test_retries_exhausted_suspends_and_keeps_key(
-        db, session_factory, redis_client, cipher, fake, email):
+        db, session_factory, redis_client, cipher, fake, provider, email):
     """최종 실패 → SUSPENDED(접근 차단). 빌링키는 수동 결제를 위해 보존."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
@@ -151,7 +158,7 @@ async def test_retries_exhausted_suspends_and_keeps_key(
     fake.fail_charge_with = TossError("CARD_EXPIRED", "카드 만료", 400)
 
     now = utcnow()
-    stats = await process_due(session_factory, redis_client, fake, cipher, email, now=now)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email, now=now)
 
     assert stats["suspended"] == 1
     await db.refresh(sub)
@@ -168,7 +175,7 @@ async def test_retries_exhausted_suspends_and_keeps_key(
 
 
 async def test_full_retry_storyline_to_suspended(db, session_factory, redis_client,
-                                                 cipher, fake, email):
+                                                 cipher, fake, provider, email):
     """정기 1회 + 재시도 4회 = 총 5회 시도 후 SUSPENDED."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
@@ -177,19 +184,19 @@ async def test_full_retry_storyline_to_suspended(db, session_factory, redis_clie
 
     now = utcnow()
     for _ in range(DEFAULT_RETRY_LIMIT + 1):
-        await process_due(session_factory, redis_client, fake, cipher, email, now=now)
+        await process_due(session_factory, redis_client, provider, cipher, email, now=now)
         await db.refresh(sub)
         now = now + timedelta(hours=12, minutes=1)
 
     assert len(fake.charges) == DEFAULT_RETRY_LIMIT + 1  # 5회
     assert sub.status == "SUSPENDED"
     # 더 돌려도 결제 시도 없음(자동 결제 중지)
-    await process_due(session_factory, redis_client, fake, cipher, email, now=now)
+    await process_due(session_factory, redis_client, provider, cipher, email, now=now)
     assert len(fake.charges) == DEFAULT_RETRY_LIMIT + 1
 
 
 async def test_suspended_expires_after_grace(db, session_factory, redis_client,
-                                             cipher, fake, email):
+                                             cipher, fake, provider, email):
     """SUSPENDED 대기 일수 초과 → EXPIRED. 카드 보관함 도입 후 빌링키는 삭제하지 않음."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
@@ -198,7 +205,7 @@ async def test_suspended_expires_after_grace(db, session_factory, redis_client,
     sub.suspended_at = utcnow() - DEFAULT_SUSPENDED_GRACE - timedelta(hours=1)
     await db.commit()
 
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["expired"] == 1
     await db.refresh(sub)
     assert sub.status == "EXPIRED"
@@ -207,21 +214,21 @@ async def test_suspended_expires_after_grace(db, session_factory, redis_client,
 
 
 async def test_suspended_within_grace_kept(db, session_factory, redis_client,
-                                           cipher, fake, email):
+                                           cipher, fake, provider, email):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
     sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-susp2",
                                     status="SUSPENDED", next_billing_at=None)
     sub.suspended_at = utcnow() - timedelta(days=1)  # 아직 유예 내
     await db.commit()
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["expired"] == 0
     await db.refresh(sub)
     assert sub.status == "SUSPENDED"
 
 
 async def test_trial_expiry_charges_to_active(db, session_factory, redis_client,
-                                              cipher, fake, email):
+                                              cipher, fake, provider, email):
     """TRIAL 만료 → 자동 결제 성공 → ACTIVE(기간 전진)."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
@@ -230,7 +237,7 @@ async def test_trial_expiry_charges_to_active(db, session_factory, redis_client,
                                status="TRIAL",
                                period_start=trial_end - timedelta(days=7),
                                period_end=trial_end, next_billing_at=trial_end)
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["renewed"] == 1
     assert fake.charges[0]["amount"] == 10000  # 만료 시 정가 결제
     await db.refresh(sub)
@@ -239,7 +246,7 @@ async def test_trial_expiry_charges_to_active(db, session_factory, redis_client,
 
 
 async def test_trial_charge_failure_goes_past_due(db, session_factory, redis_client,
-                                                  cipher, fake, email):
+                                                  cipher, fake, provider, email):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
     trial_end = utcnow() - timedelta(minutes=5)
@@ -247,7 +254,7 @@ async def test_trial_charge_failure_goes_past_due(db, session_factory, redis_cli
                                status="TRIAL", period_end=trial_end,
                                next_billing_at=trial_end)
     fake.fail_charge_with = TossError("INSUFFICIENT_FUNDS", "잔액 부족", 400)
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["failed"] == 1
     await db.refresh(sub)
     assert sub.status == "PAST_DUE"
@@ -255,7 +262,7 @@ async def test_trial_charge_failure_goes_past_due(db, session_factory, redis_cli
 
 
 async def test_canceled_expires_at_period_end_without_charge(
-        db, session_factory, redis_client, cipher, fake, email):
+        db, session_factory, redis_client, cipher, fake, provider, email):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
     sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-cx",
@@ -263,7 +270,7 @@ async def test_canceled_expires_at_period_end_without_charge(
                                period_start=utcnow() - timedelta(days=31),
                                period_end=utcnow() - timedelta(minutes=1),
                                next_billing_at=None)
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["expired"] == 1
     await db.refresh(sub)
     assert sub.status == "EXPIRED"
@@ -273,31 +280,31 @@ async def test_canceled_expires_at_period_end_without_charge(
 
 
 async def test_canceled_before_period_end_kept(db, session_factory, redis_client,
-                                               cipher, fake, email):
+                                               cipher, fake, provider, email):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
     sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-ck",
                                     status="CANCELED", next_billing_at=None)
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["expired"] == 0
     await db.refresh(sub)
     assert sub.status == "CANCELED"
 
 
 async def test_redis_lock_prevents_double_charge(db, session_factory, redis_client,
-                                                 cipher, fake, email):
+                                                 cipher, fake, provider, email):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
     sub = await _due_subscription(db, cipher, svc, plan, toss=fake)
     await redis_client.set(f"lock:renew:{sub.id}", "1", ex=60)  # 다른 워커가 처리 중인 상황
 
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["skipped"] == 1
     assert fake.charges == []
 
 
 async def test_crash_recovery_done_payment_advances_without_recharge(
-        db, session_factory, redis_client, cipher, fake, email):
+        db, session_factory, redis_client, cipher, fake, provider, email):
     """직전 실행이 '결제 성공 후 커밋 전' 크래시 → 같은 order_id의 DONE 결제 발견 시 재결제 없이 기간만 복구."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
@@ -309,7 +316,7 @@ async def test_crash_recovery_done_payment_advances_without_recharge(
                    service_id=sub.service_id, external_user_id=sub.external_user_id))
     await db.commit()
 
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["renewed"] == 1
     assert fake.charges == []  # 재결제 없음
     await db.refresh(sub)
@@ -318,28 +325,28 @@ async def test_crash_recovery_done_payment_advances_without_recharge(
 
 
 async def test_renewal_timeout_resolved_by_lookup(db, session_factory, redis_client,
-                                                  cipher, fake, email):
+                                                  cipher, fake, provider, email):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
     sub = await _due_subscription(db, cipher, svc, plan, toss=fake, external_user_id="u-rt")
     fake.succeed_despite_timeout = True
     fake.charge_failure_queue = [TossTimeoutError()]
 
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["renewed"] == 1
     await db.refresh(sub)
     assert sub.status == "ACTIVE"
 
 
 async def test_renewal_timeout_unresolved_preserved_then_converges(
-        db, session_factory, redis_client, cipher, fake, email):
+        db, session_factory, redis_client, cipher, fake, provider, email):
     """갱신 타임아웃(결과불명)은 실패 처리하지 않고, 다음 배치에서 같은 멱등키로 수렴."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
     sub = await _due_subscription(db, cipher, svc, plan, toss=fake, external_user_id="u-unres")
     fake.charge_failure_queue = [TossTimeoutError()]
 
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["unresolved"] == 1
     await db.refresh(sub)
     assert sub.status == "ACTIVE"
@@ -349,7 +356,7 @@ async def test_renewal_timeout_unresolved_preserved_then_converges(
     first_order_id = payment.order_id
 
     # 다음 배치 — 같은 order_id/멱등키로 재시도, 이번엔 성공
-    stats2 = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats2 = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats2["renewed"] == 1
     assert fake.charges[1]["order_id"] == first_order_id
     assert fake.charges[1]["idempotency_key"] == fake.charges[0]["idempotency_key"]
@@ -359,7 +366,7 @@ async def test_renewal_timeout_unresolved_preserved_then_converges(
 
 
 async def test_reconcile_stuck_first_payment_done(db, session_factory, redis_client,
-                                                  cipher, fake, email):
+                                                  cipher, fake, provider, email):
     """결과불명으로 남은 FIRST PENDING — 토스에 DONE이 있으면 확정."""
     from datetime import timedelta as td
 
@@ -377,7 +384,7 @@ async def test_reconcile_stuck_first_payment_done(db, session_factory, redis_cli
     fake.payments_by_order["frec1order"] = ChargeResult(
         payment_key="pay_rec", order_id="frec1order", status="DONE", raw={})
 
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["reconciled"] == 1
     await db.refresh(payment)
     assert payment.status == "DONE"
@@ -387,7 +394,7 @@ async def test_reconcile_stuck_first_payment_done(db, session_factory, redis_cli
 
 
 async def test_reconcile_stuck_first_payment_not_found_expires(
-        db, session_factory, redis_client, cipher, fake, email):
+        db, session_factory, redis_client, cipher, fake, provider, email):
     """유예 후에도 토스에 기록 없음 — FAILED 확정 + 구독 만료. 카드 보관함: 키 삭제 안 함."""
     from datetime import timedelta as td
 
@@ -402,7 +409,7 @@ async def test_reconcile_stuck_first_payment_not_found_expires(
     db.add(payment)
     await db.commit()
 
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["reconciled"] == 1
     await db.refresh(payment)
     assert payment.status == "FAILED"
@@ -414,7 +421,7 @@ async def test_reconcile_stuck_first_payment_not_found_expires(
 
 
 async def test_reconcile_young_pending_untouched(db, session_factory, redis_client,
-                                                 cipher, fake, email):
+                                                 cipher, fake, provider, email):
     """유예 기간(10분) 이전의 PENDING은 건드리지 않는다."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
@@ -426,14 +433,14 @@ async def test_reconcile_young_pending_untouched(db, session_factory, redis_clie
                       service_id=sub.service_id, external_user_id=sub.external_user_id)
     db.add(payment)
     await db.commit()
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["reconciled"] == 0
     await db.refresh(payment)
     assert payment.status == "PENDING"
 
 
 async def test_reconcile_canceled_sub_with_done_payment_stays_canceled(
-        db, session_factory, redis_client, cipher, fake, email):
+        db, session_factory, redis_client, cipher, fake, provider, email):
     """결제 확정 시점에 이미 취소된 구독은 CANCELED 유지(기간 혜택 유지 후 만료)."""
     from datetime import timedelta as td
 
@@ -452,14 +459,14 @@ async def test_reconcile_canceled_sub_with_done_payment_stays_canceled(
     fake.payments_by_order["frec4order"] = ChargeResult(
         payment_key="pay_rec4", order_id="frec4order", status="DONE", raw={})
 
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["reconciled"] == 1
     await db.refresh(sub)
     assert sub.status == "CANCELED"
 
 
 async def test_reconcile_orphan_renewal_on_canceled_sub_done(
-        db, session_factory, redis_client, cipher, fake, email):
+        db, session_factory, redis_client, cipher, fake, provider, email):
     """취소된 구독의 결과불명 RENEWAL이 DONE으로 확정되면 수동 검토 메일 발송."""
     from datetime import timedelta as td
 
@@ -478,7 +485,7 @@ async def test_reconcile_orphan_renewal_on_canceled_sub_done(
     fake.payments_by_order["orphrenew1"] = ChargeResult(
         payment_key="pay_orph", order_id="orphrenew1", status="DONE", raw={})
 
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["reconciled"] == 1
     await db.refresh(payment)
     assert payment.status == "DONE"
@@ -486,7 +493,7 @@ async def test_reconcile_orphan_renewal_on_canceled_sub_done(
 
 
 async def test_reconcile_skips_renewal_pending_while_sub_in_pool(
-        db, session_factory, redis_client, cipher, fake, email):
+        db, session_factory, redis_client, cipher, fake, provider, email):
     """갱신 풀(ACTIVE/PAST_DUE)에 있는 구독의 RENEWAL PENDING은 _renew_one 수렴에 맡긴다."""
     from datetime import timedelta as td
 
@@ -503,7 +510,7 @@ async def test_reconcile_skips_renewal_pending_while_sub_in_pool(
     db.add(payment)
     await db.commit()
 
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["reconciled"] == 0
     await db.refresh(payment)
     assert payment.status == "PENDING"
@@ -518,7 +525,7 @@ async def test_delete_404_treated_as_success(db, cipher, fake):
 
 
 async def test_non_renewing_expires_at_period_end(db, session_factory, redis_client,
-                                                    cipher, fake, email):
+                                                    cipher, fake, provider, email):
     """auto_renew=False 구독 기간 종료 시 process_due가 EXPIRED로 만료 처리한다 (요청 013).
 
     ACTIVE + next_billing_at=None + current_period_end <= now → EXPIRED
@@ -534,7 +541,7 @@ async def test_non_renewing_expires_at_period_end(db, session_factory, redis_cli
                                     period_start=end - timedelta(days=30),
                                     period_end=end,
                                     next_billing_at=None)  # 자동갱신 없음
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
 
     assert stats["expired"] == 1            # 만료 처리됨
     assert stats["renewed"] == 0            # 갱신 결제 없음
@@ -544,7 +551,7 @@ async def test_non_renewing_expires_at_period_end(db, session_factory, redis_cli
     assert sub.next_billing_at is None      # 다음 결제 없음
 
 
-async def test_retry_limit_from_global_settings(db, session_factory, redis_client, cipher, fake, email):
+async def test_retry_limit_from_global_settings(db, session_factory, redis_client, cipher, fake, provider, email):
     """GlobalSettings.retry_limit=1 로 낮추면 1회 실패 후 바로 SUSPENDED 전환됨을 검증(요청 013).
 
     process_due가 DB GlobalSettings에서 재시도 설정을 로드하므로,
@@ -566,7 +573,7 @@ async def test_retry_limit_from_global_settings(db, session_factory, redis_clien
     fake.fail_charge_with = TossError("INSUFFICIENT_FUNDS", "잔액 부족", 400)
 
     now = utcnow()
-    stats = await process_due(session_factory, redis_client, fake, cipher, email, now=now)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email, now=now)
 
     # retry_limit=1이므로 retry_count(1) >= limit(1) → 즉시 SUSPENDED
     assert stats["suspended"] == 1
@@ -596,7 +603,7 @@ async def test_minute_subscription_period_end(db, cipher):
 
 
 async def test_minute_subscription_auto_renew(db, session_factory, redis_client,
-                                              cipher, fake, email):
+                                              cipher, fake, provider, email):
     """MINUTE 요금제의 핵심 사용 사례: 자동갱신(process_due) 경로 검증.
 
     MINUTE 주기 구독의 next_billing_at이 이미 도래했을 때 process_due를 실행하면
@@ -620,7 +627,7 @@ async def test_minute_subscription_auto_renew(db, session_factory, redis_client,
     old_period_end = sub.current_period_end  # 갱신 전 종료일 저장
 
     # 자동갱신 실행
-    stats = await process_due(session_factory, redis_client, fake, cipher, email)
+    stats = await process_due(session_factory, redis_client, provider, cipher, email)
 
     assert stats["renewed"] == 1, f"갱신 실패: stats={stats}"
     await db.refresh(sub)

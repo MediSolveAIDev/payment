@@ -26,11 +26,13 @@ from app.services.locks import (
 )
 from app.services.transitions import transition
 from app.toss.errors import TossError
+from app.toss.provider import TossClientProvider  # 서비스별 토스 클라이언트 해석기 (Task 6)
+from app.core.errors import TossKeyNotConfiguredError  # 키 미설정 예외 (Task 6)
 
 logger = logging.getLogger("payment.reconciliation")
 
 
-async def reconcile_pending(session_factory, redis, toss, cipher, email_sender,
+async def reconcile_pending(session_factory, redis, toss_provider, cipher, email_sender,
                              *, now: datetime, stats: dict) -> None:
     """결과불명으로 남은 PENDING 결제 정산 스윕(전 타입).
 
@@ -46,6 +48,9 @@ async def reconcile_pending(session_factory, redis, toss, cipher, email_sender,
        FIRST 타입은 항상 이 함수에서 처리(갱신 배치가 FIRST를 재시도하지 않으므로)
     3. 나머지 건을 _reconcile_one_payment에 위임 (락 + 상세 처리)
     4. 한 항목 예외는 stats["errors"] 증가 후 계속 — 배치 전체를 중단시키지 않음
+
+    toss_provider: 서비스별 토스 클라이언트 해석기 (Task 6). 각 결제 건에서
+    서비스를 로드한 뒤 for_service()로 해석한다.
     """
     async with session_factory() as db:
         stuck = (await db.execute(
@@ -58,14 +63,15 @@ async def reconcile_pending(session_factory, redis, toss, cipher, email_sender,
                 and stuck_sub is not None and stuck_sub.status in DUE_STATUSES):
             continue  # _renew_one 수렴 경로가 처리(TRIAL 만료 결제 포함)
         try:
-            await _reconcile_one_payment(session_factory, redis, toss, cipher,
+            # toss_provider를 그대로 전달 — 건별 서비스 로드 후 for_service() 해석 (Task 6)
+            await _reconcile_one_payment(session_factory, redis, toss_provider, cipher,
                                          email_sender, stuck_payment.id, stats=stats)
         except Exception:  # noqa: BLE001 — 한 항목 실패가 배치 전체를 죽이면 안 됨
             logger.exception("정산 처리 실패: payment=%s", stuck_payment.id)
             stats["errors"] += 1
 
 
-async def _reconcile_one_payment(session_factory, redis, toss, cipher, email_sender,
+async def _reconcile_one_payment(session_factory, redis, toss_provider, cipher, email_sender,
                                  payment_id: uuid.UUID, *, stats: dict) -> None:
     """PENDING 결제 1건을 토스 재조회로 확정.
 
@@ -80,6 +86,8 @@ async def _reconcile_one_payment(session_factory, redis, toss, cipher, email_sen
        구독 상태 검증 — 갱신 풀(TRIAL/ACTIVE/PAST_DUE)의 RENEWAL/RETRY는
        _renew_one에 맡기고 조기 반환(FIRST는 항상 여기서 처리)
     3. [외부 호출 — DB 비점유] toss.get_payment_by_order_id(order_id)
+       서비스를 로드한 뒤 toss_provider.for_service(service)로 클라이언트 해석 (Task 6).
+       TossKeyNotConfiguredError 발생 시 → 조회 불가, 다음 주기에 재시도(결과 불명 유지).
        - TossError → 조회 실패, 다음 주기에 재시도(결과 불명 유지)
     4. [확정 트랜잭션] with_for_update로 Payment 재취득 + PENDING 재검증
        (외부 호출 사이에 다른 경로가 확정했을 수 있음) 후:
@@ -114,11 +122,30 @@ async def _reconcile_one_payment(session_factory, redis, toss, cipher, email_sen
             # 토스 조회는 전역 고유 toss_order_id로 — order_id는 서비스 내 고유라
             # 토스 측 식별자가 아니다(감사 Phase 2 — 보안 M-1)
             order_id = payment.toss_order_id
+            # rollback 이후 ORM 객체가 detached/expired되어 lazy-load가 불가하므로
+            # service_id를 미리 로컬 변수에 저장해 둔다 (Task 6).
+            payment_service_id = payment.service_id
             # 읽기 트랜잭션 종료 — 토스 조회(최대 65초) 동안 커넥션을 풀에 반납
             # (감사 Phase 1 — 성능 H1)
             await db.rollback()
 
             # ── 2단계: 외부(토스) 조회 — DB 트랜잭션/커넥션 비점유 ──
+            # 서비스별 토스 클라이언트 해석 — 토스 호출 직전에 for_service()로 해석 (Task 6).
+            # rollback 후라 별도 세션에서 서비스를 조회하고, for_service()로 클라이언트 해석.
+            # 키 미설정(TossKeyNotConfiguredError)이면 조회 불가 → 다음 주기에 재시도.
+            if payment_service_id is not None:
+                async with session_factory() as svc_db:
+                    _svc = await svc_db.get(Service, payment_service_id)
+                try:
+                    toss = toss_provider.for_service(_svc)
+                except TossKeyNotConfiguredError:
+                    return  # 키 미설정 — 다음 주기에 재시도(결과 불명 유지)
+            else:
+                # 단건 결제(service_id=None)는 전역 provider override 또는 에러
+                try:
+                    toss = toss_provider.for_service(None)
+                except (TossKeyNotConfiguredError, Exception):
+                    return  # 해석 불가 — 다음 주기에 재시도
             try:
                 found = await toss.get_payment_by_order_id(order_id)
             except TossError:
