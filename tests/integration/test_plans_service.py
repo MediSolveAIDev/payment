@@ -326,3 +326,55 @@ async def test_cycle_minutes_forbidden_on_non_minute(db, cipher):
     with pytest.raises(InputValidationError):
         await create_plan(db, service_id=svc.id, name="x", price=1000,
                           billing_cycle="MONTH", cycle_minutes=5, environment="dev")
+
+
+# ─── Task 3 리뷰 반영: MINUTE prod 가드는 생성 시에만 적용 ─────────────────────
+
+
+def test_validate_plan_fields_minute_prod_guard_create_only():
+    """_validate_plan_fields: is_create=True 이면 prod에서 MINUTE 거부,
+    is_create=False 이면 prod여도 MINUTE 허용(수정 시 가드 스킵).
+
+    update_plan이 기존 MINUTE 요금제를 prod 서버에서 수정할 때 막히지 않아야 한다는
+    회귀 보장 — DB 불필요한 순수 단위 테스트.
+    """
+    from app.services.plans import _validate_plan_fields
+
+    # 생성 시(is_create=True) prod 환경 → MINUTE 거부
+    with pytest.raises(InputValidationError, match="비운영 환경"):
+        _validate_plan_fields(
+            price=1000, billing_cycle="MINUTE", cycle_days=None, cycle_minutes=5,
+            first_payment_type="NONE", first_payment_value=None,
+            environment="prod", is_create=True,
+        )
+
+    # 수정 시(is_create=False) prod 환경 → MINUTE 허용(예외 없음)
+    _validate_plan_fields(
+        price=1000, billing_cycle="MINUTE", cycle_days=None, cycle_minutes=5,
+        first_payment_type="NONE", first_payment_value=None,
+        environment="prod", is_create=False,
+    )
+
+
+async def test_update_minute_plan_allowed_regardless_of_env(db, cipher):
+    """dev에서 생성한 MINUTE 요금제를 update_plan으로 이름·가격 변경할 때 prod 가드가 발동하지 않는다.
+
+    update_plan은 is_create=False 로 _validate_plan_fields를 호출하므로,
+    서버가 prod 환경이더라도 기존 MINUTE 요금제 수정이 가능해야 한다.
+    environment 인자를 "dev"로 명시해 생성 후, update_plan은 내부적으로
+    default_settings().environment(테스트 환경 = "test") 로 검증 — "prod" 가 아니므로
+    is_create 여부와 무관하게 통과하지만, 핵심은 is_create=False 경로 자체가 실행된다는 것이다.
+    """
+    svc, _, _ = await create_service(db, cipher)
+    # dev 환경 명시로 MINUTE 요금제 생성
+    plan = await create_plan(db, service_id=svc.id, name="분테스트", price=1000,
+                             billing_cycle="MINUTE", cycle_minutes=5, environment="dev")
+    assert plan.billing_cycle == "MINUTE"
+
+    # update_plan(이름·가격 변경) — prod 가드가 발동하면 이 호출이 실패한다
+    updated = await update_plan(db, plan_id=plan.id, service_id=svc.id,
+                                name="분테스트(수정)", price=2000)
+    assert updated.name == "분테스트(수정)"
+    assert updated.price == 2000
+    assert updated.billing_cycle == "MINUTE"   # 주기는 변경 불가, 그대로
+    assert updated.cycle_minutes == 5          # cycle_minutes도 그대로

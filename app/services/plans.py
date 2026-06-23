@@ -74,15 +74,24 @@ def _discount_text(dtype: str | None, value: int | None) -> str:
 def _validate_plan_fields(*, price: int, billing_cycle: str, cycle_days: int | None,
                           cycle_minutes: int | None,
                           first_payment_type: str, first_payment_value: int | None,
-                          environment: str) -> None:
+                          environment: str,
+                          is_create: bool = True) -> None:
     """기본 요금제 필드 검증.
+
+    is_create: True(기본) = 요금제 신규 생성 시 호출, False = 수정(update) 시 호출.
+    MINUTE 주기의 prod 환경 차단(비운영 전용 가드)은 is_create=True 일 때만 적용된다.
+    이미 존재하는 MINUTE 요금제를 운영 서버에서 이름·가격만 수정하는 경우 거부되지 않도록
+    is_create=False 로 넘기면 prod 가드를 건너뛴다.
+    다른 MINUTE 규칙(cycle_minutes ≥ 5 필수, cycle_days 금지)과
+    DAY/기타 주기 규칙은 생성·수정 모두 동일하게 적용된다.
 
     규칙(주기 관련):
     - price: 1원 이상(0·음수 불가)
     - billing_cycle: BillingCycle 열거값에 없으면 거부
     - DAY: cycle_days 1 이상 필수, cycle_minutes 전달 금지
     - MINUTE: cycle_minutes 5 이상 필수, cycle_days 전달 금지
-             + 비운영 전용 — environment == "prod"이면 거부(테스트용 주기, Task 3)
+             + 비운영 전용 가드(is_create=True 일 때만) —
+               environment == "prod"이면 거부(테스트용 주기, Task 3)
     - 그 외(YEAR/MONTH/WEEK): cycle_days·cycle_minutes 둘 다 전달 금지
       (WEEK/MONTH/YEAR는 timedelta/relativedelta 고정값으로 계산하므로 days/minutes 불필요)
     - first_payment_type: FirstPaymentType 열거값
@@ -101,8 +110,9 @@ def _validate_plan_fields(*, price: int, billing_cycle: str, cycle_days: int | N
         if cycle_minutes is not None:
             raise InputValidationError("cycle_minutes는 MINUTE 주기에서만 사용합니다")
     elif billing_cycle == BillingCycle.MINUTE:
-        # MINUTE: 비운영 전용 — prod 환경에서 생성 시도하면 거부(Task 3)
-        if environment == "prod":
+        # MINUTE: 비운영 전용 가드 — prod 환경 차단은 생성(is_create=True) 시에만 적용.
+        # 이미 생성된 MINUTE 요금제를 운영 서버에서 수정(is_create=False)할 때는 거부하지 않는다.
+        if is_create and environment == "prod":
             raise InputValidationError("MINUTE 주기는 비운영 환경에서만 사용합니다")
         # MINUTE: cycle_minutes 5 이상 필수(최소 5분 가드, Task 3)
         if not cycle_minutes or cycle_minutes < 5:
@@ -200,10 +210,12 @@ async def create_plan(db: AsyncSession, *, service_id: uuid.UUID, name: str, pri
         raise InputValidationError("요금제 이름은 필수입니다")
     # environment 미전달 시 현재 실행 환경(APP_ENV/.env)을 기본값으로 사용(Task 3)
     env = environment if environment is not None else default_settings().environment
+    # is_create=True: 생성 시에만 MINUTE prod 가드 적용(Task 3 리뷰 반영)
     _validate_plan_fields(price=price, billing_cycle=billing_cycle, cycle_days=cycle_days,
                           cycle_minutes=cycle_minutes,
                           first_payment_type=first_payment_type,
-                          first_payment_value=first_payment_value, environment=env)
+                          first_payment_value=first_payment_value,
+                          environment=env, is_create=True)
     _validate_recurring_discount(recurring_discount_type, recurring_discount_value)
     _validate_trial(trial_enabled, trial_days)
     plan = Plan(service_id=service_id, name=name.strip(), price=price,
@@ -331,12 +343,15 @@ async def update_plan(db: AsyncSession, *, plan_id: uuid.UUID, service_id: uuid.
     new_billing_cycle = plan.billing_cycle
     new_cycle_days = plan.cycle_days
     new_cycle_minutes = plan.cycle_minutes  # MINUTE 주기 분 수 — 수정 불가(Task 3)
+    # is_create=False: 수정 시에는 MINUTE prod 가드를 적용하지 않음(Task 3 리뷰 반영).
+    # 이미 생성된 MINUTE 요금제를 prod 서버에서 이름·가격만 바꿀 때 거부되지 않도록 한다.
     _validate_plan_fields(price=new_price, billing_cycle=new_billing_cycle,
                           cycle_days=new_cycle_days,
                           cycle_minutes=new_cycle_minutes,  # 기존 값 그대로 재검증(Task 3)
                           first_payment_type=new_fpt,
                           first_payment_value=new_fpv,
-                          environment=default_settings().environment)  # 현재 환경으로 재검증(Task 3)
+                          environment=default_settings().environment,
+                          is_create=False)  # 수정 시 prod 가드 스킵(Task 3 리뷰)
     _validate_recurring_discount(new_rdt, new_rdv)
     _validate_trial(new_trial_enabled, new_trial_days)
     # 요금제 수정 내역을 감사 로그에 상세히 — 모든 항목을 변경 전/후(old_/new_)로 기록(요청).
