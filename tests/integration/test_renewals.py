@@ -575,3 +575,21 @@ async def test_retry_limit_from_global_settings(db, session_factory, redis_clien
     assert sub.suspended_at == now
     assert sub.next_billing_at is None
     assert "정지" in email.sent[0]["subject"]
+
+
+async def test_minute_subscription_period_end(db, cipher):
+    """MINUTE 요금제 구독은 기간 종료일이 시작 + cycle_minutes 분이어야 한다.
+
+    Task 4: compute_period_end 호출부에 cycle_minutes를 전달하지 않으면
+    InputValidationError 발생 → 이 테스트가 RED 상태(실패).
+    수정 후 GREEN: delta == 5분 정확히 일치.
+    """
+    from tests.factories import create_plan, create_subscription
+
+    svc, _, _ = await create_service(db, cipher)
+    # MINUTE 주기, 5분 단위 요금제 생성
+    plan = await create_plan(db, svc, billing_cycle="MINUTE", cycle_minutes=5)
+    # 팩토리가 period_end 미지정 시 compute_period_end로 계산 — cycle_minutes 미전달이면 에러
+    sub = await create_subscription(db, cipher, svc, plan)
+    delta = sub.current_period_end - sub.current_period_start
+    assert delta.total_seconds() == 5 * 60  # 정확히 5분(300초)

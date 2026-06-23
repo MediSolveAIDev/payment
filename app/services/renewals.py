@@ -121,7 +121,9 @@ def _advance_period(sub: Subscription, plan: Plan) -> None:
     transition(sub, SubscriptionStatus.ACTIVE)
     new_start = sub.current_period_end
     sub.current_period_start = new_start
-    sub.current_period_end = compute_period_end(new_start, plan.billing_cycle, plan.cycle_days)
+    # cycle_minutes: MINUTE 주기 요금제에서 정확한 분 수를 전달(Task 4)
+    sub.current_period_end = compute_period_end(new_start, plan.billing_cycle,
+                                                plan.cycle_days, plan.cycle_minutes)
     sub.next_billing_at = sub.current_period_end
     # 자동결제 안함(요청 013): 이번 결제가 마지막 — 다음 갱신을 예약하지 않아
     # 이 주기 종료 시 _expire_non_renewing이 EXPIRED 처리(체험 만료 후 첫 결제 케이스 포함).

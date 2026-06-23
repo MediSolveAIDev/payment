@@ -144,7 +144,9 @@ async def create_subscription(db, cipher, service, plan, *, external_user_id="us
         card_id: cards 테이블의 UUID — NOT NULL 컬럼이므로 반드시 전달.
     """
     start = period_start or utcnow()
-    end = period_end or compute_period_end(start, plan.billing_cycle, plan.cycle_days)
+    # cycle_minutes: MINUTE 주기 요금제에서 정확한 분 수를 전달(Task 4)
+    end = period_end or compute_period_end(start, plan.billing_cycle, plan.cycle_days,
+                                           plan.cycle_minutes)
     # Subscription은 카드 보관함 이전 빌링키·카드정보 컬럼이 제거됐으므로
     # card_id FK만 설정한다 (billing_key_encrypted 등은 cards 테이블로 이동)
     sub = Subscription(

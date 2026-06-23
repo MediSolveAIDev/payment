@@ -229,7 +229,9 @@ async def create_subscription(db: AsyncSession, toss: TossClient, cipher: AesGcm
         period_end = now + timedelta(days=plan.trial_days)
         status = SubscriptionStatus.TRIAL
     else:
-        period_end = compute_period_end(now, plan.billing_cycle, plan.cycle_days)
+        # cycle_minutes: MINUTE 주기 요금제에서 정확한 분 수를 전달(Task 4)
+        period_end = compute_period_end(now, plan.billing_cycle, plan.cycle_days,
+                                        plan.cycle_minutes)
         status = SubscriptionStatus.ACTIVE
 
     # Subscription은 빌링키 컬럼 없이 card_id FK만 보유(Task 2/3에서 컬럼 제거됨).
@@ -437,7 +439,9 @@ async def _perform_manual_charge(db: AsyncSession, toss: TossClient,
     # + 기준일 리셋(결제 시점부터 새 주기)
     transition(sub, SubscriptionStatus.ACTIVE)
     sub.current_period_start = now
-    sub.current_period_end = compute_period_end(now, plan.billing_cycle, plan.cycle_days)
+    # cycle_minutes: MINUTE 주기 요금제에서 정확한 분 수를 전달(Task 4)
+    sub.current_period_end = compute_period_end(now, plan.billing_cycle, plan.cycle_days,
+                                                plan.cycle_minutes)
     sub.next_billing_at = sub.current_period_end
     await record_audit(db, **actor,
                        action="subscription.manual_pay",
