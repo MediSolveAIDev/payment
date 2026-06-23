@@ -3,12 +3,13 @@ from sqlalchemy import func, select
 
 from app.core.errors import ConflictError, InputValidationError
 from app.core.security import sha256_hex
-from app.models import Service, User, UserService
+from app.models import AuditLog, Service, User, UserService
 from app.services.registry import (
     delete_service,
     register_service,
     rotate_keys,
     set_service_status,
+    set_toss_secret_key,
     update_allowed_ips,
 )
 from tests.factories import create_plan, create_service, create_subscription, create_user
@@ -238,3 +239,67 @@ async def test_set_primary_manager_rejects_non_manager_of_service(db, cipher):
                                    manager_user_ids=[m1.id], primary_user_id=m1.id)
     with pytest.raises(InputValidationError):
         await set_primary_manager(db, creds.service.id, user_id=outsider.id)
+
+
+# ── toss_secret_key 테스트 3종 ────────────────────────────────────────────────
+
+async def test_register_with_toss_key_encrypts_and_audits(db, cipher):
+    """등록 시 toss_secret_key를 전달하면 암호화 저장되고 감사로그가 기록된다.
+    감사로그 어디에도 평문 시크릿이 남지 않아야 한다.
+    """
+    m = await _mgr(db)
+    creds = await register_service(
+        db, cipher, name="svc-toss", allowed_ips=[],
+        manager_user_ids=[m.id], primary_user_id=m.id,
+        toss_secret_key="sk_test_LIVE",
+    )
+    svc = creds.service
+    # 암호화된 값이 저장됨
+    assert svc.toss_secret_key_encrypted
+    # 복호화하면 원본과 일치해야 함
+    assert cipher.decrypt(svc.toss_secret_key_encrypted) == "sk_test_LIVE"
+    # 감사로그에 set 액션이 기록되어 있어야 함
+    rows = (await db.execute(
+        select(AuditLog).where(AuditLog.target_id == str(svc.id))
+    )).scalars().all()
+    assert any(r.action == "service.toss_secret_key.set" for r in rows)
+    # 평문 시크릿이 감사로그 detail에 포함되어서는 안 됨
+    assert all("sk_test_LIVE" not in (str(r.detail) or "") for r in rows)
+
+
+async def test_set_toss_secret_key_set_then_change(db, cipher):
+    """최초 설정은 'set', 이후 교체는 'changed' 감사 액션으로 기록된다.
+    감사로그 어디에도 평문 시크릿이 남지 않아야 한다.
+    """
+    m = await _mgr(db)
+    creds = await register_service(
+        db, cipher, name="svc2-toss", allowed_ips=[],
+        manager_user_ids=[m.id], primary_user_id=m.id,
+    )
+    sid = creds.service.id
+    # 최초 설정 → action: set
+    await set_toss_secret_key(db, cipher, service_id=sid, toss_secret_key="sk_1")
+    # 교체 → action: changed
+    await set_toss_secret_key(db, cipher, service_id=sid, toss_secret_key="sk_2")
+    svc = await db.get(Service, sid)
+    # 최종 키는 sk_2 로 교체되어 있어야 함
+    assert cipher.decrypt(svc.toss_secret_key_encrypted) == "sk_2"
+    rows = (await db.execute(
+        select(AuditLog).where(AuditLog.target_id == str(sid))
+    )).scalars().all()
+    actions = [r.action for r in rows]
+    assert "service.toss_secret_key.set" in actions      # 최초 설정
+    assert "service.toss_secret_key.changed" in actions  # 교체
+    # 평문 시크릿이 감사로그 detail에 포함되어서는 안 됨
+    assert all("sk_1" not in str(r.detail) and "sk_2" not in str(r.detail) for r in rows)
+
+
+async def test_set_toss_secret_key_rejects_empty(db, cipher):
+    """빈 문자열(공백 포함)을 toss_secret_key로 전달하면 InputValidationError를 발생시킨다."""
+    m = await _mgr(db)
+    creds = await register_service(
+        db, cipher, name="svc3-toss", allowed_ips=[],
+        manager_user_ids=[m.id], primary_user_id=m.id,
+    )
+    with pytest.raises(InputValidationError):
+        await set_toss_secret_key(db, cipher, service_id=creds.service.id, toss_secret_key="  ")

@@ -101,6 +101,7 @@ async def register_service(db: AsyncSession, cipher: AesGcmCipher,
                            primary_user_id: uuid.UUID | None,
                            cancellation_enabled: bool = True,
                            cancellation_fee_percent: int = 0,
+                           toss_secret_key: str | None = None,   # 서비스별 토스 시크릿(선택; AES 암호화 저장)
                            actor_user_id: uuid.UUID | None = None) -> IssuedCredentials:
     """서비스 등록 + 자격증명 발급.
 
@@ -146,7 +147,11 @@ async def register_service(db: AsyncSession, cipher: AesGcmCipher,
                       api_key_encrypted=cipher.encrypt(api_key),
                       hmac_secret_encrypted=cipher.encrypt(hmac_secret),
                       cancellation_enabled=cancellation_enabled,        # 취소 허용 여부
-                      cancellation_fee_percent=cancellation_fee_percent)  # 취소 수수료율
+                      cancellation_fee_percent=cancellation_fee_percent,  # 취소 수수료율
+                      # toss_secret_key가 전달된 경우 AES 암호화해서 저장; 평문은 보관하지 않음
+                      toss_secret_key_encrypted=(cipher.encrypt(toss_secret_key.strip())
+                                                 if toss_secret_key and toss_secret_key.strip()
+                                                 else None))
     db.add(service)
     try:
         await db.flush()
@@ -171,6 +176,12 @@ async def register_service(db: AsyncSession, cipher: AesGcmCipher,
                                "ip_count": len(allowed_ips),
                                "cancel_enabled": cancellation_enabled,
                                "cancel_fee_percent": cancellation_fee_percent})
+    # toss_secret_key가 설정된 경우 별도 감사 기록 — 평문 값은 절대 기록하지 않음
+    if toss_secret_key and toss_secret_key.strip():
+        await record_audit(db, actor_type="USER", actor_user_id=actor_user_id,
+                           action="service.toss_secret_key.set", target_type="service",
+                           target_id=str(service.id),
+                           detail={"service_name": service.name})
     await db.commit()
     return IssuedCredentials(service=service, api_key=api_key, hmac_secret=hmac_secret)
 
@@ -225,6 +236,30 @@ async def rotate_keys(db: AsyncSession, cipher: AesGcmCipher, service_id: uuid.U
                        detail={"note": "API 키·HMAC 시크릿 재발급(기존 키 무효화)"})
     await db.commit()
     return api_key, hmac_secret
+
+
+async def set_toss_secret_key(db: AsyncSession, cipher: AesGcmCipher, *,
+                              service_id: uuid.UUID, toss_secret_key: str,
+                              actor_user_id: uuid.UUID | None = None) -> None:
+    """서비스의 토스 시크릿 키를 설정/교체한다(AES 암호화 저장).
+
+    빈 값은 거부한다. 기존에 키가 있었으면 'changed', 없었으면 'set'으로 감사 기록한다.
+    감사로그에는 시크릿 값을 절대 남기지 않는다.
+    """
+    secret = (toss_secret_key or "").strip()
+    if not secret:
+        raise InputValidationError("토스 시크릿 키는 비어 있을 수 없습니다")
+    service = await db.get(Service, service_id)
+    if service is None:
+        raise NotFoundError("서비스를 찾을 수 없습니다")
+    had_key = bool(service.toss_secret_key_encrypted)  # 기존 키 존재 여부(set vs changed 구분)
+    service.toss_secret_key_encrypted = cipher.encrypt(secret)  # 평문은 저장하지 않음
+    await record_audit(db, actor_type="USER", actor_user_id=actor_user_id,
+                       action=("service.toss_secret_key.changed" if had_key
+                               else "service.toss_secret_key.set"),
+                       target_type="service", target_id=str(service_id),
+                       detail={"service_name": service.name})   # 시크릿 값 미기록
+    await db.commit()
 
 
 async def update_allowed_ips(db: AsyncSession, service_id: uuid.UUID, ips: list[str],
