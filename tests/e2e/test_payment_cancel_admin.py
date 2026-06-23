@@ -14,7 +14,7 @@ async def _admin(client, db, redis_client):
 
 
 async def _done_oneoff(db, svc, *, order, amount=10000):
-    p = Payment(subscription_id=None, service_id=svc.id, external_user_id="u",
+    p = Payment(subscription_id=None, service_id=svc.id, external_user_id="u@e.com",
                 order_id=order, amount=amount, payment_type=PaymentType.ONE_OFF,
                 kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                 idempotency_key=order, toss_payment_key=f"pay_{order}",

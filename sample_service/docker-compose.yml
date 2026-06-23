@@ -11,6 +11,7 @@
 #       (nginx의 https://localhost 는 자체 서명 인증서라 컨테이너에서 호스트명/TLS가 안 맞음 →
 #        테스트는 nginx를 거치지 않고 app에 직접 붙는 게 가장 확실하다.)
 
+name: payment_system
 services:
   sample:
     build: .

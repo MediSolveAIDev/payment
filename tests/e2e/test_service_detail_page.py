@@ -113,21 +113,21 @@ async def test_detail_subscriptions_list_scoped_and_filtered(client, db, redis_c
     other, _, _ = await create_service(db, cipher, name="sublist-other")
     plan = await create_plan(db, svc, name="sub-plan")
     other_plan = await create_plan(db, other, name="other-plan")
-    await create_subscription(db, cipher, svc, plan, external_user_id="sub-user-a")
-    await create_subscription(db, cipher, svc, plan, external_user_id="sub-user-b",
+    await create_subscription(db, cipher, svc, plan, external_user_id="sub-user-a@e.com")
+    await create_subscription(db, cipher, svc, plan, external_user_id="sub-user-b@e.com",
                               status="CANCELED")
     await create_subscription(db, cipher, other, other_plan,
-                              external_user_id="other-svc-user")
+                              external_user_id="other-svc-user@e.com")
     await _admin(client, db, redis_client)
     html = (await client.get(f"/admin/services/{svc.id}")).text
-    assert "sub-user-a" in html and "sub-user-b" in html
-    assert "other-svc-user" not in html  # 타 서비스 구독 미표시
+    assert "sub-user-a@e.com" in html and "sub-user-b@e.com" in html
+    assert "other-svc-user@e.com" not in html  # 타 서비스 구독 미표시
     # status 필터
     html = (await client.get(f"/admin/services/{svc.id}?status=CANCELED")).text
-    assert "sub-user-b" in html and "sub-user-a" not in html
+    assert "sub-user-b@e.com" in html and "sub-user-a@e.com" not in html
     # 사용자 검색
     html = (await client.get(f"/admin/services/{svc.id}?q=user-a")).text
-    assert "sub-user-a" in html and "sub-user-b" not in html
+    assert "sub-user-a@e.com" in html and "sub-user-b@e.com" not in html
 
 
 async def test_detail_subscriptions_paging(client, db, redis_client, cipher):
@@ -135,7 +135,7 @@ async def test_detail_subscriptions_paging(client, db, redis_client, cipher):
     plan = await create_plan(db, svc, name="page-plan")
     for i in range(16):  # PER_PAGE_DEFAULT=15 초과 → 2페이지
         await create_subscription(db, cipher, svc, plan,
-                                  external_user_id=f"pg-user-{i:02d}")
+                                  external_user_id=f"pg-user-{i:02d}@e.com")
     await _admin(client, db, redis_client)
     p1 = (await client.get(f"/admin/services/{svc.id}")).text
     assert "총 16건" in p1
@@ -154,7 +154,7 @@ async def test_detail_oneoff_paging(client, db, redis_client, cipher):
     svc, _, _ = await create_service(db, cipher, name="oneoff-page-svc")
     for i in range(11):
         db.add(Payment(subscription_id=None, service_id=svc.id,
-                       external_user_id=f"oo-{i:02d}", order_id=f"oop-{i:02d}",
+                       external_user_id=f"oo-{i:02d}@e.com", order_id=f"oop-{i:02d}",
                        amount=1000, payment_type=PaymentType.ONE_OFF,
                        kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                        idempotency_key=f"oop-{i:02d}", requested_at=utcnow(),
@@ -174,7 +174,7 @@ async def test_detail_oneoff_htmx_partial(client, db, redis_client, cipher):
     svc, _, _ = await create_service(db, cipher, name="oneoff-htmx-svc")
     for i in range(11):
         db.add(Payment(subscription_id=None, service_id=svc.id,
-                       external_user_id=f"oh-{i:02d}", order_id=f"ohp-{i:02d}",
+                       external_user_id=f"oh-{i:02d}@e.com", order_id=f"ohp-{i:02d}",
                        amount=1000, payment_type=PaymentType.ONE_OFF,
                        kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                        idempotency_key=f"ohp-{i:02d}", requested_at=utcnow(),
@@ -364,13 +364,13 @@ async def test_service_detail_shows_one_off_payments(client, db, redis_client, c
     from app.core.clock import utcnow
     from app.models import Payment, PaymentKind, PaymentStatus, PaymentType
     svc, _, _ = await create_service(db, cipher, name="상세일반결제")
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="oo-u",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="oo-u@e.com",
                    order_id="det-oo1", amount=5000, payment_type=PaymentType.ONE_OFF,
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="det-oo1", requested_at=utcnow(), approved_at=utcnow()))
     # 타 서비스 결제는 표시되지 않아야 함 (크로스 서비스 격리)
     other, _, _ = await create_service(db, cipher, name="타서비스")
-    db.add(Payment(subscription_id=None, service_id=other.id, external_user_id="other-u",
+    db.add(Payment(subscription_id=None, service_id=other.id, external_user_id="other-u@e.com",
                    order_id="det-other", amount=9000, payment_type=PaymentType.ONE_OFF,
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="det-other", requested_at=utcnow(), approved_at=utcnow()))
@@ -379,7 +379,7 @@ async def test_service_detail_shows_one_off_payments(client, db, redis_client, c
     await admin_login(client, admin.email, pw)
     html = (await client.get(f"/admin/services/{svc.id}")).text
     assert "일반결제" in html
-    assert "det-oo1" in html and "oo-u" in html
+    assert "det-oo1" in html and "oo-u@e.com" in html
     assert "det-other" not in html  # 타 서비스 결제 미표시
     # 주문번호(행) 클릭 → 결제 상세로 이동하는 링크가 있어야 한다
     p = await db.scalar(select(Payment).where(Payment.order_id == "det-oo1"))
@@ -469,15 +469,15 @@ async def test_detail_shows_registered_cards(client, db, redis_client, cipher):
     svc, _, _ = await create_service(db, cipher, name="card-list-svc")
     other, _, _ = await create_service(db, cipher, name="card-other-svc")
     fake = FakeTossClient()
-    await create_card(db, fake, cipher, svc, external_user_id="card-user-a")
-    await create_card(db, fake, cipher, other, external_user_id="other-card-user")
+    await create_card(db, fake, cipher, svc, external_user_id="card-user-a@e.com")
+    await create_card(db, fake, cipher, other, external_user_id="other-card-user@e.com")
     await _admin(client, db, redis_client)
     html = (await client.get(f"/admin/services/{svc.id}")).text
     assert "등록 카드" in html                       # 섹션 헤더
     assert 'id="list-svc-cards"' in html              # htmx 대상 컨테이너
-    assert "card-user-a" in html                      # 사용자 ID
+    assert "card-user-a@e.com" in html                      # 사용자 ID
     assert "1234-****-****-5678" in html              # 마스킹 카드번호(FakeToss)
-    assert "other-card-user" not in html              # 타 서비스 카드 미표시
+    assert "other-card-user@e.com" not in html              # 타 서비스 카드 미표시
 
 
 async def test_detail_cards_htmx_partial_and_paging(client, db, redis_client, cipher):
@@ -488,7 +488,7 @@ async def test_detail_cards_htmx_partial_and_paging(client, db, redis_client, ci
     """
     svc, _, _ = await create_service(db, cipher, name="card-htmx-svc")
     for i in range(11):
-        await create_card_direct(db, cipher, svc, external_user_id=f"ck-{i:02d}",
+        await create_card_direct(db, cipher, svc, external_user_id=f"ck-{i:02d}@e.com",
                                  billing_key=f"bk-card-{i:02d}",
                                  customer_key=f"cust-{i:02d}")
     await _admin(client, db, redis_client)

@@ -56,7 +56,7 @@ async def create_plan(db, service, *, name="기본 요금제", price=10000,
 _UNSET = object()  # next_billing_at=None(NULL)과 '미지정'을 구분하는 센티널
 
 
-async def create_card(db, toss, cipher, service, *, external_user_id="user-1",
+async def create_card(db, toss, cipher, service, *, external_user_id="user-1@e.com",
                       customer_key="ck-valid-1", auth_key="auth-1"):
     """테스트용 카드 등록 헬퍼 — register_or_replace_card 래퍼.
 
@@ -68,7 +68,7 @@ async def create_card(db, toss, cipher, service, *, external_user_id="user-1",
         toss: FakeTossClient 인스턴스.
         cipher: 암호화 인스턴스.
         service: 카드가 속할 Service 인스턴스.
-        external_user_id: 외부 사용자 식별자(기본 "user-1").
+        external_user_id: 외부 사용자 식별자(기본 "user-1@e.com").
         customer_key: 토스 customerKey(기본 "ck-valid-1").
         auth_key: 토스 authKey(기본 "auth-1").
 
@@ -85,7 +85,7 @@ async def create_card(db, toss, cipher, service, *, external_user_id="user-1",
 
 
 async def create_card_direct(db, cipher: AesGcmCipher, service, *,
-                             external_user_id: str = "user-1",
+                             external_user_id: str = "user-1@e.com",
                              billing_key: str,
                              customer_key: str = "ck-direct") -> Card:
     """테스트에서 특정 빌링키 값을 가진 Card 행을 직접 삽입한다.
@@ -119,7 +119,7 @@ async def create_card_direct(db, cipher: AesGcmCipher, service, *,
     return card
 
 
-async def create_subscription(db, cipher, service, plan, *, external_user_id="user-1",
+async def create_subscription(db, cipher, service, plan, *, external_user_id="user-1@e.com",
                               status="ACTIVE", retry_count=0,
                               period_start=None, period_end=None,
                               next_billing_at=_UNSET,

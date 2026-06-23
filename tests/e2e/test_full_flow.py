@@ -64,11 +64,11 @@ async def test_full_subscription_lifecycle(client, app, db, redis_client, cipher
 
     # 3) 외부 서비스: 카드 선등록 후 HMAC 서명 API로 구독 생성 (첫구독 50% 할인 → 7,500원)
     # 카드 보관함 전환(Task 7+): 구독 요청 전에 반드시 카드를 먼저 등록해야 한다.
-    await _register_card_api(client, api_key, hmac_secret, "e2e-user",
+    await _register_card_api(client, api_key, hmac_secret, "e2e-user@e.com",
                              customer_key="ck-e2e-user", auth_key="auth-from-widget")
     resp = await api_request(client, "POST", "/api/v1/subscriptions",
                              api_key, hmac_secret,
-                             json_body={"external_user_id": "e2e-user",
+                             json_body={"external_user_id": "e2e-user@e.com",
                                         "plan_id": str(plan.id)})
     assert resp.status_code == 201
     assert resp.json()["status"] == "ACTIVE"
@@ -89,14 +89,14 @@ async def test_full_subscription_lifecycle(client, app, db, redis_client, cipher
     # 카드 보관함 전환(Task 7+) 이후 구독 만료 시 빌링키를 삭제하지 않는다.
     # 카드는 영속적 자원이므로 구독이 끝나도 카드(빌링키)가 보존된다.
     cancel = await api_request(client, "POST",
-                               "/api/v1/subscriptions/e2e-user/cancel",
+                               "/api/v1/subscriptions/e2e-user@e.com/cancel",
                                api_key, hmac_secret)
     assert cancel.json()["status"] == "CANCELED"
     resume = await api_request(client, "POST",
-                               "/api/v1/subscriptions/e2e-user/resume",
+                               "/api/v1/subscriptions/e2e-user@e.com/resume",
                                api_key, hmac_secret)
     assert resume.json()["status"] == "ACTIVE"
-    await api_request(client, "POST", "/api/v1/subscriptions/e2e-user/cancel",
+    await api_request(client, "POST", "/api/v1/subscriptions/e2e-user@e.com/cancel",
                       api_key, hmac_secret)
     await db.refresh(sub)
     sub.current_period_end = utcnow() - timedelta(minutes=1)
@@ -104,14 +104,14 @@ async def test_full_subscription_lifecycle(client, app, db, redis_client, cipher
     stats = await run_renewals(app)
     assert stats["expired"] == 1
     status_resp = await api_request(client, "GET",
-                                    "/api/v1/subscriptions/e2e-user",
+                                    "/api/v1/subscriptions/e2e-user@e.com",
                                     api_key, hmac_secret)
     assert status_resp.json()["status"] == "EXPIRED"
     # 카드 보관함 전환 이후 구독 만료 시 빌링키를 삭제하지 않음 — 카드는 영속
     assert not fake_toss.deleted
 
     # 6) 결제 이력 API + 관리자 대시보드 반영
-    pays = await api_request(client, "GET", "/api/v1/payments/e2e-user",
+    pays = await api_request(client, "GET", "/api/v1/payments/e2e-user@e.com",
                              api_key, hmac_secret)
     assert len(pays.json()["payments"]) == 2
     dash = await client.get("/admin")

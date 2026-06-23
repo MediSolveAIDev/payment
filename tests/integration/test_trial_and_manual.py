@@ -46,11 +46,11 @@ async def test_create_trial_no_charge_period_is_trial_days(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, trial_enabled=True, trial_days=14)
     # Card Vault(Task 7): 구독 전 카드 먼저 등록 — create_subscription은 customer_key/auth_key를 받지 않음
-    await create_card(db, fake, cipher, svc, external_user_id="u-trial",
+    await create_card(db, fake, cipher, svc, external_user_id="u-trial@e.com",
                       customer_key="ck-tr", auth_key="a")
     sub = await subs.create_subscription(
         db, fake, cipher, service=svc, plan_id=plan.id,
-        external_user_id="u-trial", trial=True)
+        external_user_id="u-trial@e.com", trial=True)
     assert sub.status == "TRIAL"
     assert fake.charges == []                       # 가입 시 결제 없음
     assert fake.issued                              # 빌링키는 등록됨(만료 시 자동결제용)
@@ -68,19 +68,19 @@ async def test_trial_rejected_when_plan_has_no_trial(db, cipher, fake):
     with pytest.raises(InputValidationError):
         await subs.create_subscription(
             db, fake, cipher, service=svc, plan_id=plan.id,
-            external_user_id="u-nt", trial=True)
+            external_user_id="u-nt@e.com", trial=True)
 
 
 async def test_trial_cancel_is_immediate(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, trial_enabled=True, trial_days=14)
     # Card Vault(Task 7): 구독 전 카드 먼저 등록 — create_subscription은 customer_key/auth_key를 받지 않음
-    await create_card(db, fake, cipher, svc, external_user_id="u-tc",
+    await create_card(db, fake, cipher, svc, external_user_id="u-tc@e.com",
                       customer_key="ck-tc", auth_key="a")
     await subs.create_subscription(
         db, fake, cipher, service=svc, plan_id=plan.id,
-        external_user_id="u-tc", trial=True)
-    sub = await subs.cancel_subscription(db, service=svc, external_user_id="u-tc")
+        external_user_id="u-tc@e.com", trial=True)
+    sub = await subs.cancel_subscription(db, service=svc, external_user_id="u-tc@e.com")
     assert sub.status == "CANCELED"
     assert sub.next_billing_at is None
     assert sub.current_period_end <= utcnow() + timedelta(seconds=1)  # 즉시 만료
@@ -91,7 +91,7 @@ async def test_trial_cancel_is_immediate(db, cipher, fake):
 async def test_manual_pay_revives_suspended_and_resets_anchor(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
-    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-susp",
+    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-susp@e.com",
                                status="SUSPENDED", retry_count=4,
                                next_billing_at=None)
     sub.suspended_at = utcnow() - timedelta(days=3)
@@ -99,7 +99,7 @@ async def test_manual_pay_revives_suspended_and_resets_anchor(db, cipher, fake):
 
     now = utcnow()
     revived = await subs.manual_charge_subscription(
-        db, fake, cipher, service=svc, external_user_id="u-susp")
+        db, fake, cipher, service=svc, external_user_id="u-susp@e.com")
     assert revived.status == "ACTIVE"
     assert revived.retry_count == 0
     assert revived.suspended_at is None
@@ -114,10 +114,10 @@ async def test_manual_pay_revives_suspended_and_resets_anchor(db, cipher, fake):
 async def test_manual_pay_requires_suspended(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    await create_subscription(db, cipher, svc, plan, external_user_id="u-act")  # ACTIVE
+    await create_subscription(db, cipher, svc, plan, external_user_id="u-act@e.com")  # ACTIVE
     with pytest.raises(NotFoundError):
         await subs.manual_charge_subscription(
-            db, fake, cipher, service=svc, external_user_id="u-act")
+            db, fake, cipher, service=svc, external_user_id="u-act@e.com")
 
 
 async def test_manual_pay_allows_past_due(db, cipher, fake):
@@ -125,22 +125,22 @@ async def test_manual_pay_allows_past_due(db, cipher, fake):
     from app.models import SubscriptionStatus
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
-    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="pd",
+    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="pd@e.com",
                                status="PAST_DUE", next_billing_at=None)
     out = await subs.manual_charge_subscription(
-        db, fake, cipher, service=svc, external_user_id="pd")
+        db, fake, cipher, service=svc, external_user_id="pd@e.com")
     assert out.status == SubscriptionStatus.ACTIVE
 
 
 async def test_manual_pay_failure_keeps_suspended(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-sf",
+    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-sf@e.com",
                                status="SUSPENDED", next_billing_at=None)
     fake.fail_charge_with = TossError("INSUFFICIENT_FUNDS", "잔액 부족", 400)
     with pytest.raises(PaymentFailedError):
         await subs.manual_charge_subscription(
-            db, fake, cipher, service=svc, external_user_id="u-sf")
+            db, fake, cipher, service=svc, external_user_id="u-sf@e.com")
     await db.refresh(sub)
     assert sub.status == "SUSPENDED"  # 실패 시 정지 유지
     payment = await db.scalar(select(Payment).where(Payment.subscription_id == sub.id))
@@ -155,9 +155,9 @@ async def test_add_usage_days_extends_active(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
     base = utcnow().replace(microsecond=0)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="ud-act",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="ud-act@e.com",
                                     status="ACTIVE", period_end=base, next_billing_at=base)
-    out = await subs.add_usage_days(db, service=svc, external_user_id="ud-act", days=30)
+    out = await subs.add_usage_days(db, service=svc, external_user_id="ud-act@e.com", days=30)
     assert out.current_period_end == base + timedelta(days=30)
     assert out.next_billing_at == base + timedelta(days=30)
     assert out.status == "ACTIVE"
@@ -171,9 +171,9 @@ async def test_add_usage_days_keeps_none_next_billing(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
     base = utcnow().replace(microsecond=0)
-    await create_subscription(db, cipher, svc, plan, external_user_id="ud-pd",
+    await create_subscription(db, cipher, svc, plan, external_user_id="ud-pd@e.com",
                               status="PAST_DUE", period_end=base, next_billing_at=None)
-    out = await subs.add_usage_days(db, service=svc, external_user_id="ud-pd", days=10)
+    out = await subs.add_usage_days(db, service=svc, external_user_id="ud-pd@e.com", days=10)
     assert out.current_period_end == base + timedelta(days=10)
     assert out.next_billing_at is None
 
@@ -182,27 +182,27 @@ async def test_add_usage_days_rejects_non_active_state(db, cipher, fake):
     """이용 중이 아닌 상태(CANCELED 등)는 ConflictError."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    await create_subscription(db, cipher, svc, plan, external_user_id="ud-canc",
+    await create_subscription(db, cipher, svc, plan, external_user_id="ud-canc@e.com",
                               status="CANCELED", next_billing_at=None)
     with pytest.raises(ConflictError):
-        await subs.add_usage_days(db, service=svc, external_user_id="ud-canc", days=10)
+        await subs.add_usage_days(db, service=svc, external_user_id="ud-canc@e.com", days=10)
 
 
 async def test_add_usage_days_no_subscription(db, cipher, fake):
     """구독이 없으면 NotFoundError."""
     svc, _, _ = await create_service(db, cipher)
     with pytest.raises(NotFoundError):
-        await subs.add_usage_days(db, service=svc, external_user_id="nobody", days=10)
+        await subs.add_usage_days(db, service=svc, external_user_id="nobody@e.com", days=10)
 
 
 async def test_add_usage_days_rejects_bad_days(db, cipher, fake):
     """일수 범위(1~3650) 밖이면 InputValidationError."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    await create_subscription(db, cipher, svc, plan, external_user_id="ud-bad",
+    await create_subscription(db, cipher, svc, plan, external_user_id="ud-bad@e.com",
                               status="ACTIVE")
     with pytest.raises(InputValidationError):
-        await subs.add_usage_days(db, service=svc, external_user_id="ud-bad", days=0)
+        await subs.add_usage_days(db, service=svc, external_user_id="ud-bad@e.com", days=0)
 
 
 # ---------------- Admin 만료일 연장 (구독 상세 '만료일 연장') ----------------
@@ -213,7 +213,7 @@ async def test_extend_subscription_sets_extended_and_dates(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     admin, _ = await create_user(db)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="ext-u",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="ext-u@e.com",
                                     status="ACTIVE")
     new_end = utcnow() + timedelta(days=60)
     out = await subs.extend_subscription(db, subscription_id=sub.id, service_scope=None,
@@ -231,7 +231,7 @@ async def test_extend_subscription_rejects_expired(db, cipher, fake):
     """EXPIRED(완전 종료) 구독은 연장 불가(ConflictError) — 재구독으로 처리."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="ext-exp",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="ext-exp@e.com",
                                     status="EXPIRED", next_billing_at=None)
     with pytest.raises(ConflictError):
         await subs.extend_subscription(db, subscription_id=sub.id, service_scope=None,
@@ -243,7 +243,7 @@ async def test_extend_subscription_rejects_past_date(db, cipher, fake):
     """과거 날짜로는 연장 불가(InputValidationError)."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="ext-past")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="ext-past@e.com")
     with pytest.raises(InputValidationError):
         await subs.extend_subscription(db, subscription_id=sub.id, service_scope=None,
                                        new_end=utcnow() - timedelta(days=1),
@@ -255,7 +255,7 @@ async def test_extend_subscription_scope_enforced(db, cipher, fake):
     import uuid as _uuid
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="ext-scope")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="ext-scope@e.com")
     with pytest.raises(NotFoundError):
         await subs.extend_subscription(db, subscription_id=sub.id,
                                        service_scope=[_uuid.uuid4()],
@@ -271,7 +271,7 @@ async def test_admin_retry_payment_revives_and_audits_as_user(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     user, _ = await create_user(db)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
-    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="pd-admin",
+    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="pd-admin@e.com",
                                status="PAST_DUE", retry_count=2, next_billing_at=None)
     out = await subs.admin_retry_payment(db, fake, cipher, subscription_id=sub.id,
                                          service_scope=None, actor_user_id=user.id)
@@ -290,7 +290,7 @@ async def test_admin_retry_payment_rejects_active(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     user, _ = await create_user(db)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="act-admin")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="act-admin@e.com")
     with pytest.raises(ConflictError):
         await subs.admin_retry_payment(db, fake, cipher, subscription_id=sub.id,
                                        service_scope=None, actor_user_id=user.id)
@@ -302,7 +302,7 @@ async def test_admin_retry_payment_scope_enforced(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     user, _ = await create_user(db)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="scope-admin",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="scope-admin@e.com",
                                     status="SUSPENDED", next_billing_at=None)
     with pytest.raises(NotFoundError):
         await subs.admin_retry_payment(db, fake, cipher, subscription_id=sub.id,
@@ -315,7 +315,7 @@ async def test_admin_retry_payment_failure_keeps_state(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     user, _ = await create_user(db)
     plan = await create_plan(db, svc)
-    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="sf-admin",
+    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="sf-admin@e.com",
                                status="SUSPENDED", next_billing_at=None)
     fake.fail_charge_with = TossError("INSUFFICIENT_FUNDS", "잔액 부족", 400)
     with pytest.raises(PaymentFailedError):
@@ -347,11 +347,11 @@ async def test_recurring_discount_applied_on_create_and_renewal(
                              first_payment_type="DISCOUNT_AMOUNT",
                              first_payment_value=1000)              # 첫구독 -1000
     # Card Vault(Task 7): 구독 전 카드 먼저 등록 — create_subscription은 customer_key/auth_key를 받지 않음
-    await create_card(db, fake, cipher, svc, external_user_id="u-rec",
+    await create_card(db, fake, cipher, svc, external_user_id="u-rec@e.com",
                       customer_key="ck-rec", auth_key="a")
     sub = await subs.create_subscription(
         db, fake, cipher, service=svc, plan_id=plan.id,
-        external_user_id="u-rec")
+        external_user_id="u-rec@e.com")
     # 요청 005: 첫 결제는 정가 기준 — 10000 − 1000 = 9000 (상시 10% 무시)
     assert fake.charges[0]["amount"] == 9000  # 첫 결제: 정가 10000 − 1000 = 9000
 
@@ -371,9 +371,9 @@ async def test_recurring_discount_manual_pay_uses_discounted(db, cipher, fake):
     plan = await create_plan(db, svc, price=20000, billing_cycle="MONTH",
                              recurring_discount_type="DISCOUNT_AMOUNT",
                              recurring_discount_value=5000)  # → 15000
-    await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-rm",
+    await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-rm@e.com",
                          status="SUSPENDED", next_billing_at=None)
     revived = await subs.manual_charge_subscription(
-        db, fake, cipher, service=svc, external_user_id="u-rm")
+        db, fake, cipher, service=svc, external_user_id="u-rm@e.com")
     assert revived.status == "ACTIVE"
     assert fake.charges[-1]["amount"] == 15000

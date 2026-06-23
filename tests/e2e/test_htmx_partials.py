@@ -55,13 +55,13 @@ async def test_detail_subs_sort_partial(client, db, redis_client, cipher):
     from tests.factories import create_plan, create_service, create_subscription
     svc, _, _ = await create_service(db, cipher, name="hx-subs-svc")
     plan = await create_plan(db, svc, name="hx-plan")
-    await create_subscription(db, cipher, svc, plan, external_user_id="hx-sub-user")
+    await create_subscription(db, cipher, svc, plan, external_user_id="hx-sub-user@e.com")
     await _admin(client, db)
     resp = await client.get(f"/admin/services/{svc.id}?sort=status&dir=asc",
                             headers={"HX-Request": "true",
                                      "HX-Target": "list-svc-subs"})
     assert "<html" not in resp.text
-    assert 'id="list-svc-subs"' in resp.text and "hx-sub-user" in resp.text
+    assert 'id="list-svc-subs"' in resp.text and "hx-sub-user@e.com" in resp.text
     assert 'id="list-svc-plans"' not in resp.text  # 구독 영역만
 
 
@@ -101,7 +101,7 @@ async def test_detail_plan_delete_failure_shows_error_in_partial(client, db,
     from tests.factories import create_plan, create_service, create_subscription
     svc, _, _ = await create_service(db, cipher, name="hx-delete-fail-svc")
     plan = await create_plan(db, svc, name="hx-delete-fail-plan")
-    await create_subscription(db, cipher, svc, plan, external_user_id="del-fail-user")
+    await create_subscription(db, cipher, svc, plan, external_user_id="del-fail-user@e.com")
     csrf = await _admin_csrf(client, db, redis_client)
     resp = await client.post(f"/admin/plans/{plan.id}/delete",
                              data={"csrf_token": csrf,
@@ -126,7 +126,7 @@ async def test_service_detail_oneoff_partial(client, db, redis_client, cipher):
     from app.models import Payment, PaymentKind, PaymentStatus, PaymentType
     from tests.factories import create_service
     svc, _, _ = await create_service(db, cipher, name="htmx일반결제")
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="hx-u",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="hx-u@e.com",
                    order_id="hx-oo1", amount=3000, payment_type=PaymentType.ONE_OFF,
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="hx-oo1", requested_at=utcnow(), approved_at=utcnow()))

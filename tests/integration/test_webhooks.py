@@ -27,7 +27,7 @@ async def test_billing_deleted_notifies_manager(client, db, cipher, email_sender
     svc, _, _ = await create_service(db, cipher, manager_email="mgr@x.com")
     plan = await create_plan(db, svc)
     # Task 9: 특정 billingKey("bk_hooked")를 가진 Card를 직접 삽입하고 구독에 연결
-    card = await create_card_direct(db, cipher, svc, external_user_id="user-1",
+    card = await create_card_direct(db, cipher, svc, external_user_id="user-1@e.com",
                                     billing_key="bk_hooked")
     await create_subscription(db, cipher, svc, plan, card_id=card.id)
     resp = await client.post("/api/v1/webhooks/toss", json=_billing_deleted("bk_hooked"),
@@ -47,7 +47,7 @@ async def test_duplicate_transmission_processed_once(client, db, cipher, email_s
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
     # Task 9: 특정 billingKey("bk_dup")를 가진 Card를 직접 삽입하고 구독에 연결
-    card = await create_card_direct(db, cipher, svc, external_user_id="user-1",
+    card = await create_card_direct(db, cipher, svc, external_user_id="user-1@e.com",
                                     billing_key="bk_dup")
     await create_subscription(db, cipher, svc, plan, card_id=card.id)
     payload = _billing_deleted("bk_dup")
@@ -181,7 +181,7 @@ async def test_billing_deleted_reason_sanitized(client, db, cipher, email_sender
     svc, _, _ = await create_service(db, cipher, manager_email="m@x.com")
     plan = await create_plan(db, svc)
     # Task 9: 특정 billingKey("bk_san")를 가진 Card를 직접 삽입하고 구독에 연결
-    card = await create_card_direct(db, cipher, svc, external_user_id="user-1",
+    card = await create_card_direct(db, cipher, svc, external_user_id="user-1@e.com",
                                     billing_key="bk_san")
     await create_subscription(db, cipher, svc, plan, card_id=card.id)
     resp = await client.post(

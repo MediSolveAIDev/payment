@@ -213,24 +213,24 @@ async def test_manager_sees_only_own_subscriptions(client, db, redis_client, cip
     svc_b, _, _ = await create_service(db, cipher, name="sub-svc-b")
     plan_a = await create_plan(db, svc_a)
     plan_b = await create_plan(db, svc_b)
-    await create_subscription(db, cipher, svc_a, plan_a, external_user_id="user-of-a")
-    await create_subscription(db, cipher, svc_b, plan_b, external_user_id="user-of-b")
+    await create_subscription(db, cipher, svc_a, plan_a, external_user_id="user-of-a@e.com")
+    await create_subscription(db, cipher, svc_b, plan_b, external_user_id="user-of-b@e.com")
     user, pw = await create_user(db, role="SERVICE_MANAGER", service_id=svc_a.id)
     await admin_login(client, user.email, pw)
 
     resp = await client.get("/admin/subscriptions")
-    assert "user-of-a" in resp.text
-    assert "user-of-b" not in resp.text
+    assert "user-of-a@e.com" in resp.text
+    assert "user-of-b@e.com" not in resp.text
 
 
 async def test_admin_sees_all_subscriptions(client, db, redis_client, cipher):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    await create_subscription(db, cipher, svc, plan, external_user_id="user-all")
+    await create_subscription(db, cipher, svc, plan, external_user_id="user-all@e.com")
     user, pw = await create_user(db, role="SYSTEM_ADMIN")
     await admin_login(client, user.email, pw)
     resp = await client.get("/admin/subscriptions")
-    assert "user-all" in resp.text
+    assert "user-all@e.com" in resp.text
 
 
 async def test_manager_cannot_open_other_service_subscription_detail(
@@ -249,7 +249,7 @@ async def test_subscription_detail_shows_trial_in_progress(client, db, redis_cli
     """체험 중(TRIAL) 구독 상세에 체험 정보(기간·진행 상태)가 노출된다."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, trial_enabled=True, trial_days=14)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-trial",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-trial@e.com",
                                     status="TRIAL")
     user, pw = await create_user(db, role="SYSTEM_ADMIN")
     await admin_login(client, user.email, pw)
@@ -263,7 +263,7 @@ async def test_subscription_detail_shows_no_trial_for_plain_plan(client, db, red
     """체험 미제공 요금제 구독 상세에는 '체험 미제공'으로 표기된다."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)  # trial_enabled=False
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-notrial")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-notrial@e.com")
     user, pw = await create_user(db, role="SYSTEM_ADMIN")
     await admin_login(client, user.email, pw)
     html = (await client.get(f"/admin/subscriptions/{sub.id}")).text
@@ -276,7 +276,7 @@ async def test_subscription_detail_shows_trial_used_after_conversion(
     from app.services.audit import record_audit
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, trial_enabled=True, trial_days=7)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-converted",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-converted@e.com",
                                     status="ACTIVE")
     await record_audit(db, actor_type="SERVICE", actor_service_id=svc.id,
                        action="subscription.create", target_type="subscription",
@@ -291,7 +291,7 @@ async def test_subscription_detail_shows_trial_used_after_conversion(
 async def test_force_cancel_subscription(client, db, redis_client, cipher):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-force")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-force@e.com")
     user, pw = await create_user(db, role="SYSTEM_ADMIN")
     session_id = await admin_login(client, user.email, pw)
     csrf = await get_csrf(redis_client, session_id)
@@ -310,7 +310,7 @@ async def test_force_cancel_subscription(client, db, redis_client, cipher):
 async def test_payments_page_scoped(client, db, redis_client, cipher, fake_toss):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-paylist")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-paylist@e.com")
     from app.models import Payment
     from app.core.clock import utcnow
     db.add(Payment(subscription_id=sub.id, order_id="adm-pay-1", amount=9900,
@@ -370,7 +370,7 @@ async def test_manager_cannot_force_cancel_other_service_subscription(
     svc_a, _, _ = await create_service(db, cipher, name="fc-own")
     svc_b, _, _ = await create_service(db, cipher, name="fc-other")
     plan_b = await create_plan(db, svc_b)
-    sub_b = await create_subscription(db, cipher, svc_b, plan_b, external_user_id="u-fcb")
+    sub_b = await create_subscription(db, cipher, svc_b, plan_b, external_user_id="u-fcb@e.com")
     user, pw = await create_user(db, role="SERVICE_MANAGER", service_id=svc_a.id)
     session_id = await admin_login(client, user.email, pw)
     csrf = await get_csrf(redis_client, session_id)
@@ -541,9 +541,9 @@ async def test_subscription_service_filter_and_expiry_sort(client, db, redis_cli
     svc_b, _, _ = await create_service(db, cipher, name="filt-b")
     plan_a = await create_plan(db, svc_a)
     plan_b = await create_plan(db, svc_b)
-    await create_subscription(db, cipher, svc_a, plan_a, external_user_id="in-a",
+    await create_subscription(db, cipher, svc_a, plan_a, external_user_id="in-a@e.com",
                               period_end=utcnow() + timedelta(days=5))
-    await create_subscription(db, cipher, svc_b, plan_b, external_user_id="in-b",
+    await create_subscription(db, cipher, svc_b, plan_b, external_user_id="in-b@e.com",
                               period_end=utcnow() + timedelta(days=20))
     admin, pw = await create_user(db, role="SYSTEM_ADMIN")
     await admin_login(client, admin.email, pw)
@@ -553,11 +553,11 @@ async def test_subscription_service_filter_and_expiry_sort(client, db, redis_cli
     assert "전체 서비스" in html and "filt-a" in html and "filt-b" in html
     # 서비스 A로 필터 → A만
     only_a = (await client.get(f"/admin/subscriptions?service_id={svc_a.id}")).text
-    assert "in-a" in only_a and "in-b" not in only_a
+    assert "in-a@e.com" in only_a and "in-b@e.com" not in only_a
     # 만료일 오름차순 정렬 → in-a(5일)가 in-b(20일)보다 먼저
     asc = (await client.get(
         "/admin/subscriptions?sort=current_period_end&dir=asc")).text
-    assert asc.index("in-a") < asc.index("in-b")
+    assert asc.index("in-a@e.com") < asc.index("in-b@e.com")
 
 
 async def test_audit_purge_deletes_only_before_date(client, db, redis_client, cipher):
@@ -660,7 +660,7 @@ async def test_payments_date_range_filter(client, db, redis_client, cipher):
     from app.models import Payment
     svc, _, _ = await create_service(db, cipher, name="pay-range-svc")
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="pr-user")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="pr-user@e.com")
     db.add(Payment(subscription_id=sub.id, order_id="pr-old", amount=1000,
                    payment_type="FIRST", status="DONE", idempotency_key="pr-old",
                    requested_at=datetime(2025, 3, 10, tzinfo=timezone.utc),
@@ -690,8 +690,8 @@ async def test_subscriptions_date_range_filter(client, db, redis_client, cipher)
     from app.models import Subscription
     svc, _, _ = await create_service(db, cipher, name="sub-range-svc")
     plan = await create_plan(db, svc)
-    s_in = await create_subscription(db, cipher, svc, plan, external_user_id="rng-in")
-    s_out = await create_subscription(db, cipher, svc, plan, external_user_id="rng-out")
+    s_in = await create_subscription(db, cipher, svc, plan, external_user_id="rng-in@e.com")
+    s_out = await create_subscription(db, cipher, svc, plan, external_user_id="rng-out@e.com")
     # created_at은 server_default — 직접 update로 과거 날짜 부여
     await db.execute(sa_update(Subscription).where(Subscription.id == s_in.id)
                      .values(created_at=datetime(2026, 2, 15, tzinfo=timezone.utc)))
@@ -702,10 +702,10 @@ async def test_subscriptions_date_range_filter(client, db, redis_client, cipher)
     await admin_login(client, admin.email, pw)
 
     resp = await client.get("/admin/subscriptions?from=2026-02-01&to=2026-02-28")
-    assert "rng-in" in resp.text and "rng-out" not in resp.text
+    assert "rng-in@e.com" in resp.text and "rng-out@e.com" not in resp.text
     # 한쪽만 입력(열린 범위)
     resp = await client.get("/admin/subscriptions?from=2026-03-01")
-    assert "rng-out" in resp.text and "rng-in" not in resp.text
+    assert "rng-out@e.com" in resp.text and "rng-in@e.com" not in resp.text
     # date input 렌더
     assert 'type="date"' in resp.text
 
@@ -716,12 +716,12 @@ async def test_payments_kind_and_service_filter(client, db, redis_client, cipher
     svc_a, _, _ = await create_service(db, cipher, name="결제구분A")
     svc_b, _, _ = await create_service(db, cipher, name="결제구분B")
     plan = await create_plan(db, svc_a)
-    sub = await create_subscription(db, cipher, svc_a, plan, external_user_id="sub-user")
-    db.add(Payment(subscription_id=sub.id, service_id=svc_a.id, external_user_id="sub-user",
+    sub = await create_subscription(db, cipher, svc_a, plan, external_user_id="sub-user@e.com")
+    db.add(Payment(subscription_id=sub.id, service_id=svc_a.id, external_user_id="sub-user@e.com",
                    order_id="kind-sub", amount=1000, payment_type="RENEWAL",
                    kind=PaymentKind.SUBSCRIPTION, status=PaymentStatus.DONE,
                    idempotency_key="kind-sub", requested_at=utcnow()))
-    db.add(Payment(subscription_id=None, service_id=svc_b.id, external_user_id="oo-user",
+    db.add(Payment(subscription_id=None, service_id=svc_b.id, external_user_id="oo-user@e.com",
                    order_id="kind-oo", amount=2000, payment_type="ONE_OFF",
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="kind-oo", requested_at=utcnow()))
@@ -736,7 +736,7 @@ async def test_payments_kind_and_service_filter(client, db, redis_client, cipher
     assert "kind-sub" in body and "kind-oo" not in body
     html = (await client.get("/admin/payments")).text
     assert 'name="kind"' in html and 'name="service_id"' in html
-    assert "oo-user" in html        # 단건(구독 없음) 사용자 표시
+    assert "oo-user@e.com" in html        # 단건(구독 없음) 사용자 표시
 
 
 async def test_payments_list_sales_statement_link(client, db, redis_client, cipher):
@@ -745,13 +745,13 @@ async def test_payments_list_sales_statement_link(client, db, redis_client, ciph
     from app.models import Payment, PaymentKind, PaymentStatus
     svc, _, _ = await create_service(db, cipher, name="매출전표서비스")
     # receipt URL 보유 결제(카드 DONE)
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="rcpt-user",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="rcpt-user@e.com",
                    order_id="rcpt-yes", amount=1000, payment_type="ONE_OFF",
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="rcpt-yes", requested_at=utcnow(),
                    raw_response={"receipt": {"url": "https://dashboard.tosspayments.com/receipt/RCPT1"}}))
     # receipt 미보유 결제(raw_response 없음)
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="norcpt-user",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="norcpt-user@e.com",
                    order_id="rcpt-no", amount=2000, payment_type="ONE_OFF",
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="rcpt-no", requested_at=utcnow(), raw_response=None))
@@ -783,13 +783,13 @@ async def test_subscriptions_plan_filter(client, db, redis_client, cipher):
     svc, _, _ = await create_service(db, cipher, name="요금제필터서비스")
     p_basic = await create_plan(db, svc, name="베이직플랜")
     p_pro = await create_plan(db, svc, name="프로플랜")
-    await create_subscription(db, cipher, svc, p_basic, external_user_id="sub-basic")
-    await create_subscription(db, cipher, svc, p_pro, external_user_id="sub-pro")
+    await create_subscription(db, cipher, svc, p_basic, external_user_id="sub-basic@e.com")
+    await create_subscription(db, cipher, svc, p_pro, external_user_id="sub-pro@e.com")
     admin, pw = await create_user(db, role="SYSTEM_ADMIN")
     await admin_login(client, admin.email, pw)
     def tbody(h): return h[h.find("<tbody>"):]
     body = tbody((await client.get("/admin/subscriptions?plan_name=베이직플랜")).text)
-    assert "sub-basic" in body and "sub-pro" not in body
+    assert "sub-basic@e.com" in body and "sub-pro@e.com" not in body
     # 요금제 select + 서비스 선택 시 그 서비스 요금제 노출
     html = (await client.get(f"/admin/subscriptions?service_id={svc.id}")).text
     assert 'name="plan_name"' in html and "베이직플랜" in html and "프로플랜" in html
@@ -800,12 +800,12 @@ async def test_payments_plan_filter_subscription_only(client, db, redis_client, 
     from app.models import Payment, PaymentKind, PaymentStatus, PaymentType
     svc, _, _ = await create_service(db, cipher, name="결제요금제서비스")
     plan = await create_plan(db, svc, name="요금제P")
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="pf-sub")
-    db.add(Payment(subscription_id=sub.id, service_id=svc.id, external_user_id="pf-sub",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="pf-sub@e.com")
+    db.add(Payment(subscription_id=sub.id, service_id=svc.id, external_user_id="pf-sub@e.com",
                    order_id="pf-sub-pay", amount=1000, payment_type=PaymentType.RENEWAL,
                    kind=PaymentKind.SUBSCRIPTION, status=PaymentStatus.DONE,
                    idempotency_key="pf-sub-pay", requested_at=utcnow()))
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="pf-oo",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="pf-oo@e.com",
                    order_id="pf-oo-pay", amount=2000, payment_type=PaymentType.ONE_OFF,
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="pf-oo-pay", requested_at=utcnow()))
@@ -827,7 +827,7 @@ async def test_payment_kind_type_badges(client, db, redis_client, cipher):
     from app.models import Payment, PaymentKind, PaymentStatus, PaymentType
     svc, _, _ = await create_service(db, cipher)
     now = utcnow()
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="b-oo",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="b-oo@e.com",
                    order_id="badge-oo", amount=1000, payment_type=PaymentType.ONE_OFF,
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="badge-oo", requested_at=now, approved_at=now))
@@ -849,7 +849,7 @@ async def test_payment_detail_page_and_scope(client, db, redis_client, cipher):
     import uuid as _uuid
     svc_a, _, _ = await create_service(db, cipher, name="상세A")
     svc_b, _, _ = await create_service(db, cipher, name="상세B")
-    p = Payment(subscription_id=None, service_id=svc_a.id, external_user_id="det-u",
+    p = Payment(subscription_id=None, service_id=svc_a.id, external_user_id="det-u@e.com",
                 order_id="det-pay", amount=4200, payment_type=PaymentType.ONE_OFF,
                 kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                 idempotency_key="det-pay", requested_at=utcnow(), approved_at=utcnow())
@@ -877,7 +877,7 @@ async def test_external_cancel_api(client, db, redis_client, cipher, fake_toss):
     from app.core.clock import utcnow
     from app.models import Payment, PaymentKind, PaymentStatus, PaymentType
     svc, api_key, hmac_secret = await create_service(db, cipher, name="api-cancel-svc")
-    p = Payment(subscription_id=None, service_id=svc.id, external_user_id="api-cancel-u",
+    p = Payment(subscription_id=None, service_id=svc.id, external_user_id="api-cancel-u@e.com",
                 order_id="api-cancel-ord-1", amount=5000, payment_type=PaymentType.ONE_OFF,
                 kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                 idempotency_key="api-cancel-ik-1",
@@ -911,7 +911,7 @@ async def test_external_cancel_api_disabled_service(client, db, redis_client,
     svc.cancellation_enabled = False
     await db.commit()
 
-    p = Payment(subscription_id=None, service_id=svc.id, external_user_id="api-disabled-u",
+    p = Payment(subscription_id=None, service_id=svc.id, external_user_id="api-disabled-u@e.com",
                 order_id="api-disabled-ord-1", amount=5000, payment_type=PaymentType.ONE_OFF,
                 kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                 idempotency_key="api-disabled-ik-1",
@@ -946,13 +946,13 @@ async def test_admin_payment_cancel_button_and_action(client, db, redis_client,
     svc_no.cancellation_enabled = False   # 게이트 꺼져 있어도 어드민은 항상 취소 가능
     await db.commit()
 
-    p_ok = Payment(subscription_id=None, service_id=svc_ok.id, external_user_id="c-ok-u",
+    p_ok = Payment(subscription_id=None, service_id=svc_ok.id, external_user_id="c-ok-u@e.com",
                    order_id="cancel-ok-ord", amount=3000, payment_type=PaymentType.ONE_OFF,
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="cancel-ok-ik",
                    toss_payment_key="pay_cancel-ok-ord",
                    requested_at=utcnow())
-    p_no = Payment(subscription_id=None, service_id=svc_no.id, external_user_id="c-no-u",
+    p_no = Payment(subscription_id=None, service_id=svc_no.id, external_user_id="c-no-u@e.com",
                    order_id="cancel-no-ord", amount=3000, payment_type=PaymentType.ONE_OFF,
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="cancel-no-ik",
@@ -1006,7 +1006,7 @@ async def test_admin_payment_cancel_requires_csrf(client, db, redis_client, ciph
     from app.core.clock import utcnow
     from app.models import Payment, PaymentKind, PaymentStatus, PaymentType
     svc, _, _ = await create_service(db, cipher, name="csrf-cancel-svc")
-    p = Payment(subscription_id=None, service_id=svc.id, external_user_id="csrf-u",
+    p = Payment(subscription_id=None, service_id=svc.id, external_user_id="csrf-u@e.com",
                 order_id="csrf-cancel-ord", amount=1000, payment_type=PaymentType.ONE_OFF,
                 kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                 idempotency_key="csrf-cancel-ik",
@@ -1080,7 +1080,7 @@ async def test_subscription_extend_via_admin(client, db, redis_client, cipher):
     from app.core.clock import utcnow
     svc, _, _ = await create_service(db, cipher, name="연장서비스")
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="ext-e2e",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="ext-e2e@e.com",
                                     status="ACTIVE")
     admin, pw = await create_user(db, role="SYSTEM_ADMIN")
     session_id = await admin_login(client, admin.email, pw)

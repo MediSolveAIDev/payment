@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>19. 샘플 서비스(sample_service) 사용법 — 구독·결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>사용·개발 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>📘</span>사용자 매뉴얼</div>
+<a class="nav-link" href="00-overview.html"><span class="n">0</span><span class="tt">0. 구독·결제 서버 전체 개요</span></a>
+<a class="nav-link" href="01-admin-console.html"><span class="n">1</span><span class="tt">1. 관리자 콘솔 사용하기</span></a>
+<a class="nav-link" href="02-admin-services.html"><span class="n">2</span><span class="tt">2. 서비스 관리</span></a>
+<a class="nav-link" href="03-admin-card.html"><span class="n">3</span><span class="tt">3. 카드(결제수단) 관리</span></a>
+<a class="nav-link" href="04-admin-subscription.html"><span class="n">4</span><span class="tt">4. 구독 관리</span></a>
+<a class="nav-link" href="05-admin-plan.html"><span class="n">5</span><span class="tt">5. 요금제 관리</span></a>
+<a class="nav-link" href="06-admin-payment-refund.html"><span class="n">6</span><span class="tt">6. 일반결제와 환불(취소)</span></a>
+<a class="nav-link" href="07-admin-accounts.html"><span class="n">7</span><span class="tt">7. 계정 관리</span></a>
+<a class="nav-link" href="08-admin-settings.html"><span class="n">8</span><span class="tt">8. 전체 설정</span></a>
+<a class="nav-link" href="09-admin-audit.html"><span class="n">9</span><span class="tt">9. 감사 로그</span></a>
+<a class="nav-link" href="10-dashboard.html"><span class="n">10</span><span class="tt">10. 대시보드</span></a>
+<a class="nav-link" href="11-status-reference.html"><span class="n">11</span><span class="tt">11. 상태값 사전 — 모든 상태의 의미</span></a>
+<div class="nav-group"><span>🛠️</span>개발자 매뉴얼</div>
+<a class="nav-link" href="12-install-deploy.html"><span class="n">12</span><span class="tt">12. 설치·설정·배포</span></a>
+<a class="nav-link" href="13-service-api.html"><span class="n">13</span><span class="tt">13. 서비스 연동 API</span></a>
+<a class="nav-link" href="14-feature-card.html"><span class="n">14</span><span class="tt">14. 카드 보관함(Card Vault) 기능</span></a>
+<a class="nav-link" href="15-feature-subscription.html"><span class="n">15</span><span class="tt">15. 구독 기능</span></a>
+<a class="nav-link" href="16-feature-payment.html"><span class="n">16</span><span class="tt">16. 일반결제·취소·정산 기능</span></a>
+<a class="nav-link" href="17-feature-notifications.html"><span class="n">17</span><span class="tt">17. 서비스 알림(아웃고잉 웹훅) 기능</span></a>
+<a class="nav-link" href="18-admin-screens.html"><span class="n">18</span><span class="tt">18. 어드민 화면별 설명</span></a>
+<a class="nav-link active" href="19-sample-service.html"><span class="n">19</span><span class="tt">19. 샘플 서비스(sample_service) 사용법</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">매뉴얼 홈</a> <span>/</span> <em>개발자 매뉴얼</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">🛠️ 개발자 매뉴얼</span></div>
+      <h1>19. 샘플 서비스(sample_service) 사용법</h1>
+      
+    </header>
+    <div class="doc">
+
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p>쉽게 말하면 <code>sample_service</code>는 <strong>"외부 서비스가 결제 서버에 어떻게 연동하는지"를 직접 눌러 보며 배우는 동작하는 예제</strong>입니다. 진료 앱·쇼핑몰이 할 일을 그대로 Django로 구현해 둔 것이라, 화면을 따라가면 연동 전 과정을 이해하고 코드를 그대로 가져다 쓸 수 있습니다.</p>
+<p>함께 보기: <a href="13-service-api.html">서비스 API</a> · <a href="14-feature-card.html">카드 보관함</a> · <a href="17-feature-notifications.html">서비스 알림</a></p>
+</div></blockquote>
+<hr />
+<h2 id="191">19.1 전체 프로세스 한눈에 — 화면으로 따라가기</h2>
+<p>서비스 개발자가 연동을 시연하는 <strong>전체 흐름을 화면 순서대로</strong> 보여줍니다. 각 화면 하단의 「개발자 노트」에 그 단계가 호출하는 API가 정리돼 있습니다.</p>
+<div class="flow">
+  <div class="flow-step"><span class="fn">1</span><b>로그인</b><span>이메일 = <code>external_user_id</code> 선택</span></div>
+  <div class="flow-step"><span class="fn">2</span><b>서비스 선택</b><span>서비스·API 키 설정</span></div>
+  <div class="flow-step"><span class="fn">3</span><b>카드 등록</b><span>토스 인증 → <code>POST /cards</code> · 구독·결제 전제</span></div>
+  <div class="flow-step"><span class="fn">4</span><b>요금제·구독</b><span><code>POST /subscriptions</code> · 등록 카드로</span></div>
+  <div class="flow-step"><span class="fn">5</span><b>내 구독</b><span>취소·재개·카드변경·수동결제</span></div>
+  <div class="flow-step"><span class="fn">6</span><b>일반결제</b><span><code>POST /payments</code> · 단건</span></div>
+  <div class="flow-step"><span class="fn">7</span><b>결제 내역</b><span><code>GET /payments</code> · 단건 취소</span></div>
+  <div class="flow-step"><span class="fn">8</span><b>알림 수신</b><span><code>POST /notify</code> · 웹훅 수신</span></div>
+</div>
+
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>흐름 요지: <strong>③ 카드 등록</strong>이 <strong>④ 구독·⑥ 일반결제</strong>의 전제다(카드 보관함 모델). 카드가 없으면 결제서버가 <code>404</code>를 반환한다.</p>
+</div></blockquote>
+<p><strong>① 이메일 선택 (<code>/login</code>)</strong> — 고른 이메일이 결제서버의 사용자 식별자 <code>external_user_id</code>가 된다.</p>
+<p><img alt="샘플 — 로그인(이메일 선택)" src="assets/img/sample-01-login.png" /></p>
+<p><strong>② 서비스 선택 (<code>/services</code>)</strong> — 결제서버의 서비스 목록에서 고르고 API 키를 저장한다.</p>
+<p><img alt="샘플 — 서비스 선택·키 입력" src="assets/img/sample-02-services.png" /></p>
+<p><strong>③ 카드 등록 (<code>/card</code>)</strong> — 토스 빌링 인증창으로 카드를 등록한다(구독·결제의 전제).</p>
+<p><img alt="샘플 — 카드 등록" src="assets/img/sample-03-card.png" /></p>
+<p><strong>④ 요금제·구독 (<code>/plans</code>)</strong> — 요금제와 실제 청구 금액을 보고 등록 카드로 구독한다.</p>
+<p><img alt="샘플 — 요금제 목록" src="assets/img/sample-04-plans.png" /></p>
+<p><strong>⑤ 내 구독 (<code>/my</code>)</strong> — 상태·다음 결제일·등록 카드와 함께 취소·재개·카드 변경·수동 결제 버튼이 상태에 따라 보인다.</p>
+<p><img alt="샘플 — 내 구독 관리" src="assets/img/sample-06-my.png" /></p>
+<p><strong>⑥ 일반결제 (<code>/pay</code>)</strong> — 구독과 무관한 단건 결제(등록 카드로 즉시).</p>
+<p><img alt="샘플 — 일반(단건) 결제" src="assets/img/sample-05-oneoff.png" /></p>
+<p><strong>⑦ 결제 내역 (<code>/history</code>)</strong> — 구독 결제(서버 API)와 단건 결제(로컬 DB)를 한 화면에서 통합 조회하고, 단건은 취소(환불)할 수 있다.</p>
+<p><img alt="샘플 — 결제 내역" src="assets/img/sample-07-history.png" /></p>
+<p><strong>⑧ 받은 알림 (<code>/notifications</code>)</strong> — 결제서버가 보낸 웹훅(상태 변화 알림)을 서명 검증해 받은 내역.</p>
+<p><img alt="샘플 — 받은 알림(웹훅 수신)" src="assets/img/sample-08-notifications.png" /></p>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 아래 19.2~19.9는 위 흐름을 <strong>개념 → 코드 → 실행 → 규칙</strong>으로 풀어 설명합니다. 처음이라면 이 화면 흐름을 먼저 훑고 내려가세요.</p>
+</div></blockquote>
+<hr />
+<h2 id="192">19.2 이게 무엇이고, 왜 있나</h2>
+<p><code>sample_service</code>(Sample Shop)는 결제 서버(<code>payment_system</code>)의 <strong>외부 서비스 역할을 하는 참조 구현</strong>입니다. 실제 토스페이먼츠 테스트 키로 <strong>카드 등록 → 빌링키 발급 → 결제 승인</strong>까지 진짜 API로 동작합니다.</p>
+<p>목적은 둘입니다.</p>
+<ul>
+<li><strong>배우기</strong>: 서비스 개발자가 화면을 눌러 보며 "구독·결제를 붙이려면 무엇을 어떤 순서로 호출하는가"를 체득.</li>
+<li><strong>가져다 쓰기</strong>: 핵심 연동 코드(<code>shop/payment_client.py</code>)를 <strong>그대로 복사</strong>해 자기 서비스에 이식.</li>
+</ul>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 이건 "결제 서버"가 아니라 <strong>결제 서버를 호출하는 쪽</strong>(고객을 가진 우리 앱)입니다. 둘은 별개 프로세스로 함께 띄워 연동을 시연합니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="193">19.3 큰 그림 — 세 주체</h2>
+<p>연동에는 세 주체가 등장합니다. 샘플 서비스는 가운데 <strong>"외부 서비스(앱)"</strong> 자리를 연기합니다.</p>
+<div class="seqwrap" role="img" aria-label="샘플 서비스 연동 구조 — 사용자·sample_service·결제서버·토스 사이 호출 관계">
+<svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto;font-family:inherit">
+  <defs>
+    <marker id="ahb" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#476CFF"/></marker>
+    <marker id="ahg" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#9AA1AD"/></marker>
+  </defs>
+  <!-- 박스 -->
+  <rect x="40" y="34" width="170" height="56" rx="10" fill="#EEF2FF" stroke="#C7D2FE"/>
+  <text x="125" y="58" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">사용자(브라우저)</text>
+  <text x="125" y="76" text-anchor="middle" font-size="11" fill="#64748b">카드번호는 토스만 다룸</text>
+
+  <rect x="40" y="196" width="190" height="56" rx="10" fill="#EEF2FF" stroke="#C7D2FE"/>
+  <text x="135" y="220" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">sample_service</text>
+  <text x="135" y="238" text-anchor="middle" font-size="11" fill="#64748b">외부 서비스 역할(Django)</text>
+
+  <rect x="430" y="196" width="160" height="56" rx="10" fill="#E0F2FE" stroke="#7DD3FC"/>
+  <text x="510" y="220" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">결제 서버</text>
+  <text x="510" y="238" text-anchor="middle" font-size="11" fill="#64748b">payment_system</text>
+
+  <rect x="600" y="34" width="120" height="56" rx="10" fill="#F1F5F9" stroke="#CBD5E1"/>
+  <text x="660" y="66" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">토스페이먼츠</text>
+
+  <!-- 화살표 -->
+  <line x1="125" y1="90" x2="135" y2="196" stroke="#9AA1AD" stroke-width="1.5" marker-end="url(#ahg)"/>
+  <text x="150" y="148" font-size="11" fill="#64748b">화면 조작</text>
+
+  <line x1="210" y1="58" x2="600" y2="58" stroke="#9AA1AD" stroke-width="1.5" marker-end="url(#ahg)"/>
+  <text x="405" y="48" text-anchor="middle" font-size="11" fill="#64748b">① 카드 인증창(빌링) — 토스 SDK, 사용자↔토스 직접</text>
+
+  <line x1="230" y1="216" x2="430" y2="216" stroke="#476CFF" stroke-width="2" marker-end="url(#ahb)"/>
+  <text x="330" y="209" text-anchor="middle" font-size="11" font-weight="700" fill="#2A45C0">② HMAC API (카드·구독·결제·조회)</text>
+
+  <line x1="578" y1="196" x2="660" y2="92" stroke="#9AA1AD" stroke-width="1.5" marker-end="url(#ahg)"/>
+  <text x="648" y="150" text-anchor="middle" font-size="11" fill="#64748b">빌링키·승인</text>
+
+  <line x1="430" y1="242" x2="230" y2="242" stroke="#476CFF" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#ahb)"/>
+  <text x="330" y="266" text-anchor="middle" font-size="11" fill="#2A45C0">③ 알림(웹훅) POST /notify</text>
+</svg>
+</div>
+
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: <strong>파란 화살표</strong>(②③)가 <em>내 서비스가 작성하는 코드</em>입니다 — 결제서버로의 HMAC API 호출(<code>payment_client.py</code>)과 웹훅 수신(<code>/notify</code>). 회색은 토스·브라우저가 알아서 하는 부분입니다.</p>
+</div></blockquote>
+<ul>
+<li><strong>사용자 ↔ 토스</strong>: 카드번호는 <strong>토스 결제창에서만</strong> 다룬다(서비스·결제서버는 카드번호를 보지 않음).</li>
+<li><strong>샘플 ↔ 결제서버</strong>: 모든 호출은 <strong>API 키 + HMAC 서명</strong>으로 인증(<code>shop/payment_client.py</code>).</li>
+<li><strong>결제서버 → 샘플</strong>: 구독·결제·카드 상태가 바뀌면 <strong>알림(웹훅)</strong>을 <code>POST /notify</code>로 받는다.</li>
+</ul>
+<hr />
+<h2 id="194">19.4 화면이 곧 문서 — 「개발자 노트」</h2>
+<p>모든 화면 <strong>하단에 다크 패널 「🔍 개발자 노트」</strong>가 있습니다. 펼치면 그 화면이 <strong>어떤 API를 호출하고</strong>(메서드·경로·대응 <code>payment_client.py</code> 함수), <strong>어느 뷰가 구현하며</strong>, <strong>무슨 규칙을 지켜야 하는지</strong>를 그 자리에서 보여줍니다. 즉 화면을 따라가는 것만으로 API 레퍼런스를 함께 읽게 됩니다.</p>
+<p>화면 ↔ 호출 API ↔ 클라이언트 함수 매핑:</p>
+<table>
+<thead>
+<tr>
+<th>화면(경로)</th>
+<th>시연하는 일</th>
+<th>호출 API</th>
+<th><code>payment_client.py</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>로그인 <code>/login</code></td>
+<td>사용자 식별자(<code>external_user_id</code>) 선택</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>서비스 선택 <code>/services</code></td>
+<td>결제서버의 서비스 목록·키 입력</td>
+<td><code>GET /api/v1/services</code>(무인증)</td>
+<td><code>list_services</code></td>
+</tr>
+<tr>
+<td>카드 <code>/card</code></td>
+<td><strong>카드 등록/변경/조회/삭제</strong>(연동의 전제)</td>
+<td><code>POST·GET·DELETE /api/v1/cards</code></td>
+<td><code>register_card</code>/<code>get_card</code>/<code>delete_card</code></td>
+</tr>
+<tr>
+<td>요금제 <code>/plans</code></td>
+<td>구독 가능한 요금제·금액</td>
+<td><code>GET /api/v1/plans</code></td>
+<td><code>get_plans</code></td>
+</tr>
+<tr>
+<td>구독 <code>/subscribe/{plan_id}</code></td>
+<td>등록 카드로 구독 생성</td>
+<td><code>POST /api/v1/subscriptions</code></td>
+<td><code>create_subscription</code></td>
+</tr>
+<tr>
+<td>내 구독 <code>/my</code></td>
+<td>조회·취소·재개·수동결제·카드변경</td>
+<td><code>GET·.../cancel·/resume·/pay</code></td>
+<td><code>get_subscription</code>/<code>cancel</code>/<code>resume</code>/<code>manual_pay</code></td>
+</tr>
+<tr>
+<td>일반결제 <code>/pay</code></td>
+<td>구독과 무관한 단건 결제</td>
+<td><code>POST /api/v1/payments</code></td>
+<td><code>create_one_off_payment</code></td>
+</tr>
+<tr>
+<td>결제 내역 <code>/history</code></td>
+<td>구독+단건 내역, 단건 취소</td>
+<td><code>GET /api/v1/payments/{uid}</code> · <code>POST .../{order_id}/cancel</code></td>
+<td><code>get_payments</code>/<code>cancel_one_off_payment</code></td>
+</tr>
+<tr>
+<td>받은 알림 <code>/notifications</code></td>
+<td>웹훅 수신·서명검증 데모</td>
+<td><code>POST /notify</code>(수신측)</td>
+<td>— (수신 뷰 <code>views.notify_receive_view</code>)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="195">19.5 코드 구조 — 어디를 보면 되나</h2>
+<table>
+<thead>
+<tr>
+<th>파일</th>
+<th>역할</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>shop/payment_client.py</code></strong></td>
+<td><strong>연동의 핵심.</strong> HMAC 서명(<code>sign_request</code>) + 모든 API 호출(<code>_request</code>)이 한 파일에. Django 의존이 거의 없어 <strong>이 파일만 복사하면 연동 끝</strong>(<code>settings</code> 폴백 2줄만 교체).</td>
+</tr>
+<tr>
+<td><code>shop/views.py</code></td>
+<td>화면 흐름·토스 successUrl 콜백 처리(<code>billing_success_view</code> → <code>POST /api/v1/cards</code>), 카드 미등록 시 <code>/card</code> 유도, 401 키 재입력, 웹훅 수신(<code>notify_receive_view</code>).</td>
+</tr>
+<tr>
+<td><code>shop/templates/shop/*.html</code></td>
+<td>각 화면 + 하단 「개발자 노트」. <code>card.html</code>에 토스 SDK <code>requestBillingAuth()</code> 호출부.</td>
+</tr>
+<tr>
+<td><code>shop/urls.py</code></td>
+<td>경로 → 뷰 매핑.</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p>쉽게 말하면 <strong>"무엇을 호출하나"는 <code>payment_client.py</code>, "언제 호출하나(화면 흐름)"는 <code>views.py</code></strong> 를 보면 됩니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="196">19.6 실행 방법</h2>
+<p>샘플과 결제 서버 <strong>두 프로세스</strong>를 함께 띄웁니다. 먼저 결제 서버에 서비스를 등록해 <strong>키를 발급</strong>받아야 합니다.</p>
+<h3 id="1">(1) 사전 — 결제 서버에서 서비스 등록</h3>
+<ol>
+<li>결제 서버 어드민(<code>/admin</code>) → <strong>서비스 등록</strong>(허용 IP에 <code>127.0.0.1</code> 포함).</li>
+<li>등록 직후 표시되는 <strong>API 키 / HMAC 시크릿</strong>을 복사(서비스 상세의 <em>키 복사</em> 버튼). 이 값은 <code>.env</code>가 아니라 <strong>실행 후 <code>/services</code> 화면에 입력</strong>한다.</li>
+<li>요금제 1개 이상 생성(체험 요금제 포함 권장).</li>
+</ol>
+<h3 id="2-env">(2) 샘플 설정 — <code>.env</code></h3>
+<p><code>cp .env.example .env</code> 후 채운다. <strong>서비스 API 키·HMAC 시크릿은 <code>.env</code>에 넣지 않는다</strong> — 실행 후 <code>/services</code> 화면에서 직접 입력한다.</p>
+<pre><code class="language-env">PAYMENT_API_BASE=http://127.0.0.1:8000     # 결제 서버 주소(포트 포함)
+# 토스 빌링 client key — 비우면 /card 화면의 '수동 authKey' 폴백으로 테스트 가능
+TOSS_CLIENT_KEY=test_ck_xxx
+</code></pre>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 서비스 <strong>API 키·HMAC 시크릿</strong>은 앱 실행 후 <code>/services</code> 화면에서 서비스를 고르고 입력하면 <strong>세션에 저장</strong>되어 이후 모든 API 호출에 쓰인다(화면에서 여러 서비스 전환 가능). 그래서 <code>.env</code>에는 두지 않는다. 보호 화면은 키 입력 전까지 자동으로 <code>/services</code>로 유도한다.</p>
+</div></blockquote>
+<h3 id="3">(3) 구동 — 로컬</h3>
+<pre><code class="language-bash"># 터미널 1 — 결제 서버
+cd payment_system &amp;&amp; uv run uvicorn app.main:app --port 8000
+# 터미널 2 — 샘플
+cd sample_service
+python3 -m venv .venv &amp;&amp; .venv/bin/pip install -r requirements.txt
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py runserver 8001
+</code></pre>
+<p>→ 브라우저에서 <code>http://127.0.0.1:8001</code> 접속.</p>
+<h3 id="3-docker">(3') 구동 — docker</h3>
+<pre><code class="language-bash">cd sample_service &amp;&amp; docker compose up -d --build   # http://localhost:8001 (호스트 8001 → 컨테이너 8000)
+</code></pre>
+<hr />
+<h2 id="197">19.7 데모 시나리오 — 권장 순서</h2>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>중요: <strong>카드 등록이 구독·결제보다 먼저</strong>입니다(카드 보관함 모델). 구독/결제 화면에서 카드가 없으면 자동으로 <code>/card</code>로 유도하고, 등록을 마치면 원래 흐름으로 복귀합니다.</p>
+<p>참고: 각 화면 캡처는 맨 앞 <strong>"전체 프로세스 한눈에"</strong> 섹션에 순서대로 있습니다. 아래는 따라 할 때의 단계와 확인 지점입니다.</p>
+</div></blockquote>
+<ol>
+<li><strong>이메일 선택</strong>(<code>/login</code>) → <strong>서비스 선택</strong>(<code>/services</code>).</li>
+<li><strong>카드 등록</strong>(<code>/card</code>) — "카드 등록창 열기" → 토스 테스트 카드 입력(테스트 모드는 청구 없음). 완료 시 <code>POST /api/v1/cards</code>로 빌링키 발급·보관, 마스킹 카드만 표시. (토스 키가 없으면 <strong>수동 authKey 폴백</strong>으로 흐름 테스트)</li>
+<li><strong>구독</strong>(<code>/plans</code> → 구독하기) — 등록 카드로 <strong>즉시 구독</strong>(토스 재인증 없음). 또는 <strong>일반결제</strong>(<code>/pay</code>).</li>
+<li><strong>확인</strong> — 샘플 <code>/my</code>(ACTIVE·다음 결제일), 결제서버 어드민(구독·결제 내역), 토스 개발자센터(테스트 결제).</li>
+<li><strong>라이프사이클</strong> — <code>/my</code>에서 취소(만료일까지 유지)·재개, PAST_DUE/SUSPENDED 시 수동 결제, <strong>카드 변경</strong>(재등록=교체, 기존 구독이 새 카드 자동 참조).</li>
+<li><strong>알림</strong>(<code>/notifications</code>) — 상태 변화 시 결제서버가 보낸 웹훅 수신 내역 확인.</li>
+</ol>
+<hr />
+<h2 id="198">19.8 내 서비스에 가져다 쓰기 — 지켜야 할 규칙</h2>
+<p><code>shop/payment_client.py</code>를 복사하는 게 출발점입니다. 그리고 「개발자 노트」에도 반복되는 <strong>연동 4규칙</strong>을 지킵니다.</p>
+<h3 id="1981-external_user_id">19.8.1 사용자 식별자(<code>external_user_id</code>)는 반드시 이메일</h3>
+<p>결제 서버의 모든 사용자 키 <code>external_user_id</code>에는 <strong>이메일만</strong> 넣어야 합니다. 샘플은 로그인한 사용자의 이메일을 그대로 식별자로 전달합니다 — <code>shop/views.py</code>에서 <code>external_user_id=user.email</code>로 호출합니다(카드 등록·구독 생성·결제·조회 전부 동일한 이메일 사용).</p>
+<ul>
+<li><strong>서버가 정규화합니다</strong>: 받는 즉시 <strong>앞뒤 공백 제거 + 소문자</strong>로 바꿔 저장·조회합니다(<code>app/core/identifiers.py</code>). 그래서 <code>Han@Han.com</code>과 <code>han@han.com</code>은 <strong>같은 사용자</strong>로 취급됩니다.</li>
+<li><strong>형식이 틀리면 거부</strong>: 이메일이 아니면 <code>422</code>(InputValidationError)로 거부됩니다. 회원 PK 같은 임의 문자열을 넣으면 안 됩니다.</li>
+<li><strong>경로에 넣을 때 인코딩</strong>: <code>GET /api/v1/cards/{external_user_id}</code>처럼 이메일이 URL 경로에 들어갈 때, <code>+</code> 등 특수문자는 <strong>URL 인코딩</strong>하세요. (HMAC 서명은 클라이언트가 보낸 원본 경로 기준이라 인코딩과 무관하게 동작합니다.)</li>
+</ul>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의(내 서비스 적용 시): 사용자 식별자로 <strong>정규화된 이메일</strong>을 일관되게 보내세요. 같은 사용자가 항상 같은 이메일이어야 카드·구독이 한 사용자로 묶입니다. <strong>사용자가 이메일을 바꾸면 서버는 다른 사용자로 인식</strong>하므로(카드·구독 연결이 끊김), 이메일을 식별자로 쓸 때는 "이메일 불변" 또는 "변경 시 마이그레이션" 정책을 정해 두는 것이 안전합니다.</p>
+</div></blockquote>
+<p>연동 4규칙:</p>
+<ol>
+<li><strong>타임아웃(<code>503 PAYMENT_UNRESOLVED</code>)은 실패가 아니다</strong> — 서버가 결제를 PENDING으로 유지했다가 정산 스윕으로 확정한다. 실패로 처리하지 말 것.</li>
+<li><strong>금액은 서버 세션/DB에 보관</strong>했다가 서명된 본문으로 전달 — 토스 successUrl 쿼리스트링을 신뢰하지 말 것(변조 방지).</li>
+<li><strong><code>order_id</code>는 서비스 내 고유 + 멱등</strong> — 같은 <code>order_id</code> 재요청은 기존 결제를 반환한다(이중결제 방지).</li>
+<li><strong>접근 제어는 <code>access_allowed</code> 하나로</strong> — 구독 조회 응답의 이 불리언으로 판단하고, 상태별 분기를 직접 구현하지 말 것.</li>
+</ol>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의(알림 수신 등록): 샘플은 결제 서버와 <strong>별도 docker</strong>다. 결제 서버 컨테이너에서 샘플의 <code>/notify</code>에 닿으려면 알림 URL을 <strong><code>http://host.docker.internal:8001/notify</code></strong>로 등록한다(<code>localhost:8001</code>·컨테이너명은 닿지 않음). <code>/notifications</code> 화면 상단에 이 주소가 복사 버튼과 함께 표시되고, 어드민의 <strong>'테스트 알림 전송'</strong>으로 연결을 즉시 확인할 수 있다. 수신 측 서명검증·전달 규약은 <a href="17-feature-notifications.html">서비스 알림</a> 참고.</p>
+</div></blockquote>
+<hr />
+<h2 id="199">19.9 핵심 호출 예시 (요청/응답)</h2>
+<p>샘플이 실제로 주고받는 두 호출. 모든 요청에는 <code>payment_client.py</code>가 HMAC 서명 4개 헤더(<code>x-service-key</code>/<code>x-timestamp</code>/<code>x-nonce</code>/<code>x-signature</code>)를 붙인다.</p>
+<p><strong>① 카드 등록 — <code>POST /api/v1/cards</code></strong> (토스 successUrl 콜백에서 호출)</p>
+<pre><code class="language-json">// 요청 — customer_key·auth_key는 토스 빌링 인증창에서 받은 값
+{ &quot;external_user_id&quot;: &quot;han@han.com&quot;, &quot;customer_key&quot;: &quot;cust-123&quot;, &quot;auth_key&quot;: &quot;toss_auth_key_xxx&quot; }
+// 응답 201 — billingKey는 절대 내려오지 않고 마스킹 카드만
+{ &quot;external_user_id&quot;: &quot;han@han.com&quot;, &quot;card&quot;: { &quot;issuerCode&quot;: &quot;61&quot;, &quot;number&quot;: &quot;123456******1234&quot; } }
+</code></pre>
+<p><strong>② 구독 생성 — <code>POST /api/v1/subscriptions</code></strong> (등록 카드로 즉시, 토스 재인증 없음)</p>
+<pre><code class="language-json">// 요청 — 금액·카드 정보 없음(서버가 요금제·등록 카드에서 처리)
+{ &quot;external_user_id&quot;: &quot;han@han.com&quot;, &quot;plan_id&quot;: &quot;3fa85f64-5717-4562-b3fc-2c963f66afa6&quot;, &quot;trial&quot;: false }
+// 응답 201
+{ &quot;id&quot;: &quot;…&quot;, &quot;plan_name&quot;: &quot;프리미엄 월간&quot;, &quot;status&quot;: &quot;ACTIVE&quot;, &quot;access_allowed&quot;: true }
+</code></pre>
+<p><strong>③ 웹훅 수신 — <code>POST /notify</code></strong> (결제서버 → 샘플, 수신 측 서명 검증)</p>
+<p>결제서버는 구독·결제·카드·요금제 이벤트가 나면 서비스가 등록한 알림 URL로 JSON을 POST한다. 샘플은 API 호출과 <strong>같은 서명 규약</strong>으로 들어온 헤더(<code>X-Signature</code>/<code>X-Timestamp</code>/<code>X-Nonce</code>)를 <code>_verify_notify_signature</code>로 검증한 뒤 <code>NotificationRecord</code>에 저장한다(<code>shop/views.py:notify_receive_view</code>).</p>
+<pre><code class="language-python"># 수신 측 서명 검증(payment_client.sign_request 미러) — shop/views.py
+canonical = f&quot;POST\n{path}\n{ts}\n{nonce}\n{hashlib.sha256(body).hexdigest()}&quot;
+expected = hmac.new(secret.encode(), canonical.encode(), hashlib.sha256).hexdigest()
+verified = hmac.compare_digest(expected, request.headers.get(&quot;X-Signature&quot;, &quot;&quot;))
+</code></pre>
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p>쉽게 말하면 서비스가 직접 챙기는 호출은 <strong>①카드 등록 → ②구독 요청</strong> 둘뿐이고, 자동결제·연장은 서버가, 상태 변화 통지는 알림(<code>/notify</code>)이 처리한다. 부가 호출로 <code>get_subscription</code>/<code>cancel</code>/<code>resume</code>/<code>manual_pay</code>(구독 관리)·<code>get_card</code>/<code>delete_card</code>(카드 보관함)·<code>get_payments</code>/<code>cancel_one_off_payment</code>(결제 내역)·<code>add_usage_days</code>(사용일 추가)가 <code>payment_client.py</code>에 함께 들어 있다. 더 많은 엔드포인트·필드·오류코드는 <a href="13-service-api.html">서비스 API 연동</a> 참고.</p>
+<p>함께 보기: API 전체 레퍼런스는 <a href="13-service-api.html">서비스 API 연동</a>, 11.8의 최소 연동 예제와 함께 보면 코드가 더 빨리 잡힙니다.</p>
+</div></blockquote>
+    </div>
+    <div class="pager"><a class="pg prev" href="18-admin-screens.html"><small>← 이전</small><b>18. 어드민 화면별 설명</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#191">19.1 전체 프로세스 한눈에 — 화면으로 따라가기</a>
+<a class="toc-h2" href="#192">19.2 이게 무엇이고, 왜 있나</a>
+<a class="toc-h2" href="#193">19.3 큰 그림 — 세 주체</a>
+<a class="toc-h2" href="#194">19.4 화면이 곧 문서 — 「개발자 노트」</a>
+<a class="toc-h2" href="#195">19.5 코드 구조 — 어디를 보면 되나</a>
+<a class="toc-h2" href="#196">19.6 실행 방법</a>
+<a class="toc-h3" href="#1">(1) 사전 — 결제 서버에서 서비스 등록</a>
+<a class="toc-h3" href="#2-env">(2) 샘플 설정 — .env</a>
+<a class="toc-h3" href="#3">(3) 구동 — 로컬</a>
+<a class="toc-h3" href="#3-docker">(3&#x27;) 구동 — docker</a>
+<a class="toc-h2" href="#197">19.7 데모 시나리오 — 권장 순서</a>
+<a class="toc-h2" href="#198">19.8 내 서비스에 가져다 쓰기 — 지켜야 할 규칙</a>
+<a class="toc-h3" href="#1981-external_user_id">19.8.1 사용자 식별자(external_user_id)는 반드시 이메일</a>
+<a class="toc-h2" href="#199">19.9 핵심 호출 예시 (요청/응답)</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

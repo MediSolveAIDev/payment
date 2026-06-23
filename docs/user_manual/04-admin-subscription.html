@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4. 구독 관리 — 구독·결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>사용·개발 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>📘</span>사용자 매뉴얼</div>
+<a class="nav-link" href="00-overview.html"><span class="n">0</span><span class="tt">0. 구독·결제 서버 전체 개요</span></a>
+<a class="nav-link" href="01-admin-console.html"><span class="n">1</span><span class="tt">1. 관리자 콘솔 사용하기</span></a>
+<a class="nav-link" href="02-admin-services.html"><span class="n">2</span><span class="tt">2. 서비스 관리</span></a>
+<a class="nav-link" href="03-admin-card.html"><span class="n">3</span><span class="tt">3. 카드(결제수단) 관리</span></a>
+<a class="nav-link active" href="04-admin-subscription.html"><span class="n">4</span><span class="tt">4. 구독 관리</span></a>
+<a class="nav-link" href="05-admin-plan.html"><span class="n">5</span><span class="tt">5. 요금제 관리</span></a>
+<a class="nav-link" href="06-admin-payment-refund.html"><span class="n">6</span><span class="tt">6. 일반결제와 환불(취소)</span></a>
+<a class="nav-link" href="07-admin-accounts.html"><span class="n">7</span><span class="tt">7. 계정 관리</span></a>
+<a class="nav-link" href="08-admin-settings.html"><span class="n">8</span><span class="tt">8. 전체 설정</span></a>
+<a class="nav-link" href="09-admin-audit.html"><span class="n">9</span><span class="tt">9. 감사 로그</span></a>
+<a class="nav-link" href="10-dashboard.html"><span class="n">10</span><span class="tt">10. 대시보드</span></a>
+<a class="nav-link" href="11-status-reference.html"><span class="n">11</span><span class="tt">11. 상태값 사전 — 모든 상태의 의미</span></a>
+<div class="nav-group"><span>🛠️</span>개발자 매뉴얼</div>
+<a class="nav-link" href="12-install-deploy.html"><span class="n">12</span><span class="tt">12. 설치·설정·배포</span></a>
+<a class="nav-link" href="13-service-api.html"><span class="n">13</span><span class="tt">13. 서비스 연동 API</span></a>
+<a class="nav-link" href="14-feature-card.html"><span class="n">14</span><span class="tt">14. 카드 보관함(Card Vault) 기능</span></a>
+<a class="nav-link" href="15-feature-subscription.html"><span class="n">15</span><span class="tt">15. 구독 기능</span></a>
+<a class="nav-link" href="16-feature-payment.html"><span class="n">16</span><span class="tt">16. 일반결제·취소·정산 기능</span></a>
+<a class="nav-link" href="17-feature-notifications.html"><span class="n">17</span><span class="tt">17. 서비스 알림(아웃고잉 웹훅) 기능</span></a>
+<a class="nav-link" href="18-admin-screens.html"><span class="n">18</span><span class="tt">18. 어드민 화면별 설명</span></a>
+<a class="nav-link" href="19-sample-service.html"><span class="n">19</span><span class="tt">19. 샘플 서비스(sample_service) 사용법</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">매뉴얼 홈</a> <span>/</span> <em>사용자 매뉴얼</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">📘 사용자 매뉴얼</span></div>
+      <h1>4. 구독 관리</h1>
+      
+    </header>
+    <div class="doc">
+
+<p>이 문서는 관리자 콘솔의 <strong>구독</strong> 메뉴에서 구독을 찾아보고, 상태를 이해하고, 필요할 때 직접 손을 대는 방법(강제취소·만료일 연장·수동 재결제)을 안내합니다.</p>
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p>쉽게 말하면, 구독 화면은 "누가 어떤 요금제를 언제까지 쓰고 있고, 다음 결제는 언제인지"를 보고 조정하는 곳입니다.</p>
+<p>함께 보기: <a href="01-admin-console.html">관리자 콘솔 개요</a> · <a href="03-admin-card.html">카드 관리</a></p>
+</div></blockquote>
+<hr />
+<h2 id="41">4.1 구독 목록 보기</h2>
+<figure class="shot">
+  <img src="assets/img/subscriptions-list.png" alt="구독 목록 (상태 필터)" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">구독 목록 (상태 필터)</figcaption>
+</figure>
+
+<ol class="steps">
+<li>왼쪽 메뉴에서 <b>구독</b>을 누릅니다.</li>
+<li>위쪽 검색·필터로 원하는 구독을 좁힙니다. 사용자 ID 검색, 서비스·요금제·상태 드롭다운, 등록일 범위(시작·종료)로 필터링할 수 있습니다.</li>
+<li>표의 <b>줄을 클릭</b>하면 그 구독의 상세 화면으로 이동합니다.</li>
+</ol>
+
+<p>목록 표에는 서비스, 사용자, 요금제, <strong>상태</strong>(배지), 만료일, 다음 결제일이 보입니다.</p>
+<h3 id="411">4.1.1 검색·필터·정렬</h3>
+<p>표 위쪽 도구로 보고 싶은 구독만 추려낼 수 있습니다. 여러 조건을 함께 걸면 모두 만족하는 구독만 남습니다.</p>
+<table>
+<thead>
+<tr>
+<th>도구</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>사용자 ID 검색</td>
+<td>외부 서비스가 부여한 사용자 식별자(이메일 등)로 찾습니다.</td>
+</tr>
+<tr>
+<td>서비스</td>
+<td>특정 서비스의 구독만 봅니다. 전체 관리자는 모든 서비스가, 서비스 담당자는 담당 서비스만 목록에 나옵니다.</td>
+</tr>
+<tr>
+<td>요금제</td>
+<td>요금제 이름으로 거릅니다. 서비스를 먼저 고르면, 그 서비스의 요금제만 드롭다운에 나타납니다.</td>
+</tr>
+<tr>
+<td>상태</td>
+<td>TRIAL·ACTIVE·PAST_DUE·SUSPENDED·CANCELED·EXTENDED·EXPIRED 중 하나로 거릅니다. (상태 의미는 <a href="#42-구독-상태의-의미">4.2</a> 참고)</td>
+</tr>
+<tr>
+<td>등록일 범위</td>
+<td>구독이 만들어진 날짜의 시작·종료를 지정해 그 사이의 구독만 봅니다.</td>
+</tr>
+</tbody>
+</table>
+<p>정렬은 표 머리글을 눌러 바꿉니다. <strong>사용자</strong>, <strong>상태</strong>, <strong>만료일</strong>, <strong>다음 결제일</strong> 열을 기준으로 오름/내림차순 정렬할 수 있습니다. 기본 정렬은 최근 등록순입니다.</p>
+<h3 id="412">4.1.2 엑셀로 내보내기</h3>
+<p>현재 화면에 걸어 둔 <strong>검색·필터를 그대로 담아</strong> 엑셀(.xlsx)로 내려받을 수 있습니다. 페이지에 보이는 일부가 아니라 조건에 맞는 전체가 받아집니다. 내보내는 항목은 서비스, 사용자, 요금제, 상태, 만료일, 다음 결제입니다.</p>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 한 번에 내려받는 행 수에는 상한이 있습니다(시스템 보호 목적). 결과가 너무 많으면 상한까지만 받아지므로, 필터로 범위를 좁혀 나눠 내려받는 것을 권장합니다.</p>
+<p>참고: 서비스 담당자(<span class="pill pri">SERVICE_MANAGER</span>)는 자신이 담당하는 서비스의 구독만 보입니다. 엑셀 내보내기도 같은 담당 범위로 제한됩니다. 전체 관리자(<span class="pill pri">SYSTEM_ADMIN</span>)는 모든 구독을 봅니다. → <a href="01-admin-console.html">역할별 차이</a></p>
+</div></blockquote>
+<hr />
+<h2 id="42">4.2 구독 상태의 의미</h2>
+<p>구독은 생애주기에 따라 여러 상태를 거칩니다. 각 상태가 무슨 뜻인지, 그리고 그 상태에서 <strong>서비스를 이용할 수 있는지</strong>를 정리했습니다.</p>
+<table>
+<thead>
+<tr>
+<th>상태</th>
+<th>한글 의미</th>
+<th style="text-align: center;">서비스 이용</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TRIAL</td>
+<td>체험 중</td>
+<td style="text-align: center;">가능</td>
+<td>무료 체험 기간입니다. 체험이 끝나면 첫 정기 결제가 진행됩니다.</td>
+</tr>
+<tr>
+<td>ACTIVE</td>
+<td>이용 중</td>
+<td style="text-align: center;">가능</td>
+<td>정상적으로 결제되고 이용 중인 상태입니다.</td>
+</tr>
+<tr>
+<td>PAST_DUE</td>
+<td>미수(결제 실패)</td>
+<td style="text-align: center;">가능</td>
+<td>자동결제가 실패했지만 유예 기간이라 아직 이용은 됩니다. 재시도가 진행됩니다.</td>
+</tr>
+<tr>
+<td>SUSPENDED</td>
+<td>정지</td>
+<td style="text-align: center;"><strong>불가</strong></td>
+<td>결제 재시도가 모두 실패해 정지된 상태입니다. 수동 재결제로 되살릴 수 있습니다.</td>
+</tr>
+<tr>
+<td>CANCELED</td>
+<td>해지 예약</td>
+<td style="text-align: center;">가능</td>
+<td>해지를 예약한 상태입니다. <strong>만료일까지는 그대로 이용</strong>되고, 그 이후 종료됩니다.</td>
+</tr>
+<tr>
+<td>EXTENDED</td>
+<td>연장처리</td>
+<td style="text-align: center;">가능</td>
+<td>운영자가 만료일을 수동으로 연장한 상태입니다. 이용이 허용되고, 새 만료일에 자동결제가 갱신됩니다.</td>
+</tr>
+<tr>
+<td>EXPIRED</td>
+<td>완전 종료</td>
+<td style="text-align: center;"><strong>불가</strong></td>
+<td>구독이 완전히 끝난 최종 상태입니다. 더 이상 되돌릴 수 없습니다.</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p>쉽게 말하면, <strong>SUSPENDED(정지)</strong>와 <strong>EXPIRED(완전 종료)</strong>일 때만 서비스 이용이 막힙니다. 나머지 상태(체험·이용 중·미수·해지 예약·연장처리)에서는 만료일 전까지 이용이 유지됩니다.</p>
+</div></blockquote>
+<h3 id="421">4.2.1 상태가 바뀌는 흐름</h3>
+<p>상태는 자동결제 결과와 운영자 조치에 따라 다음처럼 이어집니다.</p>
+<ul>
+<li><strong>체험 → 이용 중</strong>: 체험(TRIAL)이 끝나면 첫 자동결제가 일어나고, 성공하면 이용 중(ACTIVE)이 됩니다.</li>
+<li><strong>이용 중 → 미수 → 정지</strong>: 자동결제가 실패하면 미수(PAST_DUE)로 바뀌어 재시도가 이어집니다. 재시도가 모두 실패하면 정지(SUSPENDED)가 됩니다.</li>
+<li><strong>정지/미수 → 이용 중</strong>: 수동 재결제가 성공하면 다시 이용 중(ACTIVE)으로 복귀합니다(만료일·다음 결제일이 결제 시점 기준으로 다시 계산됨).</li>
+<li><strong>이용 중·미수·연장처리 → 해지 예약</strong>: 사용자가 해지하거나 운영자가 강제 취소하면 해지 예약(CANCELED)이 됩니다. 만료일까지는 이용되고, 이후 완전 종료(EXPIRED)로 넘어갑니다.</li>
+<li><strong>→ 연장처리</strong>: 운영자가 만료일을 연장하면 연장처리(EXTENDED)가 되고, 새 만료일에 자동결제로 갱신됩니다.</li>
+<li><strong>→ 완전 종료</strong>: 만료일이 지난 해지 예약 구독, 정지 상태가 오래 지속된 구독 등은 배치 처리로 완전 종료(EXPIRED)됩니다. 완전 종료는 되돌릴 수 없으며, 같은 사용자가 다시 쓰려면 새로 구독해야 합니다.</li>
+</ul>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: <strong>CANCELED(해지 예약)</strong>는 "지금 당장 끊김"이 아닙니다. 이미 결제한 기간(만료일)까지는 계속 쓸 수 있고, 만료일이 지나면 자동으로 EXPIRED가 됩니다.</p>
+<p>참고: 서비스+사용자 한 쌍당 <strong>완전 종료(EXPIRED)를 제외하고 살아 있는 구독은 1개</strong>만 존재할 수 있습니다. 그래서 완전 종료된 구독을 되살리는 대신 새 구독을 만드는 방식으로 운영됩니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="43">4.3 구독 상세 화면 둘러보기</h2>
+<figure class="shot">
+  <img src="assets/img/subscription-detail.png" alt="구독 상세 화면" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">구독 상세 화면</figcaption>
+</figure>
+
+<p>목록에서 구독 한 줄을 클릭하면 상세 화면이 열립니다. 화면은 크게 세 부분입니다.</p>
+<ul>
+<li><strong>구독 정보</strong> (왼쪽): 구독 ID, 서비스, 요금제·금액, 체험 사용 여부, 구독 시작일, <strong>만료일</strong>, <strong>다음 결제일</strong>, 재시도 횟수, 그리고 등록된 <strong>카드</strong>(마스킹 번호 + 발급사 + 활성/비활성 배지)가 보입니다. 카드를 클릭하면 카드 상세로 이동합니다. → <a href="03-admin-card.html">카드 관리</a></li>
+<li><strong>관리</strong> (오른쪽): 상황에 맞는 운영 버튼(수동 재결제·만료일 연장·강제 취소)이 모입니다. 어떤 버튼이 보이는지는 현재 구독 상태에 따라 달라집니다.</li>
+<li><strong>결제 이력</strong> (아래): 이 구독에서 일어난 결제들이 표로 정리됩니다(최근 건 우선, 최대 200건). 만료일 연장을 한 적이 있으면 그 위에 <strong>만료일 연장 이력</strong>도 함께 표시됩니다(처리 시각·변경 전/후 만료일·처리자).</li>
+</ul>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 체험 사용 여부는 가입 당시 기록을 기준으로 표시되므로, 체험 후 이용 중(ACTIVE)으로 바뀌어도 "체험을 거친 구독"임이 그대로 남습니다.</p>
+<p>참고: 담당 범위 밖의 구독 상세를 직접 열려고 하면 "구독을 찾을 수 없습니다"로 표시됩니다. (존재 여부 자체를 숨기기 위한 처리입니다.)</p>
+</div></blockquote>
+<hr />
+<h2 id="44">4.4 운영 작업</h2>
+<h3 id="441">4.4.1 강제 취소</h3>
+<p>운영자가 구독을 직접 해지 예약하는 동작입니다.</p>
+<ol class="steps">
+<li>구독 상세의 <b>관리</b> 영역에서 <b>강제 취소</b> 버튼을 찾습니다. (이용 중·미수·연장처리 상태일 때 나타납니다.)</li>
+<li>버튼을 누르면 "구독을 강제 취소할까요?" 확인창이 뜹니다.</li>
+<li>확인하면 구독이 <span class="pill no">해지 예약(CANCELED)</span> 상태가 됩니다.</li>
+</ol>
+
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: 강제 취소는 <strong>즉시 끊는 것이 아닙니다.</strong> 만료일까지는 혜택(이용)이 그대로 유지되고, 만료일이 지나면 자동으로 종료됩니다. 또 강제 취소를 하면 다음 자동결제 예약이 해제되어 더 이상 청구되지 않습니다.</p>
+<p>참고: 강제 취소 버튼은 이용 중(ACTIVE)·미수(PAST_DUE)·연장처리(EXTENDED) 상태에서만 보입니다. 이미 체험·정지·해지 예약·완전 종료된 구독에는 나타나지 않습니다.</p>
+</div></blockquote>
+<h3 id="442">4.4.2 만료일 연장</h3>
+<p>만료일과 다음 결제일을 운영자가 원하는 날짜로 미루는 동작입니다.</p>
+<ol class="steps">
+<li>구독 상세의 <b>관리</b> 영역에서 <b>만료일 연장</b> 부분을 찾습니다. (완전 종료(EXPIRED)가 아닌 구독에서 보입니다.)</li>
+<li>날짜 입력칸에 새 만료일을 고릅니다(기본값은 현재 만료일).</li>
+<li><b>만료일 연장</b> 버튼을 누르고 확인창에서 확인합니다.</li>
+<li>입력한 날짜로 <b>만료일</b>과 <b>다음 결제일</b>이 바뀌고, 구독 상태가 <span class="pill ok">연장처리(EXTENDED)</span>가 됩니다.</li>
+</ol>
+
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: 새 만료일은 <strong>미래 날짜</strong>여야 합니다. 과거·오늘 날짜를 넣거나 날짜 형식이 잘못되면 "연장 만료일은 미래 날짜여야 합니다(또는 올바르게 입력하세요)" 안내가 상세 화면 위에 표시되고 연장은 적용되지 않습니다.</p>
+<p>팁: 연장처리(EXTENDED) 상태에서는 이용이 계속 허용되고, 새로 정한 만료일에 자동결제로 갱신이 이어집니다. 또 연장 시 그동안의 결제 재시도 흔적(재시도 횟수·정지 시각)이 정리되어 깨끗한 상태로 다시 시작합니다. 연장한 이력은 상세 화면의 "만료일 연장 이력"에 처리 시각·변경 전/후 만료일·처리자와 함께 남습니다.</p>
+</div></blockquote>
+<h3 id="443">4.4.3 수동 재결제 (지금 결제 처리)</h3>
+<p>자동결제가 실패해 <strong>미수(PAST_DUE)</strong> 이거나 <strong>정지(SUSPENDED)</strong> 된 구독을, 등록된 카드로 <strong>지금 바로</strong> 다시 청구하는 동작입니다.</p>
+<ol class="steps">
+<li>구독 상세를 엽니다. 미수·정지 상태이면 <b>관리</b> 영역 위쪽에 안내 문구와 <b>결제 처리</b> 버튼이 보입니다. 청구될 금액(상시 할인가)도 함께 표시됩니다.</li>
+<li><b>결제 처리</b> 버튼을 누르고 확인창에서 확인합니다.</li>
+<li>결제에 성공하면 구독이 <span class="pill ok">이용 중(ACTIVE)</span>으로 되살아나고, 만료일·다음 결제일이 결제 시점 기준으로 다시 계산됩니다.</li>
+</ol>
+
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>중요: 등록된 카드가 <strong>없거나</strong> 카드가 <strong>비활성</strong> 상태이면 결제 처리가 막힙니다. 또 그 서비스의 토스 결제 키가 설정되어 있지 않아도 결제할 수 없습니다. 이때는 먼저 <a href="03-admin-card.html">카드 관리</a>에서 카드를 활성화·등록하거나, 서비스의 결제 키 설정을 확인해야 합니다.</p>
+<p>참고: 결제가 거절되면(카드 한도·정지 등) 그 사유가 상세 화면 위에 메시지로 표시되고, 구독은 기존 상태(미수/정지)에 그대로 머뭅니다.</p>
+<p>참고: 수동 재결제는 미수(PAST_DUE)·정지(SUSPENDED) 상태에서만 가능합니다. 이용 중·체험·해지 예약·완전 종료 구독에는 결제 처리 버튼이 나타나지 않습니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="45">4.5 어떤 버튼이 언제 보이나 (상태별 요약)</h2>
+<table>
+<thead>
+<tr>
+<th>구독 상태</th>
+<th style="text-align: center;">결제 처리(재결제)</th>
+<th style="text-align: center;">만료일 연장</th>
+<th style="text-align: center;">강제 취소</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TRIAL (체험 중)</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">가능</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>ACTIVE (이용 중)</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">가능</td>
+<td style="text-align: center;">가능</td>
+</tr>
+<tr>
+<td>PAST_DUE (미수)</td>
+<td style="text-align: center;">가능</td>
+<td style="text-align: center;">가능</td>
+<td style="text-align: center;">가능</td>
+</tr>
+<tr>
+<td>SUSPENDED (정지)</td>
+<td style="text-align: center;">가능</td>
+<td style="text-align: center;">가능</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>CANCELED (해지 예약)</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">가능</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>EXTENDED (연장처리)</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">가능</td>
+<td style="text-align: center;">가능</td>
+</tr>
+<tr>
+<td>EXPIRED (완전 종료)</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>팁: 화면에 버튼이 보이지 않는다면, 그 동작이 현재 구독 상태에서 허용되지 않는다는 뜻입니다. 위 표에서 현재 상태를 확인하세요.</p>
+</div></blockquote>
+<hr />
+<blockquote class="cal ref"><span class="cal-i">🔗</span><div class="cal-b">
+<p>함께 보기: 결제가 막히는 원인이 카드 비활성 때문일 수 있습니다. <a href="03-admin-card.html">카드 관리</a>에서 카드 상태를 먼저 확인하세요. 콘솔 로그인·메뉴 구조는 <a href="01-admin-console.html">관리자 콘솔 개요</a>를 참고하세요.</p>
+</div></blockquote>
+    </div>
+    <div class="pager"><a class="pg prev" href="03-admin-card.html"><small>← 이전</small><b>3. 카드(결제수단) 관리</b></a><a class="pg next" href="05-admin-plan.html"><small>다음 →</small><b>5. 요금제 관리</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#41">4.1 구독 목록 보기</a>
+<a class="toc-h3" href="#411">4.1.1 검색·필터·정렬</a>
+<a class="toc-h3" href="#412">4.1.2 엑셀로 내보내기</a>
+<a class="toc-h2" href="#42">4.2 구독 상태의 의미</a>
+<a class="toc-h3" href="#421">4.2.1 상태가 바뀌는 흐름</a>
+<a class="toc-h2" href="#43">4.3 구독 상세 화면 둘러보기</a>
+<a class="toc-h2" href="#44">4.4 운영 작업</a>
+<a class="toc-h3" href="#441">4.4.1 강제 취소</a>
+<a class="toc-h3" href="#442">4.4.2 만료일 연장</a>
+<a class="toc-h3" href="#443">4.4.3 수동 재결제 (지금 결제 처리)</a>
+<a class="toc-h2" href="#45">4.5 어떤 버튼이 언제 보이나 (상태별 요약)</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

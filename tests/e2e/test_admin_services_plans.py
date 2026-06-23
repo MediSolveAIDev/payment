@@ -364,9 +364,9 @@ async def test_plan_bonus_days_extends_subscriptions(client, db, redis_client, c
     svc, _, _ = await create_service(db, cipher, name="보너스서비스")
     plan = await create_plan(db, svc)
     base = utcnow().replace(microsecond=0)
-    act = await create_subscription(db, cipher, svc, plan, external_user_id="bn-act",
+    act = await create_subscription(db, cipher, svc, plan, external_user_id="bn-act@e.com",
                                     status="ACTIVE", period_end=base, next_billing_at=base)
-    exp = await create_subscription(db, cipher, svc, plan, external_user_id="bn-exp",
+    exp = await create_subscription(db, cipher, svc, plan, external_user_id="bn-exp@e.com",
                                     status="EXPIRED", period_end=base, next_billing_at=None)
     csrf = await _login_admin(client, db, redis_client)   # SYSTEM_ADMIN도 사용 가능
     resp = await client.post(f"/admin/plans/{plan.id}/bonus-days",

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2. 서비스 관리 — 구독·결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>사용·개발 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>📘</span>사용자 매뉴얼</div>
+<a class="nav-link" href="00-overview.html"><span class="n">0</span><span class="tt">0. 구독·결제 서버 전체 개요</span></a>
+<a class="nav-link" href="01-admin-console.html"><span class="n">1</span><span class="tt">1. 관리자 콘솔 사용하기</span></a>
+<a class="nav-link active" href="02-admin-services.html"><span class="n">2</span><span class="tt">2. 서비스 관리</span></a>
+<a class="nav-link" href="03-admin-card.html"><span class="n">3</span><span class="tt">3. 카드(결제수단) 관리</span></a>
+<a class="nav-link" href="04-admin-subscription.html"><span class="n">4</span><span class="tt">4. 구독 관리</span></a>
+<a class="nav-link" href="05-admin-plan.html"><span class="n">5</span><span class="tt">5. 요금제 관리</span></a>
+<a class="nav-link" href="06-admin-payment-refund.html"><span class="n">6</span><span class="tt">6. 일반결제와 환불(취소)</span></a>
+<a class="nav-link" href="07-admin-accounts.html"><span class="n">7</span><span class="tt">7. 계정 관리</span></a>
+<a class="nav-link" href="08-admin-settings.html"><span class="n">8</span><span class="tt">8. 전체 설정</span></a>
+<a class="nav-link" href="09-admin-audit.html"><span class="n">9</span><span class="tt">9. 감사 로그</span></a>
+<a class="nav-link" href="10-dashboard.html"><span class="n">10</span><span class="tt">10. 대시보드</span></a>
+<a class="nav-link" href="11-status-reference.html"><span class="n">11</span><span class="tt">11. 상태값 사전 — 모든 상태의 의미</span></a>
+<div class="nav-group"><span>🛠️</span>개발자 매뉴얼</div>
+<a class="nav-link" href="12-install-deploy.html"><span class="n">12</span><span class="tt">12. 설치·설정·배포</span></a>
+<a class="nav-link" href="13-service-api.html"><span class="n">13</span><span class="tt">13. 서비스 연동 API</span></a>
+<a class="nav-link" href="14-feature-card.html"><span class="n">14</span><span class="tt">14. 카드 보관함(Card Vault) 기능</span></a>
+<a class="nav-link" href="15-feature-subscription.html"><span class="n">15</span><span class="tt">15. 구독 기능</span></a>
+<a class="nav-link" href="16-feature-payment.html"><span class="n">16</span><span class="tt">16. 일반결제·취소·정산 기능</span></a>
+<a class="nav-link" href="17-feature-notifications.html"><span class="n">17</span><span class="tt">17. 서비스 알림(아웃고잉 웹훅) 기능</span></a>
+<a class="nav-link" href="18-admin-screens.html"><span class="n">18</span><span class="tt">18. 어드민 화면별 설명</span></a>
+<a class="nav-link" href="19-sample-service.html"><span class="n">19</span><span class="tt">19. 샘플 서비스(sample_service) 사용법</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">매뉴얼 홈</a> <span>/</span> <em>사용자 매뉴얼</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">📘 사용자 매뉴얼</span></div>
+      <h1>2. 서비스 관리</h1>
+      
+    </header>
+    <div class="doc">
+
+<blockquote class="cal easy"><span class="cal-i">🍎</span><div class="cal-b">
+<p>쉽게 말하면, <strong>"어떤 사내 앱이 이 결제 서버를 쓸지" 를 등록·관리</strong>하는 화면입니다. 서비스를 등록해야 그 서비스용 API 키·토스 시크릿 키·요금제·구독이 생깁니다. 전체 흐름에서 <strong>가장 먼저</strong> 하는 일입니다(<a href="00-overview.html">0. 개요</a>의 1~5 준비 단계).</p>
+<p>대상: <span class="pill pri">SYSTEM_ADMIN</span> 전용 화면입니다. 서비스 담당자 <span class="pill">SERVICE_MANAGER</span>에게는 이 메뉴가 보이지 않습니다.</p>
+<p>함께 보기: <a href="01-admin-console.html">관리자 콘솔 사용하기</a> · <a href="07-admin-accounts.html">계정 관리</a> · <a href="05-admin-plan.html">요금제 관리</a> · <a href="17-feature-notifications.html">서비스 알림 기능</a> · 화면별 기술 레퍼런스는 <a href="18-admin-screens.html">어드민 화면별 설명</a>.</p>
+</div></blockquote>
+<hr />
+<h2 id="21">2.1 시작 전에 — 담당자 계정을 먼저</h2>
+<p>서비스 등록 화면은 담당자를 <strong>목록에서 선택</strong>하는 방식입니다. 그래서 <strong>담당자 계정(SERVICE_MANAGER)을 먼저 만들어야</strong> 서비스에 담당자를 지정할 수 있습니다. 계정 생성은 <a href="07-admin-accounts.html">계정 관리</a>를 참고하세요.</p>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 담당자 후보 목록에는 <strong>삭제되지 않은 SERVICE_MANAGER 계정 전체</strong>가 이메일 순으로 나옵니다. SYSTEM_ADMIN 계정은 담당자로 지정할 수 없습니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="22">2.2 서비스 목록</h2>
+<p><img alt="서비스 목록 화면 (검색·상태 필터·엑셀 내보내기)" src="assets/img/02-services-list.png" /></p>
+<p>왼쪽 메뉴에서 <strong>서비스</strong>를 누르면 등록된 서비스 목록이 열립니다.</p>
+<ul>
+<li><strong>검색</strong>: 서비스명 또는 담당자(이메일) 일부로 검색</li>
+<li><strong>상태 필터</strong>: <span class="pill ok">활성(ACTIVE)</span> / <span class="pill no">비활성(INACTIVE)</span> / 전체</li>
+<li><strong>정렬</strong>: 서비스명·등록일 등 컬럼 머리글로 정렬(기본은 등록일 순)</li>
+<li><strong>컬럼</strong>: 서비스명, 담당자, 허용 IP, 상태</li>
+<li>서비스명을 누르면 <strong>서비스 상세</strong>로 이동합니다.</li>
+<li>오른쪽 위 <strong>[서비스 등록]</strong> 버튼으로 새 서비스를 만듭니다.</li>
+<li><strong>엑셀 내보내기</strong>: 현재 검색·필터가 적용된 목록을 엑셀(.xlsx)로 내려받습니다. 한 번에 내보낼 수 있는 최대 행 수에 제한이 있어, 그보다 많으면 검색·필터로 범위를 좁혀 받으세요.</li>
+</ul>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 비활성(INACTIVE) 서비스는 API 키 인증이 막혀 외부 호출이 모두 거부됩니다(상세에서 활성/비활성을 토글, 2.8 참고).</p>
+</div></blockquote>
+<hr />
+<h2 id="23">2.3 서비스 등록</h2>
+<p><img alt="서비스 등록 폼" src="assets/img/service-new.png" /></p>
+<p><strong>서비스 → 서비스 등록</strong>(<code>/admin/services/new</code>)에서 입력합니다.</p>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>필수</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>서비스명</strong></td>
+<td>필수</td>
+<td>콘솔에 표시될 이름(중복 불가). 같은 이름이 이미 있으면 등록이 거부됩니다</td>
+</tr>
+<tr>
+<td><strong>담당자 계정</strong></td>
+<td>필수</td>
+<td>미리 만든 SERVICE_MANAGER 계정을 <strong>복수 선택</strong>(체크박스)</td>
+</tr>
+<tr>
+<td><strong>대표 계정</strong></td>
+<td>필수</td>
+<td>결제 실패·갱신 등 <strong>알림 메일 수신처</strong>. 체크 목록에서 빠져 있어도 <strong>자동으로 담당자에 포함</strong>되며 목록 맨 앞에 배치됩니다</td>
+</tr>
+<tr>
+<td><strong>허용 IP</strong></td>
+<td>선택</td>
+<td>API를 호출할 서버의 공인 IP(IPv4, 한 줄에 하나, 콤마 구분도 허용). 비우면 <strong>IP 제한 없음</strong>(이 경우 호출은 HMAC 서명으로만 보호)</td>
+</tr>
+<tr>
+<td><strong>일반결제 취소 정책</strong></td>
+<td>—</td>
+<td>단건(일반) 결제 취소 허용 여부 + 취소 수수료율(0~100%)</td>
+</tr>
+<tr>
+<td><strong>토스 시크릿 키</strong></td>
+<td>선택</td>
+<td>그 서비스의 토스 시크릿 키. <strong>AES 암호화 저장</strong>, 저장 후 다시 표시되지 않음(쓰기 전용). 지금 비워두고 나중에 상세에서 설정/교체 가능(2.7 참고)</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 허용 IP는 <strong>IPv4만</strong> 받습니다(IPv6·CIDR 불가). 같은 서버를 가리키는 로컬 주소(127.0.0.1)는 항상 허용되므로 입력해도 목록에 저장되지 않습니다.</p>
+<p>중요: 결제가 동작하려면 <strong>그 서비스의 토스 시크릿 키가 등록</strong>돼 있어야 합니다(서비스마다 다름). 미등록 서비스는 결제·구독 첫 결제·자동연장이 <code>TOSS_KEY_NOT_CONFIGURED</code>(422)로 거부됩니다. 자세한 동작은 <a href="18-admin-screens.html">어드민 화면별 설명</a> 참고. (전역 <code>TOSS_SECRET_KEY</code> 환경변수는 제거됨)</p>
+</div></blockquote>
+<hr />
+<h2 id="24-1">2.4 키 발급·전달 (등록 직후, 1회성 · 중요)</h2>
+<p><img alt="키 발급/복사 화면" src="assets/img/service-keys.png" /></p>
+<p>등록을 누르면 <strong>키 발급 화면</strong>으로 이동합니다.</p>
+<ul>
+<li><strong>API 키</strong>와 <strong>HMAC 시크릿</strong>이 화면에 <strong>단 한 번만</strong> 표시됩니다(키는 암호화 저장되므로 평문을 볼 수 있는 유일한 기회).</li>
+<li>두 값을 <strong>복사</strong>해 <strong>안전한 채널</strong>(사내 비밀 저장소 등)로 서비스 담당 개발자에게 전달하세요.</li>
+<li>화면을 벗어나면 평문 키를 다시 볼 수 없습니다.</li>
+</ul>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: 평문 키가 담긴 화면은 브라우저 캐시에 남지 않도록 처리되며, <strong>키 조회는 감사 로그에 기록</strong>됩니다.</p>
+<p>함께 보기: API 키·HMAC 시크릿의 용도(요청 서명)는 <a href="13-service-api.html">서비스 연동 API</a>를 참고하세요. 토스 시크릿 키는 <strong>서버가 토스에 결제 요청</strong>할 때 쓰는 별도 값이며, 외부 서비스의 client key와는 다릅니다(client key는 서비스 프론트가 자체 사용).</p>
+</div></blockquote>
+<h3 id="241">2.4.1 키 다시 복사하기 (키 복사 모달)</h3>
+<p>이미 발급된 서비스라도, 상세 화면에서 <strong>키 복사 모달</strong>을 열면 보관된 평문 API 키·HMAC 시크릿을 다시 확인·복사할 수 있습니다(키는 암호화 저장돼 있으므로 복호화해 표시). 이 조회 역시 <strong>감사 로그에 남습니다</strong>.</p>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: 키 복사는 평문 노출 동작이므로 꼭 필요한 경우에만 사용하고, 유출이 의심되면 키 재발급(2.4.2)으로 즉시 무효화하세요.</p>
+</div></blockquote>
+<h3 id="242">2.4.2 키 재발급(회전)</h3>
+<p>분실·유출 시, 상세에서 <strong>키 재발급(회전)</strong>을 실행합니다.</p>
+<ul>
+<li>새 API 키·HMAC 시크릿이 즉시 발급되고 <strong>이전 키는 그 즉시 무효화</strong>됩니다.</li>
+<li>발급 직후 같은 1회성 키 화면이 다시 표시되므로, 새 값을 복사해 외부 서비스가 <strong>새 키로 다시 설정</strong>하도록 전달해야 합니다(재설정 전까지 해당 서비스의 API 호출은 인증 실패).</li>
+</ul>
+<hr />
+<h2 id="25">2.5 서비스 상세 — 개요</h2>
+<p><img alt="서비스 상세 화면" src="assets/img/service-detail.png" /></p>
+<p>서비스명을 누르면 상세 화면이 열립니다. 상단에는 서비스 정보와 설정 영역이, 하단에는 데이터 탭이 있습니다.</p>
+<ul>
+<li><strong>설정 영역</strong>(2.6~2.10): 허용 IP, 취소 정책, 알림 URL, 토스 시크릿 키, 상태 토글, 키 재발급, 담당자 관리, 삭제</li>
+<li><strong>데이터 탭</strong>(2.11): 요금제 · 구독 · 단건 결제 · 등록 카드 · 이벤트</li>
+</ul>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 설정을 저장하면 "저장되었습니다" 같은 완료 안내가 표시됩니다. 입력값 오류(예: 잘못된 IP, 범위를 벗어난 수수료율)는 화면 상단에 오류 메시지로 안내됩니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="26-ip">2.6 허용 IP 수정</h2>
+<p>상세에서 허용 IP 목록을 <strong>통째로 교체</strong>합니다.</p>
+<ul>
+<li>한 줄에 하나씩(콤마 구분도 가능) IPv4를 입력합니다.</li>
+<li><strong>비우면 IP 제한이 없어집니다</strong>(모든 IP 허용 — 이 경우 호출은 HMAC 서명으로만 보호).</li>
+<li>잘못된 IP 형식이면 저장이 거부되고 오류 메시지가 표시됩니다.</li>
+</ul>
+<hr />
+<h2 id="27">2.7 일반결제(단건) 취소 정책</h2>
+<p>단건(ONE_OFF) 결제의 <strong>취소 허용 여부</strong>와 <strong>취소 수수료율</strong>을 설정합니다.</p>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>취소 허용</strong></td>
+<td>체크하면 단건 결제 취소를 허용, 해제하면 취소 불가</td>
+</tr>
+<tr>
+<td><strong>취소 수수료율</strong></td>
+<td>0~100% 사이 정수. 취소 시 차감되는 수수료 비율(범위를 벗어나면 저장 거부)</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 이 정책은 <strong>단건(일반) 결제</strong>에만 적용됩니다. 구독 결제의 취소·환불은 별도 규칙을 따릅니다(<a href="06-admin-payment-refund.html">결제·환불 관리</a>).</p>
+</div></blockquote>
+<hr />
+<h2 id="28">2.8 서비스별 토스 시크릿 키 설정</h2>
+<p>상세에서 그 서비스의 토스 시크릿 키를 <strong>설정/교체</strong>합니다.</p>
+<ul>
+<li><strong>쓰기 전용</strong>입니다 — 저장한 평문 키는 화면·로그·감사 어디에도 다시 표시되지 않고, 상세에는 <strong>"설정됨/미설정"</strong> 상태만 보입니다.</li>
+<li>입력란을 <strong>빈 값으로 저장하면 변경 없이 기존 키가 유지</strong>됩니다(실수로 키가 지워지지 않음).</li>
+<li>키는 <strong>AES 암호화</strong>되어 저장됩니다.</li>
+<li>최초 설정과 교체는 서로 다른 동작으로 <strong>감사 로그에 기록</strong>되지만(설정/교체 구분), <strong>시크릿 값 자체는 절대 기록되지 않습니다</strong>.</li>
+</ul>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>중요: 토스 시크릿 키가 없으면 그 서비스의 결제·구독 첫 결제·자동연장이 모두 거부됩니다(2.3의 중요 안내 참고).</p>
+</div></blockquote>
+<hr />
+<h2 id="29-url">2.9 알림 수신 URL — 저장·테스트 전송</h2>
+<p>서비스 상세 화면의 <strong>설정 영역</strong>에서, 이 서비스가 받을 <strong>아웃고잉 웹훅(알림) 수신 URL</strong>을 등록합니다. 구독·결제·카드 상태가 바뀔 때(예: 결제 성공/실패, 구독 생성·갱신·취소, 카드 등록·변경) 결제 서버가 이 URL로 JSON 알림을 <code>POST</code>합니다. 외부 서비스는 이 알림을 받아 자기 DB를 갱신합니다.</p>
+<figure class="shot">
+  <img src="assets/img/02-notification-url.png" alt="서비스 상세 — 알림 수신 URL 등록·테스트 전송" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">서비스 상세의 '알림 수신 URL' 입력란과 [저장]·[테스트 전송] 버튼</figcaption>
+</figure>
+
+<h3 id="291">2.9.1 등록 방법</h3>
+<ol>
+<li>서비스 상세 화면에서 <strong>알림 수신 URL</strong> 입력란에 서비스가 알림을 받을 주소를 입력합니다.</li>
+<li><strong>[저장]</strong> 을 누르면 적용됩니다.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>규칙</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>URL 형식</td>
+<td>반드시 <strong><code>http://</code> 또는 <code>https://</code></strong> 로 시작해야 합니다(그 외 형식은 저장 거부).</td>
+</tr>
+<tr>
+<td>비우고 저장</td>
+<td><strong>알림을 끕니다</strong>(미발송 상태).</td>
+</tr>
+<tr>
+<td>변경 시점</td>
+<td>저장 즉시 적용됩니다. 변경 내역은 <a href="09-admin-audit.html">감사 로그</a>에 남습니다.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="292">2.9.2 테스트 전송</h3>
+<p><strong>[테스트 전송]</strong> 버튼을 누르면 저장된 URL로 <strong>테스트 알림</strong>을 즉시 보내고, 수신 측 응답(성공/실패)을 화면에서 바로 확인할 수 있습니다. 연동 초기 점검에 사용하세요.</p>
+<figure class="shot">
+  <img src="assets/img/02-notification-test-result.png" alt="테스트 전송 결과 상세 — 수신 측 응답·상태 코드" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">테스트 전송 결과 상세 — 성공/실패 여부와 수신 측 응답(상태 코드·사유)</figcaption>
+</figure>
+
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: URL이 미등록이거나 수신에 실패하면 실패 사유가 안내됩니다. 결제 서버와 수신 서버가 <strong>서로 다른 도커/네트워크</strong>에 있으면 <code>localhost</code>·컨테이너명으로는 닿지 않을 수 있으니, 결제 서버에서 실제로 도달 가능한 주소(예: <code>http://host.docker.internal:8001/notify</code>)를 등록하세요.</p>
+<p>함께 보기: 어떤 이벤트가 어떤 payload로 가는지, 재시도·서명 검증 등 자세한 동작은 <a href="17-feature-notifications.html">서비스 알림 기능</a>을 참고하세요.</p>
+</div></blockquote>
+<hr />
+<h2 id="210">2.10 상태 변경 · 담당자 관리 · 삭제</h2>
+<h3 id="2101">2.10.1 상태 변경 (활성/비활성)</h3>
+<p>서비스 상태를 <span class="pill ok">ACTIVE</span> ↔ <span class="pill no">INACTIVE</span>로 토글합니다.</p>
+<ul>
+<li><strong>INACTIVE</strong>가 되면 그 서비스의 <strong>API 키 인증이 막혀 외부 호출이 모두 거부</strong>됩니다.</li>
+<li>구독 이력이 있어 삭제할 수 없는 서비스는, 삭제 대신 <strong>비활성화</strong>로 운영을 중단합니다.</li>
+</ul>
+<h3 id="2102">2.10.2 담당자 관리</h3>
+<table>
+<thead>
+<tr>
+<th>동작</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>담당자 추가</strong></td>
+<td>드롭다운에서 아직 담당자가 아닌 SERVICE_MANAGER 계정을 골라 추가</td>
+</tr>
+<tr>
+<td><strong>대표 담당자 변경</strong></td>
+<td>담당자 중 한 명을 대표로 지정 → 그 계정 이메일이 <strong>알림 메일 수신처</strong>가 됨. 이 서비스의 담당자가 아닌 계정은 대표로 지정 불가</td>
+</tr>
+<tr>
+<td><strong>담당자 해제</strong></td>
+<td>담당자에서 제외. 단, <strong>대표 담당자는 해제할 수 없습니다</strong>(먼저 다른 사람으로 대표를 바꾼 뒤 해제)</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 담당자 추가/해제, 대표 변경은 모두 이 서비스의 <strong>이벤트(감사) 탭</strong>에 기록됩니다(2.11 참고).</p>
+</div></blockquote>
+<h3 id="2103">2.10.3 서비스 삭제</h3>
+<p>상세에서 서비스를 삭제합니다.</p>
+<ul>
+<li><strong>구독 이력이 1건이라도 있으면 삭제가 거부</strong>됩니다(먼저 구독을 정리하거나, 운영 중단이 목적이면 비활성화 사용).</li>
+<li>삭제 시 그 서비스의 <strong>요금제도 함께 삭제</strong>되고, 그 서비스에 연결된 <strong>담당자 User 계정도 함께 삭제(CASCADE)</strong>됩니다(서비스 없는 담당자 계정은 무의미하므로 의도된 동작).</li>
+</ul>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: 삭제는 되돌릴 수 없습니다. 단순 운영 중단이 목적이면 <strong>비활성화(2.10.1)</strong>를 권장합니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="211">2.11 서비스 상세 — 데이터 탭</h2>
+<p>상세 하단에는 이 서비스에 속한 데이터를 보여주는 탭이 있습니다. 각 탭은 검색·필터·페이지를 서로 독립적으로 유지합니다.</p>
+<table>
+<thead>
+<tr>
+<th>탭</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>요금제</strong></td>
+<td>이 서비스의 요금제 목록(첫 결제 금액·정기 금액 등 표시). 관리는 <a href="05-admin-plan.html">요금제 관리</a></td>
+</tr>
+<tr>
+<td><strong>구독</strong></td>
+<td>이 서비스의 구독 목록. 상태 필터·검색은 구독 목록과 동일. 상세는 <a href="04-admin-subscription.html">구독 관리</a></td>
+</tr>
+<tr>
+<td><strong>단건 결제</strong></td>
+<td>이 서비스의 일반(ONE_OFF) 결제 내역. 자세한 내용은 <a href="06-admin-payment-refund.html">결제·환불 관리</a></td>
+</tr>
+<tr>
+<td><strong>등록 카드</strong></td>
+<td>이 서비스에 결제수단(카드)을 등록한 사용자별 목록(사용자 ID로 검색). 카드번호 마스킹·발급사·customerKey·등록/변경 시각 표시. 자세한 내용은 <a href="03-admin-card.html">카드 관리</a></td>
+</tr>
+<tr>
+<td><strong>이벤트</strong></td>
+<td>이 서비스 관련 <strong>감사 로그</strong>(등록·상태변경·키 재발급·키 복사·IP 갱신·취소 정책·대표 지정·담당자 추가/해제·토스 키 설정·카드 이벤트 등). 시각·동작·요약·행위자를 표시</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: <strong>이벤트 탭</strong>에는 시크릿 값(토스 키·평문 API 키 등)은 절대 표시되지 않고, "설정함/교체함" 같은 동작 요약만 남습니다. 전체 감사 로그는 <a href="09-admin-audit.html">감사 로그</a>에서 확인하세요.</p>
+<p>중요: 토스 시크릿 키 설정/변경, 키 재발급, IP 갱신 등 이 화면의 주요 동작은 모두 <strong>감사 로그</strong>에 남습니다(시크릿 값 자체는 기록하지 않음). → <a href="09-admin-audit.html">감사 로그</a></p>
+</div></blockquote>
+    </div>
+    <div class="pager"><a class="pg prev" href="01-admin-console.html"><small>← 이전</small><b>1. 관리자 콘솔 사용하기</b></a><a class="pg next" href="03-admin-card.html"><small>다음 →</small><b>3. 카드(결제수단) 관리</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#21">2.1 시작 전에 — 담당자 계정을 먼저</a>
+<a class="toc-h2" href="#22">2.2 서비스 목록</a>
+<a class="toc-h2" href="#23">2.3 서비스 등록</a>
+<a class="toc-h2" href="#24-1">2.4 키 발급·전달 (등록 직후, 1회성 · 중요)</a>
+<a class="toc-h3" href="#241">2.4.1 키 다시 복사하기 (키 복사 모달)</a>
+<a class="toc-h3" href="#242">2.4.2 키 재발급(회전)</a>
+<a class="toc-h2" href="#25">2.5 서비스 상세 — 개요</a>
+<a class="toc-h2" href="#26-ip">2.6 허용 IP 수정</a>
+<a class="toc-h2" href="#27">2.7 일반결제(단건) 취소 정책</a>
+<a class="toc-h2" href="#28">2.8 서비스별 토스 시크릿 키 설정</a>
+<a class="toc-h2" href="#29-url">2.9 알림 수신 URL — 저장·테스트 전송</a>
+<a class="toc-h3" href="#291">2.9.1 등록 방법</a>
+<a class="toc-h3" href="#292">2.9.2 테스트 전송</a>
+<a class="toc-h2" href="#210">2.10 상태 변경 · 담당자 관리 · 삭제</a>
+<a class="toc-h3" href="#2101">2.10.1 상태 변경 (활성/비활성)</a>
+<a class="toc-h3" href="#2102">2.10.2 담당자 관리</a>
+<a class="toc-h3" href="#2103">2.10.3 서비스 삭제</a>
+<a class="toc-h2" href="#211">2.11 서비스 상세 — 데이터 탭</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

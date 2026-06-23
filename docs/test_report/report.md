@@ -1,9 +1,9 @@
 # 테스트 실행 리포트
 
-- 실행 시각: 2026-06-23 22:10:57 KST
+- 실행 시각: 2026-06-24 01:51:10 KST
 - 결과: ✅ 성공 (exit status 0)
-- 합계: 67건 · 통과 67 · 실패 0 · 에러 0 · 스킵 0
-- 통과율: 100.0%  · 소요시간: 10.0s
+- 합계: 57건 · 통과 57 · 실패 0 · 에러 0 · 스킵 0
+- 통과율: 100.0%  · 소요시간: 4.8s
 
 ## 실패/에러
 
@@ -11,13 +11,13 @@
 
 ## 가장 느린 테스트 (상위 10)
 
-- 0.28s · `tests/e2e/test_admin_operations.py::test_reset_password_destroys_target_user_sessions`
-- 0.24s · `tests/e2e/test_admin_operations.py::test_payments_date_range_filter`
-- 0.23s · `tests/e2e/test_admin_operations.py::test_payment_detail_page_and_scope`
-- 0.18s · `tests/e2e/test_admin_operations.py::test_admin_payment_cancel_button_and_action`
-- 0.16s · `tests/e2e/test_admin_operations.py::test_settings_page_and_forms`
-- 0.16s · `tests/e2e/test_admin_operations.py::test_admin_ip_restriction`
-- 0.16s · `tests/e2e/test_admin_operations.py::test_users_page_admin_only_and_reset_password`
-- 0.15s · `tests/e2e/test_admin_operations.py::test_audit_q_searches_actor_target_detail`
-- 0.15s · `tests/e2e/test_admin_operations.py::test_audit_resolves_target_and_detail`
-- 0.14s · `tests/e2e/test_admin_operations.py::test_audit_action_filter`
+- 0.06s · `tests/integration/test_one_off_payment.py::test_one_off_max_amount_runtime_configurable`
+- 0.06s · `tests/integration/test_one_off_payment.py::test_keyless_service_payment_returns_422`
+- 0.06s · `tests/integration/test_subscription_create.py::test_create_subscription_records_actor_service_id`
+- 0.05s · `tests/integration/test_api_endpoints.py::test_get_subscription_status`
+- 0.05s · `tests/integration/test_api_endpoints.py::test_duplicate_subscription_409`
+- 0.05s · `tests/integration/test_card_active.py::test_inactive_card_blocks_renewal_to_past_due`
+- 0.05s · `tests/integration/test_api_endpoints.py::test_list_payments_endpoint`
+- 0.05s · `tests/integration/test_one_off_payment.py::test_reconcile_confirms_one_off`
+- 0.05s · `tests/integration/test_api_endpoints.py::test_cancel_and_resume_endpoints`
+- 0.04s · `tests/integration/test_api_endpoints.py::test_create_subscription_endpoint`

@@ -8,10 +8,19 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.identifiers import normalize_external_user_id
 from app.models import Plan, Subscription
 from app.models import access_allowed as model_access_allowed
+
+
+def _normalize_external_user_id_field(value: str) -> str:
+    """요청 본문 external_user_id 공통 검증기 — 이메일 형식 강제 + 정규화(소문자/trim).
+
+    전역 룰(이메일만 허용)을 입력 경계에서 보장한다. 잘못된 형식은 422로 거부된다.
+    """
+    return normalize_external_user_id(value)
 
 
 class SubscriptionCreateRequest(BaseModel):
@@ -25,11 +34,16 @@ class SubscriptionCreateRequest(BaseModel):
     # Field(description=...)는 Swagger 모델 스키마에 그대로 노출된다(외부 개발자용 설명).
     external_user_id: str = Field(
         min_length=1, max_length=255,
-        description="외부 서비스 측 사용자 식별자. (서비스+사용자 당 구독 1개 규칙의 기준 키)",
-        examples=["user-123"])
+        description="외부 서비스 측 사용자 식별자. **반드시 이메일**이어야 한다(소문자로 정규화 저장). "
+                    "(서비스+사용자 당 구독 1개 규칙의 기준 키)",
+        examples=["user@example.com"])
     plan_id: uuid.UUID = Field(
         description="구독할 요금제 ID. GET /plans 응답의 id 사용.",
         examples=["3fa85f64-5717-4562-b3fc-2c963f66afa6"])
+
+    # external_user_id 는 이메일만 허용 — 입력 경계에서 정규화/검증
+    _norm_euid = field_validator("external_user_id")(_normalize_external_user_id_field)
+
     trial: bool = Field(
         default=False,
         description="체험(Trial)으로 시작할지 여부. 요금제가 체험을 제공(trial_enabled=true)할 때만 허용되며, "
@@ -146,7 +160,9 @@ class OneOffPaymentRequest(BaseModel):
 
     external_user_id: str = Field(
         min_length=1, max_length=255,
-        description="외부 서비스 측 사용자 식별자.", examples=["user-123"])
+        description="외부 서비스 측 사용자 식별자. **반드시 이메일**이어야 한다(소문자로 정규화 저장).",
+        examples=["user@example.com"])
+    _norm_euid = field_validator("external_user_id")(_normalize_external_user_id_field)
     order_id: str = Field(
         min_length=6, max_length=64,
         description="주문 ID. 서비스 내에서 고유해야 하며 재사용 시 기존 결제 반환(멱등). 최소 6자(토스 스펙).",
@@ -315,8 +331,10 @@ class CardRegisterRequest(BaseModel):
 
     external_user_id: str = Field(
         min_length=1, max_length=255,
-        description="외부 서비스 측 사용자 식별자. (서비스+사용자 당 카드 1개 규칙의 기준 키)",
-        examples=["user-123"])
+        description="외부 서비스 측 사용자 식별자. **반드시 이메일**이어야 한다(소문자로 정규화 저장). "
+                    "(서비스+사용자 당 카드 1개 규칙의 기준 키)",
+        examples=["user@example.com"])
+    _norm_euid = field_validator("external_user_id")(_normalize_external_user_id_field)
     customer_key: str = Field(
         min_length=2, max_length=300,
         description="토스 customerKey(고객 식별자). 최소 2자(토스 스펙).",

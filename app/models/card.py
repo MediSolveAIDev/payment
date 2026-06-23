@@ -28,7 +28,7 @@ class Card(TimestampMixin, Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)  # 카드 고유 ID(UUID, 자동 생성)
     service_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("services.id", ondelete="RESTRICT"), index=True)               # 카드가 속한 서비스(삭제 불가 — RESTRICT)
-    external_user_id: Mapped[str] = mapped_column(String(255))                    # 외부 서비스의 사용자 ID(vault 키의 절반)
+    external_user_id: Mapped[str] = mapped_column(String(255))                    # 외부 서비스의 사용자 ID=이메일(소문자 정규화, vault 키의 절반)
     customer_key: Mapped[str] = mapped_column(String(300))                        # 토스 customerKey(빌링 인증에 사용)
     billing_key_encrypted: Mapped[str] = mapped_column(String(1024))              # 토스 빌링키 — AES-GCM 암호화 보관(평문 저장 안 함)
     billing_key_hash: Mapped[str] = mapped_column(String(64), index=True)         # 빌링키 SHA-256 해시(중복 탐지·조회용, 인증은 암호문으로)

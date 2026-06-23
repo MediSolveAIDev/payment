@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.clock import utcnow
 from app.core.crypto import AesGcmCipher
+from app.core.identifiers import normalize_external_user_id  # 이메일 룰 정규화/검증
 from app.core.errors import (
     ConflictError,
     InputValidationError,
@@ -136,17 +137,8 @@ async def _is_first_subscription(db: AsyncSession, *, service_id: uuid.UUID,
     return not benefit_used
 
 
-def _validate_external_user_id(external_user_id: str) -> None:
-    """external_user_id 입력 검증.
-
-    external_user_id: 외부 서비스가 사용하는 사용자 ID — DB 유니크 인덱스 대상이므로
-    공백만 있는 문자열도 거부한다(strip 검사).
-    Task 7: customer_key 검증은 카드 등록 시점(cards.py)으로 이동했으므로 제거.
-    """
-    if (not external_user_id or not external_user_id.strip()
-            or len(external_user_id) > 255):
-        raise InputValidationError("external_user_id가 올바르지 않습니다")
-
+# external_user_id 검증·정규화는 app.core.identifiers.normalize_external_user_id 로 일원화.
+# (create_subscription 은 그 함수를 직접 호출 — 이메일 룰 + 소문자/trim 정규화)
 
 # Task 10: _validate_inputs 제거 — change_card 전용이었으며 해당 함수와 함께 삭제됨.
 # customer_key 검증은 카드 등록 시점(cards.py)에서 수행한다.
@@ -187,8 +179,9 @@ async def create_subscription(db: AsyncSession, toss: TossClient, cipher: AesGcm
     - 첫 결제 실패: 구독·결제 행 삭제(미저장) — 감사로그만 남김(요청). 카드는 보존.
     - 타임아웃: (없음) → ACTIVE(payment PENDING — 배치 정산 대기)
     """
-    # external_user_id 검증 (customer_key 검증은 카드 등록 시점에 완료됨)
-    _validate_external_user_id(external_user_id)
+    # external_user_id 는 이메일만 허용 — 정규화(소문자/trim)한 값으로 저장해
+    # 대소문자/공백 차이로 인한 중복 구독을 방지한다. (customer_key 검증은 카드 등록 시점에 완료됨)
+    external_user_id = normalize_external_user_id(external_user_id)
 
     plan = await db.get(Plan, plan_id)
     if plan is None or plan.service_id != service.id or plan.status != PlanStatus.ACTIVE:

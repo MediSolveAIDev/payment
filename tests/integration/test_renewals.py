@@ -40,7 +40,7 @@ def email():
     return RecordingEmailSender()
 
 
-async def _sub_with_card(db, toss, cipher, svc, plan, *, external_user_id="user-1", **kw):
+async def _sub_with_card(db, toss, cipher, svc, plan, *, external_user_id="user-1@e.com", **kw):
     """카드(Card Vault)를 먼저 등록하고 그 card_id를 가진 구독을 만든다(Task 8).
 
     카드 보관함 도입 이후 갱신/재시도 결제는 cards 테이블의 빌링키를 사용하므로,
@@ -57,7 +57,7 @@ async def _due_subscription(db, cipher, svc, plan, *, toss, **kw):
     """만료일이 지난 ACTIVE 구독(등록 카드 포함)."""
     start = utcnow() - timedelta(days=31)
     end = utcnow() - timedelta(minutes=5)
-    defaults = dict(external_user_id="u-due", period_start=start, period_end=end,
+    defaults = dict(external_user_id="u-due@e.com", period_start=start, period_end=end,
                     next_billing_at=end)
     defaults.update(kw)
     # 카드 등록 → card_id 연결(Task 8). toss는 카드 발급에 필요(FakeTossClient).
@@ -88,7 +88,7 @@ async def test_renews_extended_subscription_to_active(db, session_factory, redis
     """연장처리(EXTENDED) 구독도 새 만료일 도래 시 자동결제 갱신 → 성공 시 ACTIVE 복귀."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
-    sub = await _due_subscription(db, cipher, svc, plan, toss=fake, external_user_id="u-ext-due",
+    sub = await _due_subscription(db, cipher, svc, plan, toss=fake, external_user_id="u-ext-due@e.com",
                                   status="EXTENDED")
     stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["renewed"] == 1
@@ -134,7 +134,7 @@ async def test_retry_success_restores_active_continuous_period(
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, billing_cycle="MONTH")
     end = utcnow() - timedelta(days=2)
-    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-retry",
+    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-retry@e.com",
                                status="PAST_DUE", retry_count=1,
                                period_start=end - timedelta(days=31), period_end=end,
                                next_billing_at=utcnow() - timedelta(minutes=1))
@@ -179,7 +179,7 @@ async def test_full_retry_storyline_to_suspended(db, session_factory, redis_clie
     """정기 1회 + 재시도 4회 = 총 5회 시도 후 SUSPENDED."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await _due_subscription(db, cipher, svc, plan, toss=fake, external_user_id="u-story")
+    sub = await _due_subscription(db, cipher, svc, plan, toss=fake, external_user_id="u-story@e.com")
     fake.fail_charge_with = TossError("INSUFFICIENT_FUNDS", "잔액 부족", 400)
 
     now = utcnow()
@@ -200,7 +200,7 @@ async def test_suspended_expires_after_grace(db, session_factory, redis_client,
     """SUSPENDED 대기 일수 초과 → EXPIRED. 카드 보관함 도입 후 빌링키는 삭제하지 않음."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-susp",
+    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-susp@e.com",
                                status="SUSPENDED", next_billing_at=None)
     sub.suspended_at = utcnow() - DEFAULT_SUSPENDED_GRACE - timedelta(hours=1)
     await db.commit()
@@ -217,7 +217,7 @@ async def test_suspended_within_grace_kept(db, session_factory, redis_client,
                                            cipher, fake, provider, email):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-susp2",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-susp2@e.com",
                                     status="SUSPENDED", next_billing_at=None)
     sub.suspended_at = utcnow() - timedelta(days=1)  # 아직 유예 내
     await db.commit()
@@ -233,7 +233,7 @@ async def test_trial_expiry_charges_to_active(db, session_factory, redis_client,
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
     trial_end = utcnow() - timedelta(minutes=5)
-    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-trial",
+    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-trial@e.com",
                                status="TRIAL",
                                period_start=trial_end - timedelta(days=7),
                                period_end=trial_end, next_billing_at=trial_end)
@@ -250,7 +250,7 @@ async def test_trial_charge_failure_goes_past_due(db, session_factory, redis_cli
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
     trial_end = utcnow() - timedelta(minutes=5)
-    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-trialf",
+    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-trialf@e.com",
                                status="TRIAL", period_end=trial_end,
                                next_billing_at=trial_end)
     fake.fail_charge_with = TossError("INSUFFICIENT_FUNDS", "잔액 부족", 400)
@@ -265,7 +265,7 @@ async def test_canceled_expires_at_period_end_without_charge(
         db, session_factory, redis_client, cipher, fake, provider, email):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-cx",
+    sub = await _sub_with_card(db, fake, cipher, svc, plan, external_user_id="u-cx@e.com",
                                status="CANCELED",
                                period_start=utcnow() - timedelta(days=31),
                                period_end=utcnow() - timedelta(minutes=1),
@@ -283,7 +283,7 @@ async def test_canceled_before_period_end_kept(db, session_factory, redis_client
                                                cipher, fake, provider, email):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-ck",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-ck@e.com",
                                     status="CANCELED", next_billing_at=None)
     stats = await process_due(session_factory, redis_client, provider, cipher, email)
     assert stats["expired"] == 0
@@ -308,7 +308,7 @@ async def test_crash_recovery_done_payment_advances_without_recharge(
     """직전 실행이 '결제 성공 후 커밋 전' 크래시 → 같은 order_id의 DONE 결제 발견 시 재결제 없이 기간만 복구."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await _due_subscription(db, cipher, svc, plan, toss=fake, external_user_id="u-crash")
+    sub = await _due_subscription(db, cipher, svc, plan, toss=fake, external_user_id="u-crash@e.com")
     db.add(Payment(subscription_id=sub.id, order_id=_renewal_order_id(sub),
                    amount=plan.price, payment_type="RENEWAL", status="DONE",
                    toss_payment_key="pay_recovered", idempotency_key="ik",
@@ -328,7 +328,7 @@ async def test_renewal_timeout_resolved_by_lookup(db, session_factory, redis_cli
                                                   cipher, fake, provider, email):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await _due_subscription(db, cipher, svc, plan, toss=fake, external_user_id="u-rt")
+    sub = await _due_subscription(db, cipher, svc, plan, toss=fake, external_user_id="u-rt@e.com")
     fake.succeed_despite_timeout = True
     fake.charge_failure_queue = [TossTimeoutError()]
 
@@ -343,7 +343,7 @@ async def test_renewal_timeout_unresolved_preserved_then_converges(
     """갱신 타임아웃(결과불명)은 실패 처리하지 않고, 다음 배치에서 같은 멱등키로 수렴."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await _due_subscription(db, cipher, svc, plan, toss=fake, external_user_id="u-unres")
+    sub = await _due_subscription(db, cipher, svc, plan, toss=fake, external_user_id="u-unres@e.com")
     fake.charge_failure_queue = [TossTimeoutError()]
 
     stats = await process_due(session_factory, redis_client, provider, cipher, email)
@@ -374,7 +374,7 @@ async def test_reconcile_stuck_first_payment_done(db, session_factory, redis_cli
     from app.toss.types import ChargeResult
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=9000)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-rec")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-rec@e.com")
     payment = Payment(subscription_id=sub.id, order_id="frec1order", amount=9000,
                       payment_type="FIRST", status="PENDING", idempotency_key="ik-rec",
                       requested_at=now_fn() - td(minutes=20),
@@ -401,7 +401,7 @@ async def test_reconcile_stuck_first_payment_not_found_expires(
     from app.core.clock import utcnow as now_fn
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-rec2")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-rec2@e.com")
     payment = Payment(subscription_id=sub.id, order_id="frec2order", amount=10000,
                       payment_type="FIRST", status="PENDING", idempotency_key="ik-rec2",
                       requested_at=now_fn() - td(minutes=20),
@@ -425,7 +425,7 @@ async def test_reconcile_young_pending_untouched(db, session_factory, redis_clie
     """유예 기간(10분) 이전의 PENDING은 건드리지 않는다."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-rec3")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-rec3@e.com")
     from app.core.clock import utcnow as now_fn
     payment = Payment(subscription_id=sub.id, order_id="frec3order", amount=10000,
                       payment_type="FIRST", status="PENDING", idempotency_key="ik-rec3",
@@ -448,7 +448,7 @@ async def test_reconcile_canceled_sub_with_done_payment_stays_canceled(
     from app.toss.types import ChargeResult
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-rec4",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-rec4@e.com",
                                     status="CANCELED", next_billing_at=None)
     payment = Payment(subscription_id=sub.id, order_id="frec4order", amount=10000,
                       payment_type="FIRST", status="PENDING", idempotency_key="ik-rec4",
@@ -474,7 +474,7 @@ async def test_reconcile_orphan_renewal_on_canceled_sub_done(
     from app.toss.types import ChargeResult
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-orph",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-orph@e.com",
                                     status="CANCELED", next_billing_at=None)
     payment = Payment(subscription_id=sub.id, order_id="orphrenew1", amount=plan.price,
                       payment_type="RENEWAL", status="PENDING", idempotency_key="ik-or",
@@ -500,7 +500,7 @@ async def test_reconcile_skips_renewal_pending_while_sub_in_pool(
     from app.core.clock import utcnow as now_fn
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-pool",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-pool@e.com",
                                     period_start=now_fn() - td(days=31),
                                     period_end=now_fn() + td(days=1))  # 아직 due 아님
     payment = Payment(subscription_id=sub.id, order_id="poolrenew1", amount=plan.price,
@@ -536,7 +536,7 @@ async def test_non_renewing_expires_at_period_end(db, session_factory, redis_cli
     # 기간 만료된 ACTIVE 구독, next_billing_at=None(auto_renew=False 표시)
     end = utcnow() - timedelta(minutes=5)
     sub = await create_subscription(db, cipher, svc, plan,
-                                    external_user_id="u-nonrenew",
+                                    external_user_id="u-nonrenew@e.com",
                                     status="ACTIVE",
                                     period_start=end - timedelta(days=30),
                                     period_end=end,
@@ -569,7 +569,7 @@ async def test_retry_limit_from_global_settings(db, session_factory, redis_clien
     plan = await create_plan(db, svc)
     # retry_count=1(= retry_limit) 인 PAST_DUE 구독 — 다음 배치에서 즉시 SUSPENDED 전환 예상
     sub = await _due_subscription(db, cipher, svc, plan, toss=fake, status="PAST_DUE", retry_count=1,
-                                  external_user_id="u-gs-retry")
+                                  external_user_id="u-gs-retry@e.com")
     fake.fail_charge_with = TossError("INSUFFICIENT_FUNDS", "잔액 부족", 400)
 
     now = utcnow()
@@ -619,7 +619,7 @@ async def test_minute_subscription_auto_renew(db, session_factory, redis_client,
     period_end = utcnow() - timedelta(minutes=5)  # 5분 전에 만료됨
     sub = await _sub_with_card(
         db, fake, cipher, svc, plan,
-        external_user_id="u-minute-renew",
+        external_user_id="u-minute-renew@e.com",
         period_start=period_start,
         period_end=period_end,
         next_billing_at=period_end,   # 만료 시점 = 갱신 대상

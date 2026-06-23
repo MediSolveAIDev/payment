@@ -46,12 +46,12 @@ async def test_create_with_full_price(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
     # Task 7: 구독 전 카드 등록 필수
-    await _register_card(db, fake, cipher, svc, "u-1",
+    await _register_card(db, fake, cipher, svc, "u-1@e.com",
                          customer_key="ck-valid-1", auth_key="auth-1")
 
     sub = await subs.create_subscription(
         db, fake, cipher, service=svc, plan_id=plan.id,
-        external_user_id="u-1")
+        external_user_id="u-1@e.com")
 
     assert sub.status == "ACTIVE"
     assert sub.next_billing_at == sub.current_period_end
@@ -71,12 +71,12 @@ async def test_first_subscription_free_skips_charge(db, cipher, fake):
     """첫구독 무료 요금제 — 카드 등록 후 결제 없이 ACTIVE."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, first_payment_type="FREE")
-    await _register_card(db, fake, cipher, svc, "u-free",
+    await _register_card(db, fake, cipher, svc, "u-free@e.com",
                          customer_key="ck-free", auth_key="a")
 
     sub = await subs.create_subscription(
         db, fake, cipher, service=svc, plan_id=plan.id,
-        external_user_id="u-free")
+        external_user_id="u-free@e.com")
     assert sub.status == "ACTIVE"
     # 빌링키 발급 1회(카드 등록) + 결제 없음
     assert len(fake.charges) == 0
@@ -87,19 +87,19 @@ async def test_free_benefit_not_repeatable(db, cipher, fake):
     """무료 첫구독을 쓰고 만료된 뒤 재구독하면 정가 결제 (무한 무료 방지)."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, first_payment_type="FREE")
-    await _register_card(db, fake, cipher, svc, "u-free2",
+    await _register_card(db, fake, cipher, svc, "u-free2@e.com",
                          customer_key="ck-free2", auth_key="a")
 
     sub1 = await subs.create_subscription(
         db, fake, cipher, service=svc, plan_id=plan.id,
-        external_user_id="u-free2")
+        external_user_id="u-free2@e.com")
     assert len(fake.charges) == 0  # 첫 구독은 무료
     sub1.status = "EXPIRED"
     await db.commit()
 
     await subs.create_subscription(
         db, fake, cipher, service=svc, plan_id=plan.id,
-        external_user_id="u-free2")
+        external_user_id="u-free2@e.com")
     assert len(fake.charges) == 1
     assert fake.charges[0]["amount"] == 10000  # 재구독은 정가
 
@@ -109,11 +109,11 @@ async def test_first_subscription_discount_amount(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000,
                              first_payment_type="DISCOUNT_AMOUNT", first_payment_value=3000)
-    await _register_card(db, fake, cipher, svc, "u-dc",
+    await _register_card(db, fake, cipher, svc, "u-dc@e.com",
                          customer_key="ck-dc", auth_key="a")
 
     await subs.create_subscription(db, fake, cipher, service=svc, plan_id=plan.id,
-                                   external_user_id="u-dc")
+                                   external_user_id="u-dc@e.com")
     assert fake.charges[0]["amount"] == 7000
 
 
@@ -122,17 +122,17 @@ async def test_resubscribe_after_expiry_pays_full_price(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000,
                              first_payment_type="DISCOUNT_AMOUNT", first_payment_value=9000)
-    await _register_card(db, fake, cipher, svc, "u-re",
+    await _register_card(db, fake, cipher, svc, "u-re@e.com",
                          customer_key="ck-re", auth_key="a")
 
     sub1 = await subs.create_subscription(db, fake, cipher, service=svc, plan_id=plan.id,
-                                          external_user_id="u-re")
+                                          external_user_id="u-re@e.com")
     assert fake.charges[0]["amount"] == 1000  # 첫구독 할인
     sub1.status = "EXPIRED"
     await db.commit()
 
     await subs.create_subscription(db, fake, cipher, service=svc, plan_id=plan.id,
-                                   external_user_id="u-re")
+                                   external_user_id="u-re@e.com")
     assert fake.charges[1]["amount"] == 10000  # 정가
 
 
@@ -141,13 +141,13 @@ async def test_duplicate_subscription_conflicts(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
     # factories.create_card로 카드 등록 (빌링키 1회 발급)
-    card = await create_card(db, fake, cipher, svc, external_user_id="u-dup")
+    card = await create_card(db, fake, cipher, svc, external_user_id="u-dup@e.com")
     issued_before = len(fake.issued)  # 카드 등록 시 발급된 빌링키 수 기록
     await create_subscription(db, cipher, svc, plan,
-                               external_user_id="u-dup", card_id=card.id)
+                               external_user_id="u-dup@e.com", card_id=card.id)
     with pytest.raises(ConflictError):
         await subs.create_subscription(db, fake, cipher, service=svc, plan_id=plan.id,
-                                       external_user_id="u-dup")
+                                       external_user_id="u-dup@e.com")
     # 중복 구독 시도 시 추가 빌링키 발급 없음(create_subscription에서 발급하지 않음)
     assert len(fake.issued) == issued_before
 
@@ -160,7 +160,7 @@ async def test_no_registered_card_raises_not_found(db, cipher, fake):
     with pytest.raises(NotFoundError, match="등록된 카드가 없습니다"):
         await subs.create_subscription(
             db, fake, cipher, service=svc, plan_id=plan.id,
-            external_user_id="u-no-card")
+            external_user_id="u-no-card@e.com")
     # 토스 빌링키 발급이 일어나지 않아야 함
     assert fake.issued == []
     assert await db.scalar(select(Subscription)) is None
@@ -175,7 +175,7 @@ async def test_concurrent_create_only_one_wins(session_factory, cipher):
         # 카드 사전 등록(동시성 테스트 전 1회)
         await register_or_replace_card(
             setup_db, fake_setup, cipher,
-            service=svc, external_user_id="u-race",
+            service=svc, external_user_id="u-race@e.com",
             customer_key="ck-race", auth_key="a")
         svc_id, plan_id = svc.id, plan.id
     fake = FakeTossClient()
@@ -186,7 +186,7 @@ async def test_concurrent_create_only_one_wins(session_factory, cipher):
             try:
                 await subs.create_subscription(
                     session, fake, cipher, service=service, plan_id=plan_id,
-                    external_user_id="u-race")
+                    external_user_id="u-race@e.com")
                 return "ok"
             except ConflictError:
                 return "conflict"
@@ -207,12 +207,12 @@ async def test_first_charge_failure_not_persisted_keeps_benefit(db, cipher, fake
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000,
                              first_payment_type="DISCOUNT_AMOUNT", first_payment_value=5000)
-    await _register_card(db, fake, cipher, svc, "u-fail",
+    await _register_card(db, fake, cipher, svc, "u-fail@e.com",
                          customer_key="ck-f1", auth_key="a")
     fake.charge_failure_queue = [TossError("EXCEED_MAX_AMOUNT", "한도 초과", 400)]
     with pytest.raises(PaymentFailedError):
         await subs.create_subscription(db, fake, cipher, service=svc, plan_id=plan.id,
-                                       external_user_id="u-fail")
+                                       external_user_id="u-fail@e.com")
     # 구독·결제 테이블에 흔적이 남지 않는다
     assert await db.scalar(select(Subscription)) is None
     assert await db.scalar(select(Payment)) is None
@@ -228,7 +228,7 @@ async def test_first_charge_failure_not_persisted_keeps_benefit(db, cipher, fake
 
     # 재시도: DONE 이력이 없으므로 여전히 첫구독 할인 적용
     sub2 = await subs.create_subscription(db, fake, cipher, service=svc, plan_id=plan.id,
-                                          external_user_id="u-fail")
+                                          external_user_id="u-fail@e.com")
     assert sub2.status == "ACTIVE"
     assert fake.charges[-1]["amount"] == 5000
 
@@ -237,12 +237,12 @@ async def test_timeout_with_actual_approval_resolves_done(db, cipher, fake):
     """타임아웃 후 재조회에서 승인 확인 시 DONE으로 확정."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000)
-    await _register_card(db, fake, cipher, svc, "u-to",
+    await _register_card(db, fake, cipher, svc, "u-to@e.com",
                          customer_key="ck-to", auth_key="a")
     fake.succeed_despite_timeout = True
     fake.charge_failure_queue = [TossTimeoutError()]
     sub = await subs.create_subscription(db, fake, cipher, service=svc, plan_id=plan.id,
-                                         external_user_id="u-to")
+                                         external_user_id="u-to@e.com")
     assert sub.status == "ACTIVE"
     payment = await db.scalar(select(Payment).where(Payment.subscription_id == sub.id))
     assert payment.status == "DONE"  # 재조회로 승인 확인
@@ -252,12 +252,12 @@ async def test_timeout_without_approval_stays_unresolved(db, cipher, fake):
     """결과 불명은 '실패 확정'이 아니다 — PENDING 유지 + 슬롯 점유(이중결제 차단)."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000)
-    await _register_card(db, fake, cipher, svc, "u-to2",
+    await _register_card(db, fake, cipher, svc, "u-to2@e.com",
                          customer_key="ck-to2", auth_key="a")
     fake.charge_failure_queue = [TossTimeoutError()]
     with pytest.raises(PaymentFailedError) as exc:
         await subs.create_subscription(db, fake, cipher, service=svc, plan_id=plan.id,
-                                       external_user_id="u-to2")
+                                       external_user_id="u-to2@e.com")
     assert exc.value.code == "PAYMENT_UNRESOLVED"
     sub = await db.scalar(select(Subscription))
     assert sub.status == "ACTIVE"          # 슬롯 점유 유지
@@ -268,20 +268,20 @@ async def test_timeout_without_approval_stays_unresolved(db, cipher, fake):
     # 외부 재시도는 409 → 이중 결제 불가
     with pytest.raises(ConflictError):
         await subs.create_subscription(db, fake, cipher, service=svc, plan_id=plan.id,
-                                       external_user_id="u-to2")
+                                       external_user_id="u-to2@e.com")
 
 
 async def test_timeout_then_lookup_error_stays_unresolved(db, cipher, fake):
     """타임아웃 후 재조회마저 실패해도 결과 불명으로 보존된다."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000)
-    await _register_card(db, fake, cipher, svc, "u-to3",
+    await _register_card(db, fake, cipher, svc, "u-to3@e.com",
                          customer_key="ck-to3", auth_key="a")
     fake.charge_failure_queue = [TossTimeoutError()]
     fake.fail_lookup_with = TossError("NETWORK_ERROR", "재조회 실패", 0)
     with pytest.raises(PaymentFailedError) as exc:
         await subs.create_subscription(db, fake, cipher, service=svc, plan_id=plan.id,
-                                       external_user_id="u-to3")
+                                       external_user_id="u-to3@e.com")
     assert exc.value.code == "PAYMENT_UNRESOLVED"
     payment = await db.scalar(select(Payment))
     assert payment.status == "PENDING"  # FAILED로 붕괴되지 않음
@@ -296,12 +296,12 @@ async def test_charge_failure_card_preserved(db, cipher, fake):
     from app.models import AuditLog
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000)
-    card = await _register_card(db, fake, cipher, svc, "u-cf",
+    card = await _register_card(db, fake, cipher, svc, "u-cf@e.com",
                                 customer_key="ck-cf", auth_key="a")
     fake.charge_failure_queue = [TossError("EXCEED_MAX_AMOUNT", "한도 초과", 400)]
     with pytest.raises(PaymentFailedError):
         await subs.create_subscription(db, fake, cipher, service=svc, plan_id=plan.id,
-                                       external_user_id="u-cf")
+                                       external_user_id="u-cf@e.com")
     assert await db.scalar(select(Subscription)) is None  # 구독행 미저장
     assert await db.scalar(select(Payment)) is None        # 결제행 미저장
     audit = await db.scalar(select(AuditLog).where(
@@ -317,22 +317,22 @@ async def test_plan_of_other_service_not_found(db, cipher, fake):
     svc_b, _, _ = await create_service(db, cipher, name="svc-cs-b")
     plan_b = await create_plan(db, svc_b)
     # svc_a에 카드 등록 후 svc_b 요금제로 시도
-    await _register_card(db, fake, cipher, svc_a, "u-x",
+    await _register_card(db, fake, cipher, svc_a, "u-x@e.com",
                          customer_key="ck-x", auth_key="a")
     with pytest.raises(NotFoundError):
         await subs.create_subscription(db, fake, cipher, service=svc_a, plan_id=plan_b.id,
-                                       external_user_id="u-x")
+                                       external_user_id="u-x@e.com")
 
 
 async def test_archived_plan_not_subscribable(db, cipher, fake):
     """ARCHIVED 요금제는 구독 불가 — NotFoundError."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, status="ARCHIVED")
-    await _register_card(db, fake, cipher, svc, "u-a",
+    await _register_card(db, fake, cipher, svc, "u-a@e.com",
                          customer_key="ck-a", auth_key="a")
     with pytest.raises(NotFoundError):
         await subs.create_subscription(db, fake, cipher, service=svc, plan_id=plan.id,
-                                       external_user_id="u-a")
+                                       external_user_id="u-a@e.com")
 
 
 async def test_create_subscription_records_actor_service_id(db, cipher, fake):
@@ -340,11 +340,11 @@ async def test_create_subscription_records_actor_service_id(db, cipher, fake):
     from app.models import AuditLog
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
-    await _register_card(db, fake, cipher, svc, "u-actor-svc",
+    await _register_card(db, fake, cipher, svc, "u-actor-svc@e.com",
                          customer_key="ck-actor-svc", auth_key="a-1")
     await subs.create_subscription(
         db, fake, cipher, service=svc, plan_id=plan.id,
-        external_user_id="u-actor-svc")
+        external_user_id="u-actor-svc@e.com")
     row = await db.scalar(select(AuditLog).where(
         AuditLog.action == "subscription.create"))
     assert row.actor_service_id == svc.id
@@ -357,11 +357,11 @@ async def test_subscription_no_auto_renew_sets_no_next_billing(db, cipher, fake)
     """auto_renew=False 요금제로 구독 시 next_billing_at=None이어야 한다."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, auto_renew=False)
-    await _register_card(db, fake, cipher, svc, "nr-1",
+    await _register_card(db, fake, cipher, svc, "nr-1@e.com",
                          customer_key="ck-nr-1", auth_key="a-nr")
     sub = await subs.create_subscription(
         db, fake, cipher, service=svc, plan_id=plan.id,
-        external_user_id="nr-1")
+        external_user_id="nr-1@e.com")
     assert sub.next_billing_at is None           # 자동갱신 없음
     assert sub.status == "ACTIVE"                # 결제는 정상 진행
 
@@ -370,11 +370,11 @@ async def test_auto_renew_true_plan_has_next_billing(db, cipher, fake):
     """auto_renew=True(기본값) 요금제로 구독 시 next_billing_at이 설정된다."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, auto_renew=True)
-    await _register_card(db, fake, cipher, svc, "nr-2",
+    await _register_card(db, fake, cipher, svc, "nr-2@e.com",
                          customer_key="ck-nr-2", auth_key="a-nr2")
     sub = await subs.create_subscription(
         db, fake, cipher, service=svc, plan_id=plan.id,
-        external_user_id="nr-2")
+        external_user_id="nr-2@e.com")
     assert sub.next_billing_at is not None        # 자동갱신 있음
     assert sub.next_billing_at == sub.current_period_end
 
@@ -387,10 +387,10 @@ async def test_trial_with_no_auto_renew_keeps_first_charge_schedule(db, cipher, 
     """
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, auto_renew=False, trial_enabled=True, trial_days=7)
-    await _register_card(db, fake, cipher, svc, "nr-trial",
+    await _register_card(db, fake, cipher, svc, "nr-trial@e.com",
                          customer_key="ck-nrt", auth_key="a-nrt")
     sub = await subs.create_subscription(
         db, fake, cipher, service=svc, plan_id=plan.id,
-        external_user_id="nr-trial", trial=True)
+        external_user_id="nr-trial@e.com", trial=True)
     assert sub.status == "TRIAL"
     assert sub.next_billing_at == sub.current_period_end   # 체험 만료 시 첫 결제 예약 유지(None 아님)

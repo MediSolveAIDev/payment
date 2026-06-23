@@ -49,13 +49,13 @@ async def test_plans_export(client, db, redis_client, cipher):
 async def test_subscriptions_export(client, db, redis_client, cipher):
     svc, _, _ = await create_service(db, cipher, name="구독서비스")
     plan = await create_plan(db, svc)
-    await create_subscription(db, cipher, svc, plan, external_user_id="exp-user")
+    await create_subscription(db, cipher, svc, plan, external_user_id="exp-user@e.com")
     admin, pw = await create_user(db, role="SYSTEM_ADMIN")
     await admin_login(client, admin.email, pw)
     ws = _wb(await client.get("/admin/subscriptions/export.xlsx"))
     assert [c.value for c in ws[1]] == ["서비스", "사용자", "요금제", "상태",
                                         "만료일", "다음 결제"]
-    assert any(r[1] == "exp-user" for r in ws.iter_rows(min_row=2, values_only=True))
+    assert any(r[1] == "exp-user@e.com" for r in ws.iter_rows(min_row=2, values_only=True))
 
 
 async def test_payments_export_scoped_to_manager(client, db, redis_client, cipher):
@@ -64,7 +64,7 @@ async def test_payments_export_scoped_to_manager(client, db, redis_client, ciphe
     svc_a, _, _ = await create_service(db, cipher, name="결제A")
     svc_b, _, _ = await create_service(db, cipher, name="결제B")
     for svc, oid in [(svc_a, "exp-a"), (svc_b, "exp-b")]:
-        db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u",
+        db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u@e.com",
                        order_id=oid, amount=1000, payment_type=PaymentType.ONE_OFF,
                        kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                        idempotency_key=oid, requested_at=utcnow(), approved_at=utcnow()))
@@ -92,7 +92,7 @@ async def test_settlement_export_all_mode(client, db, redis_client, cipher):
     from app.models import Payment, PaymentKind, PaymentStatus, PaymentType
     svc, _, _ = await create_service(db, cipher, name="정산서비스")
     when = datetime(2026, 6, 3, tzinfo=timezone.utc)
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u@e.com",
                    order_id="set-oo", amount=5000, payment_type=PaymentType.ONE_OFF,
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="set-oo", requested_at=when, approved_at=when))
@@ -111,7 +111,7 @@ async def test_settlement_export_service_mode(client, db, redis_client, cipher):
     from app.models import Payment, PaymentKind, PaymentStatus, PaymentType
     svc, _, _ = await create_service(db, cipher, name="정산상세")
     when = datetime(2026, 6, 3, tzinfo=timezone.utc)
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="su",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="su@e.com",
                    order_id="set-detail", amount=7000, payment_type=PaymentType.ONE_OFF,
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="set-detail", requested_at=when, approved_at=when))
@@ -130,8 +130,8 @@ async def test_service_detail_exports(client, db, redis_client, cipher):
     from app.models import Payment, PaymentKind, PaymentStatus, PaymentType
     svc, _, _ = await create_service(db, cipher, name="상세서비스")
     plan = await create_plan(db, svc, name="상세요금")
-    await create_subscription(db, cipher, svc, plan, external_user_id="d-sub")
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="d-oo",
+    await create_subscription(db, cipher, svc, plan, external_user_id="d-sub@e.com")
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="d-oo@e.com",
                    order_id="d-oo-1", amount=3000, payment_type=PaymentType.ONE_OFF,
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="d-oo-1", requested_at=utcnow(), approved_at=utcnow()))
@@ -140,7 +140,7 @@ async def test_service_detail_exports(client, db, redis_client, cipher):
     await admin_login(client, admin.email, pw)
     subs = _wb(await client.get(f"/admin/services/{svc.id}/subs.xlsx"))
     assert [c.value for c in subs[1]] == ["사용자", "요금제", "상태", "만료일", "다음 결제"]
-    assert any(r[0] == "d-sub" for r in subs.iter_rows(min_row=2, values_only=True))
+    assert any(r[0] == "d-sub@e.com" for r in subs.iter_rows(min_row=2, values_only=True))
     oneoff = _wb(await client.get(f"/admin/services/{svc.id}/oneoff.xlsx"))
     assert [c.value for c in oneoff[1]] == ["승인시각", "사용자", "주문번호", "금액",
                                             "환불", "수수료", "상태"]
@@ -165,7 +165,7 @@ async def test_payments_export_reflects_status_filter(client, db, redis_client, 
     from app.models import Payment, PaymentKind, PaymentStatus, PaymentType
     svc, _, _ = await create_service(db, cipher, name="필터서비스")
     for oid, st in [("flt-done", PaymentStatus.DONE), ("flt-fail", PaymentStatus.FAILED)]:
-        db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u",
+        db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u@e.com",
                        order_id=oid, amount=1000, payment_type=PaymentType.ONE_OFF,
                        kind=PaymentKind.ONE_OFF, status=st,
                        idempotency_key=oid, requested_at=utcnow(),

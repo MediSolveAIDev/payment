@@ -15,6 +15,7 @@ from app.core.clock import utcnow
 from app.core.config import default_settings
 from app.core.crypto import AesGcmCipher
 from app.core.errors import ConflictError, InputValidationError, NotFoundError, PaymentFailedError
+from app.core.identifiers import normalize_external_user_id  # 이메일 룰 정규화/검증
 from app.models import Payment, PaymentKind, PaymentStatus, PaymentType, Service
 from app.notifications.service_notify import (
     EVENT_PAYMENT_ONE_OFF,
@@ -74,8 +75,8 @@ async def create_one_off_payment(
     """
     if not ORDER_ID_RE.fullmatch(order_id or ""):
         raise InputValidationError("order_id 형식이 올바르지 않습니다")
-    if not external_user_id or len(external_user_id) > 255:
-        raise InputValidationError("external_user_id가 올바르지 않습니다")
+    # external_user_id 는 이메일만 허용 — 정규화(소문자/trim)한 값으로 저장(추적 일관성)
+    external_user_id = normalize_external_user_id(external_user_id)
     if amount <= 0:
         raise InputValidationError("금액은 1원 이상이어야 합니다")
     # 단건결제 상한은 런타임(전체 설정·GlobalSettings)에서 즉시 조정 가능 — 사고 시 즉시 조이기.

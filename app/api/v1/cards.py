@@ -29,6 +29,7 @@ from app.api.openapi import (
 )
 from app.core.crypto import AesGcmCipher
 from app.core.errors import NotFoundError
+from app.core.identifiers import normalize_external_user_id  # 경로 파라미터 이메일 정규화
 from app.models import Service
 from app.schemas.api import CardRegisterRequest, CardResponse
 from app.services import cards as card_service
@@ -101,6 +102,8 @@ async def get_card(
     authenticate_service: 결제 API 호출 없이 조회만 하므로 일반 인증 적용.
     카드가 없으면 404를 반환한다.
     """
+    # 경로의 external_user_id를 이메일 룰로 정규화(소문자/trim) 후 조회 — 저장 형태와 일치
+    external_user_id = normalize_external_user_id(external_user_id)
     # 서비스+사용자 기준으로 카드 조회
     card = await card_service.get_card(
         db, service_id=service.id, external_user_id=external_user_id
@@ -139,6 +142,8 @@ async def delete_card(
     카드가 없으면 404를 반환한다.
     T7 컷오버: 전역 toss 제거 — 서비스별 키로 toss_provider.for_service(service) 해석.
     """
+    # 경로의 external_user_id를 이메일 룰로 정규화 후 삭제 대상 조회
+    external_user_id = normalize_external_user_id(external_user_id)
     # T7: 서비스에 등록된 toss_secret_key로 클라이언트 해석
     toss = toss_provider.for_service(service)
     # 카드 삭제 — cipher 필요(빌링키 복호화 후 토스 best-effort 삭제). 삭제 시 서비스 알림.

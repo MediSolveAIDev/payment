@@ -15,7 +15,7 @@ async def test_body_tampering_rejected(client, db, cipher):
     """서명한 본문과 다른 본문을 보내면 401 (본문 무결성)."""
     svc, api_key, secret = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    base = {"external_user_id": "u-1", "plan_id": str(plan.id),
+    base = {"external_user_id": "u-1@e.com", "plan_id": str(plan.id),
             "auth_key": "a", "customer_key": "ck-1"}
     good_body = json.dumps(base).encode()
     evil_body = json.dumps({**base, "customer_key": "ck-EVIL"}).encode()
@@ -28,7 +28,7 @@ async def test_signature_for_other_path_rejected(client, db, cipher):
     """다른 경로용 서명 재사용 → 401."""
     svc, api_key, secret = await create_service(db, cipher)
     headers = signed_headers(api_key, secret, "GET", "/api/v1/plans")
-    resp = await client.get("/api/v1/payments/u-1", headers=headers)
+    resp = await client.get("/api/v1/payments/u-1@e.com", headers=headers)
     assert resp.status_code == 401
 
 
@@ -84,9 +84,9 @@ async def test_payment_rate_limit_stricter(settings, engine, fake_toss, email_se
     # POST /api/v1/cards도 payment_rate_limit 대상이므로, HTTP API 우회하여
     # 서비스 레이어 헬퍼(create_card)로 DB에 직접 삽입해 rate limit 카운터를 소비하지 않는다.
     await create_card(db, fake_toss, cipher, svc,
-                      external_user_id="u-rl1", customer_key="ck-rl1", auth_key="a")
+                      external_user_id="u-rl1@e.com", customer_key="ck-rl1", auth_key="a")
     await create_card(db, fake_toss, cipher, svc,
-                      external_user_id="u-rl2", customer_key="ck-rl2", auth_key="a")
+                      external_user_id="u-rl2@e.com", customer_key="ck-rl2", auth_key="a")
     application = create_app(limited, toss_client=fake_toss,
                              email_sender=email_sender, engine=engine)
     async with LifespanManager(application):
@@ -94,10 +94,10 @@ async def test_payment_rate_limit_stricter(settings, engine, fake_toss, email_se
                                base_url="http://test") as c:
             first = await api_request(
                 c, "POST", "/api/v1/subscriptions", api_key, secret,
-                json_body={"external_user_id": "u-rl1", "plan_id": str(plan.id)})
+                json_body={"external_user_id": "u-rl1@e.com", "plan_id": str(plan.id)})
             second = await api_request(
                 c, "POST", "/api/v1/subscriptions", api_key, secret,
-                json_body={"external_user_id": "u-rl2", "plan_id": str(plan.id)})
+                json_body={"external_user_id": "u-rl2@e.com", "plan_id": str(plan.id)})
     assert first.status_code == 201
     assert second.status_code == 429
 

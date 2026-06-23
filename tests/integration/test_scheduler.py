@@ -17,8 +17,8 @@ async def test_run_renewals_processes_due(app, db, redis_client, cipher, fake_to
     plan = await create_plan(db, svc)
     # 카드 보관함(Task 8): 갱신 결제는 cards 테이블의 빌링키를 사용하므로
     # 구독에 등록 카드를 먼저 연결한다.
-    card = await create_card(db, fake_toss, cipher, svc, external_user_id="u-sch")
-    await create_subscription(db, cipher, svc, plan, external_user_id="u-sch",
+    card = await create_card(db, fake_toss, cipher, svc, external_user_id="u-sch@e.com")
+    await create_subscription(db, cipher, svc, plan, external_user_id="u-sch@e.com",
                               card_id=card.id,
                               period_start=utcnow() - timedelta(days=31),
                               period_end=utcnow() - timedelta(minutes=1),

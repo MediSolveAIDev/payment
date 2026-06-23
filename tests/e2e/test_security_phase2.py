@@ -63,7 +63,7 @@ async def test_one_off_amount_over_cap_rejected(db, cipher):
     fake = FakeTossClient()
     with pytest.raises(InputValidationError):
         await payment_service.create_one_off_payment(
-            db, fake, cipher, service=svc, external_user_id="u-cap",
+            db, fake, cipher, service=svc, external_user_id="u-cap@e.com",
             order_id="oo-cap-1", order_name="고액",
             amount=payment_service.ONE_OFF_MAX_AMOUNT + 1)
     assert not fake.charges, "상한 초과 요청이 토스까지 전달되면 안 됨"

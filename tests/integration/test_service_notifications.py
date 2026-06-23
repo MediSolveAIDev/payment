@@ -58,10 +58,10 @@ def test_build_payload_has_event_and_all_fields():
 async def test_no_url_no_send(db, cipher, fake):
     svc, _, _ = await create_service(db, cipher)   # notification_url 없음
     plan = await create_plan(db, svc, price=10000)
-    await create_card(db, fake, cipher, svc, external_user_id="u-no")
+    await create_card(db, fake, cipher, svc, external_user_id="u-no@e.com")
     rec = _rec()
     await subs.create_subscription(db, fake, cipher, service=svc, plan_id=plan.id,
-                                   external_user_id="u-no", notifier=rec)
+                                   external_user_id="u-no@e.com", notifier=rec)
     assert rec.sent == []   # URL 미등록 → 발송 안 함
 
 
@@ -70,23 +70,23 @@ async def test_no_url_no_send(db, cipher, fake):
 async def test_subscription_created_notifies(db, cipher, fake):
     svc = await _svc_with_url(db, cipher)
     plan = await create_plan(db, svc, price=10000)
-    await create_card(db, fake, cipher, svc, external_user_id="u-sub")
+    await create_card(db, fake, cipher, svc, external_user_id="u-sub@e.com")
     rec = _rec()
     sub = await subs.create_subscription(db, fake, cipher, service=svc, plan_id=plan.id,
-                                         external_user_id="u-sub", notifier=rec)
+                                         external_user_id="u-sub@e.com", notifier=rec)
     assert len(rec.sent) == 1
     msg = rec.sent[0]
     assert msg["EVENT"] == EVENT_SUBSCRIPTION_CREATED
-    assert msg["subscribe_id"] == str(sub.id) and msg["email"] == "u-sub"
+    assert msg["subscribe_id"] == str(sub.id) and msg["email"] == "u-sub@e.com"
     assert msg["service_name"] == svc.name
 
 
 async def test_one_off_payment_notifies(db, cipher, fake):
     svc = await _svc_with_url(db, cipher)
-    await create_card(db, fake, cipher, svc, external_user_id="u-oo")
+    await create_card(db, fake, cipher, svc, external_user_id="u-oo@e.com")
     rec = _rec()
     await payment_service.create_one_off_payment(
-        db, fake, cipher, service=svc, external_user_id="u-oo",
+        db, fake, cipher, service=svc, external_user_id="u-oo@e.com",
         order_id="oo-notify-1", order_name="상품", amount=5000, notifier=rec)
     assert [m["EVENT"] for m in rec.sent] == [EVENT_PAYMENT_ONE_OFF]
     assert rec.sent[0]["order_id"] == "oo-notify-1" and "5,000" in rec.sent[0]["DESC"]
@@ -96,10 +96,10 @@ async def test_card_register_notifies(db, cipher, fake):
     svc = await _svc_with_url(db, cipher)
     rec = _rec()
     await register_or_replace_card(db, fake, cipher, service=svc,
-                                   external_user_id="u-card", customer_key="ck-1",
+                                   external_user_id="u-card@e.com", customer_key="ck-1",
                                    auth_key="auth-1", notifier=rec)
     assert [m["EVENT"] for m in rec.sent] == [EVENT_CARD_REGISTERED]
-    assert rec.sent[0]["email"] == "u-card"
+    assert rec.sent[0]["email"] == "u-card@e.com"
 
 
 async def test_plan_archive_notifies(db, cipher, fake):
@@ -116,7 +116,7 @@ async def test_admin_one_off_cancel_notifies(db, cipher, fake):
     from app.core.clock import utcnow
     from app.models import Payment, PaymentKind, PaymentStatus, PaymentType
     svc = await _svc_with_url(db, cipher)
-    p = Payment(subscription_id=None, service_id=svc.id, external_user_id="u-c",
+    p = Payment(subscription_id=None, service_id=svc.id, external_user_id="u-c@e.com",
                 order_id="oo-cancel-n", amount=10000, payment_type=PaymentType.ONE_OFF,
                 kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                 idempotency_key="oo-cancel-n", toss_payment_key="pay_x",
@@ -188,9 +188,9 @@ async def test_renewal_notifies(db, session_factory, redis_client, cipher, fake)
     from tests.factories import create_subscription
     svc = await _svc_with_url(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
-    card = await create_card(db, fake, cipher, svc, external_user_id="u-renew")
+    card = await create_card(db, fake, cipher, svc, external_user_id="u-renew@e.com")
     end = utcnow() - timedelta(minutes=5)
-    await create_subscription(db, cipher, svc, plan, external_user_id="u-renew",
+    await create_subscription(db, cipher, svc, plan, external_user_id="u-renew@e.com",
                               card_id=card.id, period_start=utcnow() - timedelta(days=31),
                               period_end=end, next_billing_at=end)
     rec = _rec()

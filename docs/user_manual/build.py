@@ -19,26 +19,28 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 # 사이드바 표시 순서·그룹.
 DOCS = [
+    # 사용자 매뉴얼(00~11): 파일번호 = 사이드바 표시 순서로 정렬
     ("00-overview.md", "사용자 매뉴얼"),
     ("01-admin-console.md", "사용자 매뉴얼"),
-    ("19-admin-services.md", "사용자 매뉴얼"),   # 서비스 관리(목록·등록·키) — 콘솔 다음에 배치
-    ("02-admin-card.md", "사용자 매뉴얼"),
-    ("03-admin-subscription.md", "사용자 매뉴얼"),
-    ("04-admin-plan.md", "사용자 매뉴얼"),
-    ("05-admin-payment-refund.md", "사용자 매뉴얼"),
-    ("06-admin-accounts.md", "사용자 매뉴얼"),
-    ("07-admin-settings.md", "사용자 매뉴얼"),
-    ("08-admin-audit.md", "사용자 매뉴얼"),
-    ("09-dashboard.md", "사용자 매뉴얼"),
-    ("18-status-reference.md", "사용자 매뉴얼"),
-    ("10-install-deploy.md", "개발자 매뉴얼"),
-    ("11-service-api.md", "개발자 매뉴얼"),
-    ("12-feature-card.md", "개발자 매뉴얼"),
-    ("13-feature-subscription.md", "개발자 매뉴얼"),
-    ("14-feature-payment.md", "개발자 매뉴얼"),
-    ("15-feature-notifications.md", "개발자 매뉴얼"),
-    ("16-admin-screens.md", "개발자 매뉴얼"),
-    ("17-sample-service.md", "개발자 매뉴얼"),
+    ("02-admin-services.md", "사용자 매뉴얼"),
+    ("03-admin-card.md", "사용자 매뉴얼"),
+    ("04-admin-subscription.md", "사용자 매뉴얼"),
+    ("05-admin-plan.md", "사용자 매뉴얼"),
+    ("06-admin-payment-refund.md", "사용자 매뉴얼"),
+    ("07-admin-accounts.md", "사용자 매뉴얼"),
+    ("08-admin-settings.md", "사용자 매뉴얼"),
+    ("09-admin-audit.md", "사용자 매뉴얼"),
+    ("10-dashboard.md", "사용자 매뉴얼"),
+    ("11-status-reference.md", "사용자 매뉴얼"),
+    # 개발자 매뉴얼(12~19)
+    ("12-install-deploy.md", "개발자 매뉴얼"),
+    ("13-service-api.md", "개발자 매뉴얼"),
+    ("14-feature-card.md", "개발자 매뉴얼"),
+    ("15-feature-subscription.md", "개발자 매뉴얼"),
+    ("16-feature-payment.md", "개발자 매뉴얼"),
+    ("17-feature-notifications.md", "개발자 매뉴얼"),
+    ("18-admin-screens.md", "개발자 매뉴얼"),
+    ("19-sample-service.md", "개발자 매뉴얼"),
 ]
 
 GROUP_ICON = {"사용자 매뉴얼": "📘", "개발자 매뉴얼": "🛠️"}

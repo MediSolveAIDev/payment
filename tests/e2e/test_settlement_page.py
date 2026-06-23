@@ -13,8 +13,8 @@ async def _seed(db, cipher):
     svc_b, _, _ = await create_service(db, cipher, name="정산서비스B")
     plan_a = await create_plan(db, svc_a)
     plan_b = await create_plan(db, svc_b)
-    sub_a = await create_subscription(db, cipher, svc_a, plan_a, external_user_id="se-a")
-    sub_b = await create_subscription(db, cipher, svc_b, plan_b, external_user_id="se-b")
+    sub_a = await create_subscription(db, cipher, svc_a, plan_a, external_user_id="se-a@e.com")
+    sub_b = await create_subscription(db, cipher, svc_b, plan_b, external_user_id="se-b@e.com")
     when = datetime(2026, 5, 10, tzinfo=UTC)
     db.add(Payment(subscription_id=sub_a.id, order_id="se-pay-a", amount=10000,
                    payment_type="RENEWAL", status="DONE", idempotency_key="se-pay-a",
@@ -28,7 +28,7 @@ async def _seed(db, cipher):
     db.add(Payment(subscription_id=None, order_id="se-pay-oo", amount=2000,
                    payment_type="ONE_OFF", status="DONE", idempotency_key="se-pay-oo",
                    requested_at=when, approved_at=when, kind=PaymentKind.ONE_OFF,
-                   service_id=svc_a.id, external_user_id="se-oo"))
+                   service_id=svc_a.id, external_user_id="se-oo@e.com"))
     await db.commit()
     return svc_a, svc_b, sub_a
 
@@ -105,7 +105,7 @@ async def test_settlement_shows_split_and_oneoff_detail(client, db, redis_client
     from app.models import Payment, PaymentKind, PaymentStatus, PaymentType
     svc, _, _ = await create_service(db, cipher, name="정산상세S")
     when = datetime(2026, 5, 10, tzinfo=UTC)
-    p = Payment(subscription_id=None, service_id=svc.id, external_user_id="oo-u",
+    p = Payment(subscription_id=None, service_id=svc.id, external_user_id="oo-u@e.com",
                 order_id="s-oo-det", amount=3000, payment_type=PaymentType.ONE_OFF,
                 kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                 idempotency_key="s-oo-det", requested_at=when, approved_at=when)
@@ -145,13 +145,13 @@ async def test_settlement_service_mode_plan_filter_excludes_oneoff(client, db, r
     """서비스별 모드에서 요금제 필터 지정 시 ONE_OFF 결제는 제외된다."""
     svc, _, _ = await create_service(db, cipher, name="정산플랜모드")
     plan = await create_plan(db, svc, name="모드플랜")
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="m-sub")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="m-sub@e.com")
     when = datetime(2026, 5, 10, tzinfo=UTC)
-    db.add(Payment(subscription_id=sub.id, service_id=svc.id, external_user_id="m-sub",
+    db.add(Payment(subscription_id=sub.id, service_id=svc.id, external_user_id="m-sub@e.com",
                    order_id="sm-sub", amount=10000, payment_type=PaymentType.RENEWAL,
                    kind=PaymentKind.SUBSCRIPTION, status=PaymentStatus.DONE,
                    idempotency_key="sm-sub", requested_at=when, approved_at=when))
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="m-oo",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="m-oo@e.com",
                    order_id="sm-oo", amount=3000, payment_type=PaymentType.ONE_OFF,
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="sm-oo", requested_at=when, approved_at=when))

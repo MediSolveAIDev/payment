@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18. 어드민 화면별 설명 — 구독·결제 서버 매뉴얼</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="index.html"><span class="brand-ico">💳</span><span class="brand-t"><b>구독·결제 서버</b><small>사용·개발 매뉴얼</small></span></a>
+<div class="search"><input id="q" type="text" placeholder="문서 검색…" autocomplete="off"></div>
+<nav class="nav">
+<div class="nav-group"><span>📘</span>사용자 매뉴얼</div>
+<a class="nav-link" href="00-overview.html"><span class="n">0</span><span class="tt">0. 구독·결제 서버 전체 개요</span></a>
+<a class="nav-link" href="01-admin-console.html"><span class="n">1</span><span class="tt">1. 관리자 콘솔 사용하기</span></a>
+<a class="nav-link" href="02-admin-services.html"><span class="n">2</span><span class="tt">2. 서비스 관리</span></a>
+<a class="nav-link" href="03-admin-card.html"><span class="n">3</span><span class="tt">3. 카드(결제수단) 관리</span></a>
+<a class="nav-link" href="04-admin-subscription.html"><span class="n">4</span><span class="tt">4. 구독 관리</span></a>
+<a class="nav-link" href="05-admin-plan.html"><span class="n">5</span><span class="tt">5. 요금제 관리</span></a>
+<a class="nav-link" href="06-admin-payment-refund.html"><span class="n">6</span><span class="tt">6. 일반결제와 환불(취소)</span></a>
+<a class="nav-link" href="07-admin-accounts.html"><span class="n">7</span><span class="tt">7. 계정 관리</span></a>
+<a class="nav-link" href="08-admin-settings.html"><span class="n">8</span><span class="tt">8. 전체 설정</span></a>
+<a class="nav-link" href="09-admin-audit.html"><span class="n">9</span><span class="tt">9. 감사 로그</span></a>
+<a class="nav-link" href="10-dashboard.html"><span class="n">10</span><span class="tt">10. 대시보드</span></a>
+<a class="nav-link" href="11-status-reference.html"><span class="n">11</span><span class="tt">11. 상태값 사전 — 모든 상태의 의미</span></a>
+<div class="nav-group"><span>🛠️</span>개발자 매뉴얼</div>
+<a class="nav-link" href="12-install-deploy.html"><span class="n">12</span><span class="tt">12. 설치·설정·배포</span></a>
+<a class="nav-link" href="13-service-api.html"><span class="n">13</span><span class="tt">13. 서비스 연동 API</span></a>
+<a class="nav-link" href="14-feature-card.html"><span class="n">14</span><span class="tt">14. 카드 보관함(Card Vault) 기능</span></a>
+<a class="nav-link" href="15-feature-subscription.html"><span class="n">15</span><span class="tt">15. 구독 기능</span></a>
+<a class="nav-link" href="16-feature-payment.html"><span class="n">16</span><span class="tt">16. 일반결제·취소·정산 기능</span></a>
+<a class="nav-link" href="17-feature-notifications.html"><span class="n">17</span><span class="tt">17. 서비스 알림(아웃고잉 웹훅) 기능</span></a>
+<a class="nav-link active" href="18-admin-screens.html"><span class="n">18</span><span class="tt">18. 어드민 화면별 설명</span></a>
+<a class="nav-link" href="19-sample-service.html"><span class="n">19</span><span class="tt">19. 샘플 서비스(sample_service) 사용법</span></a>
+</nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<main class="main">
+  <article class="content">
+    <nav class="crumb"><a href="index.html">매뉴얼 홈</a> <span>/</span> <em>개발자 매뉴얼</em></nav>
+    <header class="doc-head">
+      <div class="dh-eyebrow"><span class="dh-chip">🛠️ 개발자 매뉴얼</span></div>
+      <h1>18. 어드민 화면별 설명</h1>
+      
+    </header>
+    <div class="doc">
+
+<p>이 문서는 htmx 어드민(<code>/admin/*</code>)을 <strong>화면별로</strong> 정리한 개발자용 지도입니다. 각 화면의 경로(GET/POST)·라우트 함수 위치(<code>file:line</code>)·템플릿·하는 일·필요 권한을 표로 정리하므로, 화면을 고치거나 디버깅할 때 어디를 봐야 하는지 바로 찾을 수 있습니다.</p>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 라우터 등록 순서·렌더 헬퍼는 <code>app/admin/__init__.py</code>에 있습니다. 권한·CSRF·세션은 <code>app/admin/deps.py</code>, 목록 공통(페이지네이션·정렬·검색)은 <code>app/admin/pagination.py</code>에 있습니다.</p>
+<p>함께 보기: <a href="01-admin-console.html">관리자 콘솔(사용자용)</a></p>
+</div></blockquote>
+<hr />
+<h2 id="181">18.1 어드민 공통 구조</h2>
+<p>화면별 설명에 들어가기 전, 모든 화면이 공유하는 골격을 먼저 정리합니다.</p>
+<h3 id="depspy">인증·권한 (deps.py)</h3>
+<p>인증은 <code>require_user</code>(<code class="loc">app/admin/deps.py:60</code>)가 세션 쿠키(<code>admin_session</code>) → Redis 세션 → DB 사용자 확인 → <code>AdminContext</code> 주입의 순서로 처리합니다. <code>AdminContext</code>(<code class="loc">app/admin/deps.py:42</code>)는 <code>user</code>, <code>session_id</code>, <code>csrf_token</code>, <code>service_ids</code>를 담습니다. <code>service_ids</code>는 SYSTEM_ADMIN이면 <code>None</code>(전체 접근), SERVICE_MANAGER이면 담당 서비스 UUID 목록입니다.</p>
+<p>권한 Depends는 <code>require_role</code> 팩토리(<code class="loc">app/admin/deps.py:88</code>)로 만든 두 축약을 씁니다.</p>
+<table>
+<thead>
+<tr>
+<th>Depends</th>
+<th>정의 위치</th>
+<th>허용 역할</th>
+<th>쓰는 화면</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>require_admin</code></td>
+<td><code class="loc">app/admin/deps.py:102</code></td>
+<td>SYSTEM_ADMIN 전용</td>
+<td>서비스·계정·감사·전체설정·카드</td>
+</tr>
+<tr>
+<td><code>require_any</code></td>
+<td><code class="loc">app/admin/deps.py:104</code></td>
+<td>SYSTEM_ADMIN + SERVICE_MANAGER</td>
+<td>대시보드·구독·결제·정산·요금제</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: <code>require_any</code> 화면이라도 데이터 범위는 <code>service_scope(ctx)</code>(<code class="loc">app/admin/deps.py:115</code>, = <code>ctx.service_ids</code>)로 갈라집니다. SERVICE_MANAGER는 담당 서비스만 보이며, 비담당 리소스 직접 접근은 <strong>403이 아니라 404</strong>로 응답합니다(존재 여부 미노출). <code>require_user</code>는 또한 <code>GlobalSettings.admin_allowed_ips</code>가 비어 있지 않으면 접속 IP를 검사합니다(루프백 IP는 항상 허용).</p>
+</div></blockquote>
+<p>미인증 시 <code>AdminAuthRequired</code>(<code class="loc">app/admin/deps.py:34</code>)가 발생하고, <code>register_admin_exception_handlers</code>(<code class="loc">app/admin/deps.py:120</code>)가 일반 요청은 303 리다이렉트, htmx 요청은 <code>HX-Redirect</code> 헤더(204)로 <code>/admin/login</code>에 보냅니다.</p>
+<h3 id="csrf">CSRF</h3>
+<p>모든 admin POST는 <code>validate_csrf(request, ctx)</code>(<code class="loc">app/admin/deps.py:107</code>)를 첫 줄에서 호출해야 합니다. 폼 hidden 필드 <code>csrf_token</code> 또는 헤더 <code>X-CSRF-Token</code>을 세션 토큰과 상수시간 비교합니다. 불일치 시 <code>PermissionDeniedError</code>(403). 토큰 값은 템플릿에서 <code>{{ ctx.csrf_token }}</code>로 폼에 주입합니다.</p>
+<h3 id="htmx-initpy">htmx 부분 갱신 패턴 (<strong>init</strong>.py)</h3>
+<p>목록 화면은 <code>render_list</code>(<code class="loc">app/admin/__init__.py:77</code>)를 사용합니다. <code>HX-Request</code> 헤더가 있으면 리스트 <strong>partial</strong>(<code>_table.html</code>)만, 없으면 전체 페이지(<code>list.html</code>)를 렌더합니다.</p>
+<pre><code class="language-python">def render_list(request, full_name, partial_name, ctx=None, **extra):
+    name = partial_name if request.headers.get(&quot;HX-Request&quot;) else full_name
+    return render(request, name, ctx=ctx, **extra)
+</code></pre>
+<p>서비스 상세처럼 한 화면에 탭이 여러 개인 경우는 <code>HX-Target</code> 헤더 값으로 partial을 갈라 렌더합니다(<code class="loc">app/admin/routes/services.py:323</code>).</p>
+<p><code>render</code>(<code class="loc">app/admin/__init__.py:61</code>)는 공통으로 <code>?flash</code>/<code>?saved</code> 쿼리를 컨텍스트에 넣고, <code>saved</code>가 있으면 <code>HX-Trigger: showSaved</code> 헤더를 붙여 admin.js가 완료 모달(✓)을 띄우게 합니다. DB 쓰기 성공 후에는 <code>saved_redirect</code>(<code class="loc">app/admin/__init__.py:49</code>)로 대상 URL에 <code>?saved=</code> 메시지를 덧붙여 리다이렉트합니다.</p>
+<h3 id="paginationpy">페이지네이션·정렬·검색 (pagination.py)</h3>
+<p>목록 라우트는 <code>PageParams.from_request</code>(<code class="loc">app/admin/pagination.py:31</code>)로 쿼리스트링을 파싱합니다.</p>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>쿼리 파라미터</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>페이지</td>
+<td><code>page</code>(기본)</td>
+<td><code>page_param</code>으로 변경 가능(한 화면 다중 페이저 분리)</td>
+</tr>
+<tr>
+<td>검색어</td>
+<td><code>q</code></td>
+<td><code>pp.q</code></td>
+</tr>
+<tr>
+<td>정렬</td>
+<td><code>sort</code>, <code>dir</code></td>
+<td><code>sortable</code> 화이트리스트 밖이면 default로 보정</td>
+</tr>
+<tr>
+<td>필터</td>
+<td><code>filter_keys</code>로 지정</td>
+<td><code>pp.filters</code> dict</td>
+</tr>
+</tbody>
+</table>
+<p><code>paginate</code>(<code class="loc">app/admin/pagination.py:115</code>)가 count 쿼리를 내부 생성(<code>count_of</code>)해 실행하며, <code>flatten=True</code>면 단일 엔티티 Row를 엔티티로 평탄화합니다. 날짜 범위 필터는 <code>date_range</code>(<code class="loc">app/admin/pagination.py:150</code>)가 <code>from</code>/<code>to</code>(YYYY-MM-DD)를 UTC 반개구간으로 변환합니다. 정렬 가능 컬럼 맵(<code>_*_SORT</code>)과 공유 쿼리 빌더 일부는 <code>app/admin/filters.py</code>에 있습니다.</p>
+<h3 id="_1">라우터 등록·내비게이션</h3>
+<p>라우터 등록은 <code class="loc">app/admin/__init__.py:101</code>부터입니다. <code>services_export</code>/<code>services_managers</code>를 <code>services</code>보다 <strong>먼저</strong> 등록해 <code>/services/export.xlsx</code>가 <code>/services/{service_id}</code>(UUID 경로)에 잡히지 않게 합니다. 대시보드는 <code>prefix="/admin"</code>에서 <code>GET /admin</code>(트레일링 슬래시 없음)이 해석되도록 <code>add_api_route("")</code>로 직접 등록합니다(<code class="loc">app/admin/__init__.py:119</code>). 좌측 메뉴(LNB)는 <code class="loc">app/admin/templates/base.html:37</code>에 있으며, <code>관리</code> 카테고리(서비스·계정·전체 설정·감사 로그)는 <code>ctx.user.role == 'SYSTEM_ADMIN'</code>일 때만 렌더됩니다.</p>
+<hr />
+<h2 id="182">18.2 로그인·접근</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>라우트 파일: <code>app/admin/routes/auth.py</code> · 템플릿: <code>login.html</code>, <code>setup_password.html</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+<th>템플릿</th>
+<th>권한</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /admin/login</code></td>
+<td><code>login_page</code> <code class="loc">app/admin/routes/auth.py:45</code></td>
+<td><code>login.html</code></td>
+<td>없음</td>
+</tr>
+<tr>
+<td><code>POST /admin/login</code></td>
+<td><code>login_submit</code> <code class="loc">app/admin/routes/auth.py:69</code></td>
+<td><code>login.html</code>(실패 시)</td>
+<td>없음</td>
+</tr>
+<tr>
+<td><code>POST /admin/logout</code></td>
+<td><code>logout</code> <code class="loc">app/admin/routes/auth.py:107</code></td>
+<td>—</td>
+<td><code>require_any</code> + CSRF</td>
+</tr>
+<tr>
+<td><code>GET /admin/setup-password</code></td>
+<td><code>setup_password_page</code> <code class="loc">app/admin/routes/auth.py:124</code></td>
+<td><code>setup_password.html</code></td>
+<td>토큰</td>
+</tr>
+<tr>
+<td><code>POST /admin/setup-password</code></td>
+<td><code>setup_password_submit</code> <code class="loc">app/admin/routes/auth.py:134</code></td>
+<td><code>setup_password.html</code>(실패 시)</td>
+<td>토큰</td>
+</tr>
+<tr>
+<td><code>GET /admin/intro</code></td>
+<td><code>intro_page</code> <code class="loc">app/admin/routes/auth.py:60</code></td>
+<td>(정적 HTML)</td>
+<td>없음</td>
+</tr>
+</tbody>
+</table>
+<p>하는 일: 로그인은 IP당 분당 시도 제한(<code>_login_rate_limited</code>, <code class="loc">app/admin/routes/auth.py:31</code>)을 먼저 검사한 뒤 <code>auth_service.login</code>으로 인증하고, 성공 시 <code>admin_session</code> 쿠키(HttpOnly, SameSite=Lax, prod에서만 secure)를 발급하고 <code>/admin</code>으로 보냅니다. 로컬 개발(<code>environment == "dev"</code>)에서만 폼에 <code>dev_login_email</code>/<code>dev_login_password</code>를 미리 채우며, 스테이징(stg)·운영(prod)에서는 채우지 않습니다. 비밀번호 설정/재설정은 메일로 받은 <code>token</code>을 hidden으로 전달받아 처리하며, 확인 불일치는 폼 단에서 즉시 오류로 막습니다.</p>
+<hr />
+<h2 id="183">18.3 대시보드</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>라우트 파일: <code>app/admin/routes/dashboard.py</code> · 템플릿: <code>dashboard.html</code> (+ <code>_charts.html</code> 인클루드)</p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+<th>템플릿</th>
+<th>권한</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /admin</code></td>
+<td><code>dashboard</code> <code class="loc">app/admin/routes/dashboard.py:24</code></td>
+<td><code>dashboard.html</code></td>
+<td><code>require_any</code></td>
+</tr>
+</tbody>
+</table>
+<p>하는 일: <code>build_dashboard(db, ctx.service_ids)</code>(<code>app/services/dashboard.py</code>)로 집계 데이터를 조회해 렌더합니다. <code>is_admin = ctx.user.role == SYSTEM_ADMIN</code> 플래그로 전체 통계·관리자 전용 섹션을 조건부 노출합니다. SERVICE_MANAGER는 <code>service_ids</code> 스코프 내 데이터만 집계됩니다. 등록은 서브라우터가 아니라 <code class="loc">__init__.py:119</code>의 <code>add_api_route("")</code>로 직접 합니다.</p>
+<hr />
+<h2 id="184">18.4 서비스 (+등록 카드/키)</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>라우트 파일: <code>app/admin/routes/services.py</code>, <code>services_managers.py</code>, <code>services_export.py</code>
+템플릿: <code>services/</code> 디렉터리(<code>list.html</code>, <code>_table.html</code>, <code>new.html</code>, <code>detail.html</code>, <code>keys.html</code>, <code>_keys_modal.html</code>, <code>_plans_table.html</code>, <code>_subs_table.html</code>, <code>_cards_table.html</code>, <code>_oneoff_table.html</code>, <code>_events_table.html</code>)</p>
+</div></blockquote>
+<p>모든 서비스 엔드포인트는 <strong>SYSTEM_ADMIN 전용</strong>(<code>require_admin</code>)입니다.</p>
+<h3 id="_2">목록·등록·키</h3>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+<th>템플릿</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /admin/services</code></td>
+<td><code>services_list</code> <code class="loc">app/admin/routes/services.py:59</code></td>
+<td><code>services/list.html</code> / <code>_table.html</code>(htmx)</td>
+</tr>
+<tr>
+<td><code>GET /admin/services/new</code></td>
+<td><code>services_new</code> <code class="loc">app/admin/routes/services.py:87</code></td>
+<td><code>services/new.html</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/services</code></td>
+<td><code>services_create</code> <code class="loc">app/admin/routes/services.py:95</code></td>
+<td><code>services/keys.html</code>(성공)</td>
+</tr>
+<tr>
+<td><code>GET /admin/services/export.xlsx</code></td>
+<td><code>services_export</code> <code class="loc">app/admin/routes/services_export.py:30</code></td>
+<td>(xlsx)</td>
+</tr>
+<tr>
+<td><code>GET /admin/services/{id}/keys-modal</code></td>
+<td><code>services_keys_modal</code> <code class="loc">app/admin/routes/services.py:138</code></td>
+<td><code>services/_keys_modal.html</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/services/{id}/rotate-keys</code></td>
+<td><code>services_rotate</code> <code class="loc">app/admin/routes/services.py:347</code></td>
+<td><code>services/keys.html</code></td>
+</tr>
+</tbody>
+</table>
+<p>하는 일: 등록 성공 시 평문 API 키·HMAC 시크릿을 <strong>일회성</strong>으로 <code>keys.html</code>에 표시합니다(키는 암호화 저장되므로 평문을 볼 수 있는 유일한 기회). 키 복사 모달과 재발급은 감사 로그를 남기고 <code>Cache-Control: no-store</code>로 캐시를 막습니다. 등록 폼(<code>new.html</code>)·상세(<code>detail.html</code>)에서 <strong>서비스별 토스 시크릿 키</strong>를 입력할 수 있으며(쓰기 전용 — 저장 후 재표시 안 함, 상세엔 "설정됨/미설정"만), AES 암호화 저장됩니다(아래 설정 변경 표의 <code>toss-secret-key</code> 참조).</p>
+<h3 id="_3">상세 (탭)</h3>
+<figure class="shot">
+  <img src="assets/img/service-detail.png" alt="서비스 상세 화면 (키·카드·요금제 탭)" style="max-width:100%;height:auto;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <figcaption style="color:#6b7280;font-size:13px;margin-top:6px">서비스 상세 화면 (키·카드·요금제 탭)</figcaption>
+</figure>
+
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+<th>템플릿</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /admin/services/{id}</code></td>
+<td><code>services_detail</code> <code class="loc">app/admin/routes/services.py:284</code></td>
+<td><code>services/detail.html</code> / 탭 partial</td>
+</tr>
+</tbody>
+</table>
+<p>상세는 <code>HX-Target</code> 헤더로 탭 partial을 갈라 렌더합니다(<code class="loc">app/admin/routes/services.py:323</code>).</p>
+<table>
+<thead>
+<tr>
+<th><code>HX-Target</code></th>
+<th>partial</th>
+<th>탭 데이터 빌더</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>list-svc-plans</code></td>
+<td><code>services/_plans_table.html</code></td>
+<td><code>_plans_tab</code> <code class="loc">app/admin/routes/services.py:163</code></td>
+</tr>
+<tr>
+<td><code>list-svc-subs</code></td>
+<td><code>services/_subs_table.html</code></td>
+<td><code>_subs_tab</code> <code class="loc">app/admin/routes/services.py:175</code></td>
+</tr>
+<tr>
+<td><code>list-svc-cards</code></td>
+<td><code>services/_cards_table.html</code></td>
+<td><code>_cards_tab</code> <code class="loc">app/admin/routes/services.py:211</code></td>
+</tr>
+<tr>
+<td><code>list-svc-oneoff</code></td>
+<td><code>services/_oneoff_table.html</code></td>
+<td><code>_oneoff_tab</code> <code class="loc">app/admin/routes/services.py:187</code></td>
+</tr>
+<tr>
+<td><code>list-svc-events</code></td>
+<td><code>services/_events_table.html</code></td>
+<td><code>_events_tab</code> <code class="loc">app/admin/routes/services.py:238</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 등록 카드 탭은 <code>cards</code> 테이블을 <code>(service_id, external_user_id)</code>당 1건으로 페이징합니다(<code>kpage</code>, 10건). 단건결제 탭은 <code>kind == ONE_OFF</code> 고정(<code>opage</code>), 이벤트 탭은 이 서비스 관련 감사 로그(서비스·요금제·담당자 할당·카드)를 모읍니다(<code>epage</code>).</p>
+</div></blockquote>
+<h3 id="post">설정 변경 (POST)</h3>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+<th>하는 일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST /admin/services/{id}/ips</code></td>
+<td><code>services_update_ips</code> <code class="loc">app/admin/routes/services.py:367</code></td>
+<td>허용 IP 목록 갱신(줄바꿈/콤마 파싱)</td>
+</tr>
+<tr>
+<td><code>POST /admin/services/{id}/cancel-policy</code></td>
+<td><code>services_cancel_policy</code> <code class="loc">app/admin/routes/services.py:385</code></td>
+<td>단건결제 취소 허용·수수료율</td>
+</tr>
+<tr>
+<td><code>POST /admin/services/{id}/notification-url</code></td>
+<td><code>services_notification_url</code> <code class="loc">app/admin/routes/services.py:416</code></td>
+<td>아웃고잉 웹훅 URL 저장(빈값=NULL)</td>
+</tr>
+<tr>
+<td><code>POST /admin/services/{id}/notification-test</code></td>
+<td><code>services_notification_test</code> <code class="loc">app/admin/routes/services.py:445</code></td>
+<td>테스트 알림 동기 전송</td>
+</tr>
+<tr>
+<td><code>POST /admin/services/{id}/toss-secret-key</code></td>
+<td><code>services_set_toss_secret_key</code> <code class="loc">app/admin/routes/services.py:419</code></td>
+<td>서비스별 토스 시크릿 키 설정/교체(AES 암호화 저장). 빈 값이면 변경 없음. 감사: <code>service.toss_secret_key.set</code>/<code>.changed</code>(값 미기록). 키 미설정 서비스는 결제 시 <code>TOSS_KEY_NOT_CONFIGURED</code>(422)</td>
+</tr>
+<tr>
+<td><code>POST /admin/services/{id}/status</code></td>
+<td><code>services_set_status</code> <code class="loc">app/admin/routes/services.py:468</code></td>
+<td>서비스 상태(ACTIVE/INACTIVE)</td>
+</tr>
+<tr>
+<td><code>POST /admin/services/{id}/delete</code></td>
+<td><code>services_delete</code> <code class="loc">app/admin/routes/services.py:481</code></td>
+<td>삭제(구독 있으면 DomainError 거부)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="services_managerspy">담당자 관리 (services_managers.py)</h3>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST /admin/services/{id}/assign-manager</code></td>
+<td><code>services_assign_manager</code> <code class="loc">app/admin/routes/services_managers.py:56</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/services/{id}/primary-manager</code></td>
+<td><code>services_set_primary_manager</code> <code class="loc">app/admin/routes/services_managers.py:75</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/services/{id}/managers/{user_id}/remove</code></td>
+<td><code>services_remove_manager</code> <code class="loc">app/admin/routes/services_managers.py:94</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 담당자 목록 헬퍼 <code>service_managers</code>(<code class="loc">app/admin/routes/services_managers.py:30</code>)는 서비스 상세 화면도 사용합니다. 대표 담당자는 해제할 수 없으며 이 규칙은 도메인(<code>accounts.unassign_service</code>)이 <code>ConflictError</code>로 강제합니다.</p>
+</div></blockquote>
+<h3 id="services_exportpy">서비스 상세 탭 엑셀 (services_export.py)</h3>
+<p><code>GET /admin/services/{id}/subs.xlsx</code>(<code>:44</code>), <code>/oneoff.xlsx</code>(<code>:66</code>), <code>/plans.xlsx</code>(<code>:90</code>) — 각 탭의 현재 검색/필터를 그대로 적용해 다운로드합니다(공유 쿼리 빌더 사용, 행 상한 <code>EXPORT_MAX_ROWS</code>).</p>
+<hr />
+<h2 id="185">18.5 요금제</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>라우트 파일: <code>app/admin/routes/plans.py</code> · 템플릿: <code>plans/list.html</code>, <code>plans/_table.html</code>, <code>plans/form.html</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+<th>템플릿</th>
+<th>권한</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /admin/plans</code></td>
+<td><code>plans_list</code> <code class="loc">app/admin/routes/plans.py:187</code></td>
+<td><code>plans/list.html</code> / <code>_table.html</code>(htmx)</td>
+<td><code>require_any</code></td>
+</tr>
+<tr>
+<td><code>GET /admin/plans/export.xlsx</code></td>
+<td><code>plans_export</code> <code class="loc">app/admin/routes/plans.py:166</code></td>
+<td>(xlsx)</td>
+<td><code>require_any</code></td>
+</tr>
+<tr>
+<td><code>GET /admin/plans/new</code></td>
+<td><code>plans_new</code> <code class="loc">app/admin/routes/plans.py:225</code></td>
+<td><code>plans/form.html</code></td>
+<td><code>require_manager</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/plans</code></td>
+<td><code>plans_create</code> <code class="loc">app/admin/routes/plans.py:236</code></td>
+<td><code>plans/form.html</code>(실패 시)</td>
+<td><code>require_manager</code></td>
+</tr>
+<tr>
+<td><code>GET /admin/services/{id}/plans/new</code></td>
+<td><code>service_plan_new</code> <code class="loc">app/admin/routes/plans.py:259</code></td>
+<td><code>plans/form.html</code></td>
+<td><code>require_any</code> + <code>_can_manage</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/services/{id}/plans</code></td>
+<td><code>service_plan_create</code> <code class="loc">app/admin/routes/plans.py:279</code></td>
+<td><code>plans/form.html</code>(실패 시)</td>
+<td><code>require_any</code> + <code>_can_manage</code></td>
+</tr>
+<tr>
+<td><code>GET /admin/plans/{id}/edit</code></td>
+<td><code>plans_edit</code> <code class="loc">app/admin/routes/plans.py:307</code></td>
+<td><code>plans/form.html</code></td>
+<td><code>require_any</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/plans/{id}</code></td>
+<td><code>plans_update</code> <code class="loc">app/admin/routes/plans.py:321</code></td>
+<td><code>plans/form.html</code>(실패 시)</td>
+<td><code>require_any</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/plans/{id}/archive</code></td>
+<td><code>plans_archive</code> <code class="loc">app/admin/routes/plans.py:352</code></td>
+<td>—</td>
+<td><code>require_any</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/plans/{id}/activate</code></td>
+<td><code>plans_activate</code> <code class="loc">app/admin/routes/plans.py:368</code></td>
+<td>—</td>
+<td><code>require_any</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/plans/{id}/delete</code></td>
+<td><code>plans_delete</code> <code class="loc">app/admin/routes/plans.py:384</code></td>
+<td>—</td>
+<td><code>require_any</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/plans/{id}/bonus-days</code></td>
+<td><code>plans_bonus_days</code> <code class="loc">app/admin/routes/plans.py:413</code></td>
+<td>—</td>
+<td><code>require_any</code></td>
+</tr>
+</tbody>
+</table>
+<p>하는 일: 목록은 각 Plan에 표시용 금액·툴팁(<code>plan_first_amount</code>/<code>plan_recurring_amount</code>/<code>*_breakdown</code>)을 동적으로 주입합니다(<code>:207</code>). 폼 파싱은 <code>_form_plan_fields</code>(<code>:86</code>)와 추가정보 수집 <code>_collect_extra_info</code>(<code>:62</code>)가 담당합니다. 권한 분기: <code>require_manager</code>(SERVICE_MANAGER) 진입점은 본인 주 서비스에 추가하는 기존 플로우, 서비스 상세 경유는 <code>require_any</code> + <code>_can_manage</code>(<code>:37</code>)로 담당 여부를 추가 검사합니다. <code>_authorize_plan</code>(<code>:50</code>)은 비담당 요금제를 <strong>404</strong>로 처리합니다.</p>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: 결제 주기(<code>billing_cycle</code>/<code>cycle_days</code>/<code>cycle_minutes</code>)는 수정 불가입니다 — 폼이 보내지 않고 <code>update_plan</code>도 인자를 받지 않아 기존 주기가 유지됩니다. <code>MINUTE</code>(분) 주기는 자동연장 테스트용으로 <strong>비운영(<code>environment != prod</code>)에서만</strong> 선택칸이 노출되며 <code>cycle_minutes</code>(최소 5)를 받습니다. 삭제/보너스일은 next URL을 <code>_safe_next</code>(<code>:42</code>)로 open redirect 방어합니다(반드시 <code>/admin/</code>로 시작).</p>
+</div></blockquote>
+<hr />
+<h2 id="186">18.6 구독</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>라우트 파일: <code>app/admin/routes/subscriptions.py</code> · 템플릿: <code>subscriptions/list.html</code>, <code>subscriptions/_table.html</code>, <code>subscriptions/detail.html</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+<th>템플릿</th>
+<th>권한</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /admin/subscriptions</code></td>
+<td><code>subscriptions_list</code> <code class="loc">app/admin/routes/subscriptions.py:71</code></td>
+<td><code>subscriptions/list.html</code> / <code>_table.html</code>(htmx)</td>
+<td><code>require_any</code></td>
+</tr>
+<tr>
+<td><code>GET /admin/subscriptions/export.xlsx</code></td>
+<td><code>subscriptions_export</code> <code class="loc">app/admin/routes/subscriptions.py:47</code></td>
+<td>(xlsx)</td>
+<td><code>require_any</code></td>
+</tr>
+<tr>
+<td><code>GET /admin/subscriptions/{id}</code></td>
+<td><code>subscription_detail</code> <code class="loc">app/admin/routes/subscriptions.py:105</code></td>
+<td><code>subscriptions/detail.html</code></td>
+<td><code>require_any</code>(스코프)</td>
+</tr>
+<tr>
+<td><code>POST /admin/subscriptions/{id}/force-cancel</code></td>
+<td><code>subscription_force_cancel</code> <code class="loc">app/admin/routes/subscriptions.py:166</code></td>
+<td>—</td>
+<td><code>require_any</code> + CSRF</td>
+</tr>
+<tr>
+<td><code>POST /admin/subscriptions/{id}/extend</code></td>
+<td><code>subscription_extend</code> <code class="loc">app/admin/routes/subscriptions.py:186</code></td>
+<td>—</td>
+<td><code>require_any</code> + CSRF</td>
+</tr>
+<tr>
+<td><code>POST /admin/subscriptions/{id}/retry-payment</code></td>
+<td><code>subscription_retry_payment</code> <code class="loc">app/admin/routes/subscriptions.py:221</code></td>
+<td>—</td>
+<td><code>require_any</code> + CSRF</td>
+</tr>
+</tbody>
+</table>
+<p>하는 일: 목록·엑셀·서비스 상세 탭은 공유 빌더 <code>subscription_query</code>(<code>app/admin/filters.py</code>)로 동일 필터를 보장합니다(스코프는 <code>service_scope(ctx)</code>). 상세는 최근 결제 200건 + DONE 건수, 연장 이력(<code>subscription.extended</code> 감사로그), 체험 사용 여부(<code>subscription.create</code> 감사 detail), 등록 카드(<code>card_service.get_card</code>로 <code>cards</code> 테이블 조회)를 함께 렌더합니다. 강제 해지/연장/재결제는 스코프·감사 기록을 서비스 레이어에 위임하고, 도메인 오류는 <code>?error=</code>로 상세 페이지에 표시합니다(스코프 밖은 404 전파).</p>
+<hr />
+<h2 id="187">18.7 결제 (+취소)</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>라우트 파일: <code>app/admin/routes/payments.py</code> · 템플릿: <code>payments/list.html</code>, <code>payments/detail.html</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+<th>템플릿</th>
+<th>권한</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /admin/payments</code></td>
+<td><code>payments_list</code> <code class="loc">app/admin/routes/payments.py:186</code></td>
+<td><code>payments/list.html</code></td>
+<td><code>require_any</code></td>
+</tr>
+<tr>
+<td><code>GET /admin/payments/export.xlsx</code></td>
+<td><code>payments_export</code> <code class="loc">app/admin/routes/payments.py:90</code></td>
+<td>(xlsx)</td>
+<td><code>require_any</code></td>
+</tr>
+<tr>
+<td><code>GET /admin/payments/{id}</code></td>
+<td><code>payment_detail</code> <code class="loc">app/admin/routes/payments.py:151</code></td>
+<td><code>payments/detail.html</code></td>
+<td><code>require_any</code>(스코프)</td>
+</tr>
+<tr>
+<td><code>POST /admin/payments/{id}/cancel</code></td>
+<td><code>payment_cancel</code> <code class="loc">app/admin/routes/payments.py:115</code></td>
+<td>—</td>
+<td><code>require_any</code> + CSRF</td>
+</tr>
+</tbody>
+</table>
+<p>하는 일: 목록은 partial이 없어 <code>render</code>로 전체 페이지만 렌더합니다(htmx 부분 갱신 대상 아님). 목록 각 행에는 <strong>매출전표</strong> 열이 있어, 저장된 <code>raw_response.receipt.url</code>이 있으면 토스 매출전표(영수증)로 가는 새 탭 링크를, 없으면 <code>-</code>를 표시합니다(<code>receipt_url(p)</code> 템플릿 전역, <code>app/admin/__init__.py</code>). 공유 쿼리 <code>_build_payments_query</code>(<code>:36</code>)는 단건(ONE_OFF) 결제를 포함하려고 Subscription/Plan을 <strong>OUTER JOIN</strong>, Service는 INNER JOIN합니다. 상세는 구독 결제면 Subscription을 추가 조회하고, 결제 카드(<code>card_service.get_card</code>)·누적 환불액·잔여 환불가능액을 계산해 전달합니다(<code>:178</code>). 취소는 단건(ONE_OFF) 결제 대상이며 폼 <code>cancel_amount</code>가 비면 전액, 숫자면 부분(누적) 취소입니다. 어드민 취소는 수수료 없이 항상 허용되며 상태(DONE)·잔여 한도 검증은 도메인이 합니다.</p>
+<hr />
+<h2 id="188">18.8 카드 상세/토글</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>라우트 파일: <code>app/admin/routes/cards.py</code> · 템플릿: <code>cards/detail.html</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+<th>템플릿</th>
+<th>권한</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /admin/cards/{id}</code></td>
+<td><code>cards_detail</code> <code class="loc">app/admin/routes/cards.py:66</code></td>
+<td><code>cards/detail.html</code></td>
+<td><code>require_admin</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/cards/{id}/toggle</code></td>
+<td><code>cards_toggle</code> <code class="loc">app/admin/routes/cards.py:31</code></td>
+<td><code>services/_cards_table.html</code>(htmx)</td>
+<td><code>require_admin</code> + CSRF</td>
+</tr>
+</tbody>
+</table>
+<p>하는 일: 카드 상세는 등록 카드 정보 + 이 카드로 결제한 내역을 보여줍니다. Payment에는 <code>card_id</code>가 없으므로 <code>(service_id, external_user_id)</code>가 일치하는 결제를 페이징합니다(구독·일반 모두 포함). 토글은 <code>set_card_active</code>로 활성↔비활성을 반전합니다(비활성화 시 해당 카드 결제 차단).</p>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 토글 응답은 호출 위치에 따라 다릅니다. 서비스 상세 '등록 카드' 리스트에서 호출(htmx)이면 갱신된 <code>services/_cards_table.html</code> partial을, 카드 상세에서 호출(일반 요청)이면 카드 상세로 리다이렉트합니다. partial 재렌더에는 <code>services</code> 라우트의 <code>_cards_tab</code>을 함수 내부에서 import해 씁니다(순환 import 방지).</p>
+</div></blockquote>
+<hr />
+<h2 id="189">18.9 정산</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>라우트 파일: <code>app/admin/routes/settlement.py</code> · 템플릿: <code>settlement/index.html</code></p>
+</div></blockquote>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+<th>템플릿</th>
+<th>권한</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /admin/settlement</code></td>
+<td><code>settlement_view</code> <code class="loc">app/admin/routes/settlement.py:99</code></td>
+<td><code>settlement/index.html</code></td>
+<td><code>require_any</code></td>
+</tr>
+<tr>
+<td><code>GET /admin/settlement/export.xlsx</code></td>
+<td><code>settlement_export</code> <code class="loc">app/admin/routes/settlement.py:164</code></td>
+<td>(xlsx)</td>
+<td><code>require_any</code></td>
+</tr>
+</tbody>
+</table>
+<p>하는 일: 두 가지 모드가 있습니다. <strong>전체 모드</strong>(<code>service_id</code> 미지정)는 <code>settlement_summary</code>로 스코프 내 서비스별 요약 테이블을 만들고 구독/일반 매출·환불·순매출을 합산합니다. <strong>서비스별 모드</strong>(<code>service_id</code> 지정)는 <code>_settlement_payment_query</code>(<code>:35</code>)로 그 서비스의 결제 건별 페이지를 추가 조회합니다(상태 DONE+CANCELED 포함). 기간·스코프·선택 서비스 판정은 공통 헬퍼 <code>_settlement_context</code>(<code>:60</code>)가 처리하며 기본 기간은 당월 1일~오늘입니다. SERVICE_MANAGER가 담당하지 않는 서비스 ID 지정 시 404입니다.</p>
+<hr />
+<h2 id="1810">18.10 계정</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>라우트 파일: <code>app/admin/routes/users.py</code> · 템플릿: <code>users/list.html</code>, <code>users/_table.html</code>, <code>users/new.html</code>, <code>users/detail.html</code>, <code>users/edit.html</code></p>
+</div></blockquote>
+<p>모든 계정 엔드포인트는 <strong>SYSTEM_ADMIN 전용</strong>(<code>require_admin</code>)입니다.</p>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+<th>템플릿</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /admin/users</code></td>
+<td><code>users_list</code> <code class="loc">app/admin/routes/users.py:79</code></td>
+<td><code>users/list.html</code> / <code>_table.html</code>(htmx)</td>
+</tr>
+<tr>
+<td><code>GET /admin/users/export.xlsx</code></td>
+<td><code>users_export</code> <code class="loc">app/admin/routes/users.py:99</code></td>
+<td>(xlsx)</td>
+</tr>
+<tr>
+<td><code>GET /admin/users/new</code></td>
+<td><code>users_new</code> <code class="loc">app/admin/routes/users.py:115</code></td>
+<td><code>users/new.html</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/users</code></td>
+<td><code>users_create</code> <code class="loc">app/admin/routes/users.py:123</code></td>
+<td><code>users/new.html</code>(실패 시)</td>
+</tr>
+<tr>
+<td><code>GET /admin/users/{id}</code></td>
+<td><code>users_detail</code> <code class="loc">app/admin/routes/users.py:150</code></td>
+<td><code>users/detail.html</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/users/{id}/services</code></td>
+<td><code>users_assign_service</code> <code class="loc">app/admin/routes/users.py:171</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>POST /admin/users/{id}/services/{service_id}/remove</code></td>
+<td><code>users_unassign_service</code> <code class="loc">app/admin/routes/users.py:189</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>GET /admin/users/{id}/edit</code></td>
+<td><code>users_edit</code> <code class="loc">app/admin/routes/users.py:202</code></td>
+<td><code>users/edit.html</code></td>
+</tr>
+<tr>
+<td><code>POST /admin/users/{id}/edit</code></td>
+<td><code>users_update</code> <code class="loc">app/admin/routes/users.py:213</code></td>
+<td><code>users/edit.html</code>(실패 시)</td>
+</tr>
+<tr>
+<td><code>POST /admin/users/{id}/disable</code></td>
+<td><code>users_disable</code> <code class="loc">app/admin/routes/users.py:232</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>POST /admin/users/{id}/delete</code></td>
+<td><code>users_delete</code> <code class="loc">app/admin/routes/users.py:260</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>POST /admin/users/{id}/reset-password</code></td>
+<td><code>users_reset_password</code> <code class="loc">app/admin/routes/users.py:277</code></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>하는 일: 목록·엑셀 공유 쿼리 <code>_build_users_query</code>(<code>:34</code>)는 DELETED 계정을 기본 제외하고 Service를 LEFT OUTER JOIN합니다(담당 서비스 없는 계정 누락 방지). 계정 생성/비밀번호 재설정은 메일 발송 결과를 <code>email_flash_qs</code>로 토스트에 표시합니다. 비활성화·삭제는 Redis로 기존 세션을 즉시 무효화합니다. 비활성화는 체크박스가 아니라 hidden <code>disabled</code>("true"/"false") 문자열로 의도를 명확히 전달합니다(<code>:249</code>).</p>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 상세의 <code>managed</code>(현재 담당 서비스)·<code>assignable</code>(미담당 서비스) 구분은 추가 할당 드롭다운에 쓰입니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="1811">18.11 감사로그</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>라우트 파일: <code>app/admin/routes/audit.py</code> · 템플릿: <code>audit/list.html</code>, <code>audit/_table.html</code></p>
+</div></blockquote>
+<p>모든 감사 엔드포인트는 <strong>SYSTEM_ADMIN 전용</strong>(<code>require_admin</code>)입니다.</p>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+<th>템플릿</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /admin/audit</code></td>
+<td><code>audit_list</code> <code class="loc">app/admin/routes/audit.py:136</code></td>
+<td><code>audit/list.html</code> / <code>_table.html</code>(htmx)</td>
+</tr>
+<tr>
+<td><code>GET /admin/audit/export.xlsx</code></td>
+<td><code>audit_export</code> <code class="loc">app/admin/routes/audit.py:154</code></td>
+<td>(xlsx)</td>
+</tr>
+<tr>
+<td><code>POST /admin/audit/purge</code></td>
+<td><code>audit_purge</code> <code class="loc">app/admin/routes/audit.py:176</code></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>하는 일: 목록·엑셀 공유 쿼리 <code>_build_audit_query</code>(<code>:95</code>)는 키워드(<code>q</code>)를 행위자 이메일·서비스명·target_id·detail JSON에서 검색하고, 행위자 유형(<code>actor_type</code>)·활동(<code>action</code>)으로 필터합니다. <code>_resolve_names</code>(<code>:53</code>)가 actor/target UUID를 배치 조회해 사람이 읽는 이름으로 바꾸고, <code>_build_rows</code>(<code>:114</code>)가 화면/엑셀 공용 dict로 변환합니다(라벨은 <code>app/admin/audit_labels.py</code>). purge는 기준일(UTC 자정) 이전 로그를 일괄 삭제하고 삭제 행위 자체를 <code>audit.purge</code>로 감사 기록합니다.</p>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: audit 화면에는 <code>?error=</code> 표시 블록이 없어 입력 오류는 <code>?flash=…&amp;flash_type=error</code> 토스트로 통일합니다(<code>:188</code>).</p>
+</div></blockquote>
+<hr />
+<h2 id="1812">18.12 전체 설정</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>라우트 파일: <code>app/admin/routes/settings.py</code> · 템플릿: <code>settings/index.html</code></p>
+</div></blockquote>
+<p>모든 전체설정 엔드포인트는 <strong>SYSTEM_ADMIN 전용</strong>(<code>require_admin</code>)입니다. 단일 화면(<code>settings/index.html</code>)에 여러 폼이 섹션으로 들어가고, 각 섹션이 별도 POST로 저장됩니다.</p>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+<th>하는 일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /admin/settings</code></td>
+<td><code>settings_page</code> <code class="loc">app/admin/routes/settings.py:25</code></td>
+<td>현재 <code>GlobalSettings</code> 렌더</td>
+</tr>
+<tr>
+<td><code>POST /admin/settings/retry</code></td>
+<td><code>settings_retry</code> <code class="loc">app/admin/routes/settings.py:47</code></td>
+<td>자동결제 재시도(횟수·간격·유예일)</td>
+</tr>
+<tr>
+<td><code>POST /admin/settings/security-policy</code></td>
+<td><code>settings_security_policy</code> <code class="loc">app/admin/routes/settings.py:76</code></td>
+<td>로그인 잠금 임계치·잠금시간·단건결제 상한(런타임 즉시 적용)</td>
+</tr>
+<tr>
+<td><code>POST /admin/settings/admin-ips</code></td>
+<td><code>settings_admin_ips</code> <code class="loc">app/admin/routes/settings.py:104</code></td>
+<td>어드민 접속 허용 IP(줄바꿈 구분)</td>
+</tr>
+<tr>
+<td><code>POST /admin/settings/server-toggle</code></td>
+<td><code>settings_server_toggle</code> <code class="loc">app/admin/routes/settings.py:142</code></td>
+<td>결제서버 킬스위치(활성/비활성)</td>
+</tr>
+</tbody>
+</table>
+<p>하는 일: 저장값은 <code>app/services/app_settings.py</code>를 통해 <code>GlobalSettings</code>에 반영됩니다. 각 POST는 성공 시 <code>?saved=</code>(완료 모달), 실패 시 <code>?error=</code>로 같은 화면에 돌아옵니다.</p>
+<blockquote class="cal warn"><span class="cal-i">⚠️</span><div class="cal-b">
+<p>주의: 어드민 IP 저장은 lockout 방지를 위해 현재 접속 IP가 목록에 없으면 <code>InputValidationError</code>로 거부합니다. 킬스위치 비활성화는 사유(<code>reason</code>)와 작업자 본인 비밀번호 재확인(<code>password</code>)이 필요하고, Redis로 킬스위치 캐시를 즉시 무효화해 전파 지연을 없앱니다.</p>
+</div></blockquote>
+<hr />
+<h2 id="1813">18.13 가이드(관리자 매뉴얼)</h2>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>라우트 파일: <code>app/admin/routes/guide.py</code> · 템플릿: <code>guide.html</code>
+문서 소스: <code>docs/admin_manual/</code> 디렉터리의 마크다운(<code>.md</code>)을 런타임에 HTML로 변환해 렌더</p>
+</div></blockquote>
+<p>어드민 콘솔 안에서 관리자용 매뉴얼을 읽는 화면입니다. 라우터는 <code>prefix="/guide"</code>로 등록됩니다(<code class="loc">app/admin/__init__.py:137</code>).</p>
+<table>
+<thead>
+<tr>
+<th>경로</th>
+<th>라우트 함수</th>
+<th>템플릿</th>
+<th>권한</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /admin/guide</code></td>
+<td><code>guide_index</code> <code class="loc">app/admin/routes/guide.py:42</code></td>
+<td><code>guide.html</code>(기본 <code>dashboard</code> 가이드)</td>
+<td><code>require_any</code></td>
+</tr>
+<tr>
+<td><code>GET /admin/guide/{guide_id}</code></td>
+<td><code>guide_page</code> <code class="loc">app/admin/routes/guide.py:23</code></td>
+<td><code>guide.html</code></td>
+<td><code>require_any</code></td>
+</tr>
+</tbody>
+</table>
+<p>하는 일: <code>GUIDES</code> 목록(<code class="loc">app/admin/routes/guide.py:13</code>)에 정의된 <code>guide_id</code>→파일 매핑으로 <code>docs/admin_manual/</code> 아래 마크다운을 찾아 <code>markdown</code>(extensions: <code>extra</code>/<code>toc</code>/<code>sane_lists</code>/<code>attr_list</code>)으로 변환해 좌측 가이드 메뉴(<code>guides</code>)와 함께 렌더합니다. <code>guide_id</code>가 매핑에 없거나 파일이 없으면 404입니다. <code>GET /admin/guide</code>(index)는 기본값으로 <code>dashboard</code> 가이드를 그대로 위임 렌더합니다.</p>
+<p>현재 제공 가이드(<code>guide_id</code> → 문서):</p>
+<table>
+<thead>
+<tr>
+<th><code>guide_id</code></th>
+<th>제목</th>
+<th>문서 파일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dashboard</code></td>
+<td>대시보드</td>
+<td><code>docs/admin_manual/01-dashboard.md</code></td>
+</tr>
+<tr>
+<td><code>subscriptions</code></td>
+<td>구독 관리</td>
+<td><code>docs/admin_manual/02-subscriptions.md</code></td>
+</tr>
+<tr>
+<td><code>payments</code></td>
+<td>결제 관리</td>
+<td><code>docs/admin_manual/03-payments.md</code></td>
+</tr>
+<tr>
+<td><code>plans</code></td>
+<td>요금제 관리</td>
+<td><code>docs/admin_manual/04-plans.md</code></td>
+</tr>
+<tr>
+<td><code>services</code></td>
+<td>서비스 관리</td>
+<td><code>docs/admin_manual/05-services.md</code></td>
+</tr>
+<tr>
+<td><code>settlement</code></td>
+<td>정산 관리</td>
+<td><code>docs/admin_manual/06-settlement.md</code></td>
+</tr>
+<tr>
+<td><code>audit</code></td>
+<td>감사 및 계정</td>
+<td><code>docs/admin_manual/07-audit-and-users.md</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
+<p>참고: 이 화면이 읽는 <code>docs/admin_manual/</code>은 <strong>관리자(사용자)용</strong> 매뉴얼이고, 지금 보고 있는 <code>docs/user_manual/</code>(개발자용)과는 별개 디렉터리입니다. SERVICE_MANAGER도 접근할 수 있으나, 가이드 내용은 권한별로 분기하지 않습니다.</p>
+</div></blockquote>
+    </div>
+    <div class="pager"><a class="pg prev" href="17-feature-notifications.html"><small>← 이전</small><b>17. 서비스 알림(아웃고잉 웹훅) 기능</b></a><a class="pg next" href="19-sample-service.html"><small>다음 →</small><b>19. 샘플 서비스(sample_service) 사용법</b></a></div>
+  </article>
+  <aside class="toc" id="toc">
+<div class="toc-h">이 페이지 내용</div>
+<a class="toc-h2" href="#181">18.1 어드민 공통 구조</a>
+<a class="toc-h3" href="#depspy">인증·권한 (deps.py)</a>
+<a class="toc-h3" href="#csrf">CSRF</a>
+<a class="toc-h3" href="#htmx-initpy">htmx 부분 갱신 패턴 (init.py)</a>
+<a class="toc-h3" href="#paginationpy">페이지네이션·정렬·검색 (pagination.py)</a>
+<a class="toc-h3" href="#_1">라우터 등록·내비게이션</a>
+<a class="toc-h2" href="#182">18.2 로그인·접근</a>
+<a class="toc-h2" href="#183">18.3 대시보드</a>
+<a class="toc-h2" href="#184">18.4 서비스 (+등록 카드/키)</a>
+<a class="toc-h3" href="#_2">목록·등록·키</a>
+<a class="toc-h3" href="#_3">상세 (탭)</a>
+<a class="toc-h3" href="#post">설정 변경 (POST)</a>
+<a class="toc-h3" href="#services_managerspy">담당자 관리 (services_managers.py)</a>
+<a class="toc-h3" href="#services_exportpy">서비스 상세 탭 엑셀 (services_export.py)</a>
+<a class="toc-h2" href="#185">18.5 요금제</a>
+<a class="toc-h2" href="#186">18.6 구독</a>
+<a class="toc-h2" href="#187">18.7 결제 (+취소)</a>
+<a class="toc-h2" href="#188">18.8 카드 상세/토글</a>
+<a class="toc-h2" href="#189">18.9 정산</a>
+<a class="toc-h2" href="#1810">18.10 계정</a>
+<a class="toc-h2" href="#1811">18.11 감사로그</a>
+<a class="toc-h2" href="#1812">18.12 전체 설정</a>
+<a class="toc-h2" href="#1813">18.13 가이드(관리자 매뉴얼)</a>
+  </aside>
+</main>
+<button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>
+<script src="assets/manual.js"></script>
+</body>
+</html>

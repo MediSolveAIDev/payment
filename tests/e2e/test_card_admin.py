@@ -27,14 +27,14 @@ async def test_card_detail_shows_info_and_scoped_payments(client, db, redis_clie
     """카드 상세 — 카드 정보·활성 뱃지 + 이 카드(같은 사용자)의 결제만 표시, 타 사용자 결제 제외."""
     svc, _, _ = await create_service(db, cipher, name="card-detail-svc")
     fake = FakeTossClient()
-    card = await create_card(db, fake, cipher, svc, external_user_id="card-user-a")
-    db.add(_oneoff(svc, "card-user-a", "pay-mine-1"))
+    card = await create_card(db, fake, cipher, svc, external_user_id="card-user-a@e.com")
+    db.add(_oneoff(svc, "card-user-a@e.com", "pay-mine-1"))
     db.add(_oneoff(svc, "other-user-b", "pay-other-1"))  # 타 사용자 — 표시되면 안 됨
     await db.commit()
     await _admin(client, db, redis_client)
 
     html = (await client.get(f"/admin/cards/{card.id}")).text
-    assert "card-user-a" in html
+    assert "card-user-a@e.com" in html
     assert "1234-****-****-5678" in html        # 마스킹 카드번호
     assert "활성" in html                         # 상태 뱃지
     assert "pay-mine-1" in html                  # 이 카드의 결제
@@ -45,7 +45,7 @@ async def test_card_toggle_via_post_and_audit(client, db, redis_client, cipher):
     """카드 상세에서 토글 POST → is_active 반전 + 감사로그(card.deactivate) 기록."""
     svc, _, _ = await create_service(db, cipher, name="card-toggle-svc")
     fake = FakeTossClient()
-    card = await create_card(db, fake, cipher, svc, external_user_id="toggle-u")
+    card = await create_card(db, fake, cipher, svc, external_user_id="toggle-u@e.com")
     csrf = await _admin(client, db, redis_client)
 
     resp = await client.post(f"/admin/cards/{card.id}/toggle",
@@ -64,7 +64,7 @@ async def test_card_toggle_htmx_returns_cards_partial(client, db, redis_client, 
     """서비스 상세 리스트에서 htmx 토글 → list-svc-cards partial + 비활성 뱃지로 갱신."""
     svc, _, _ = await create_service(db, cipher, name="card-htmx-toggle-svc")
     fake = FakeTossClient()
-    card = await create_card(db, fake, cipher, svc, external_user_id="htmx-u")
+    card = await create_card(db, fake, cipher, svc, external_user_id="htmx-u@e.com")
     csrf = await _admin(client, db, redis_client)
 
     resp = await client.post(f"/admin/cards/{card.id}/toggle",
@@ -83,8 +83,8 @@ async def test_payment_detail_shows_paying_card(client, db, redis_client, cipher
     """결제 상세에 '결제 카드' 행으로 마스킹 카드번호가 표시된다."""
     svc, _, _ = await create_service(db, cipher, name="pay-card-svc")
     fake = FakeTossClient()
-    await create_card(db, fake, cipher, svc, external_user_id="pay-u")
-    payment = _oneoff(svc, "pay-u", "pay-detail-1")
+    await create_card(db, fake, cipher, svc, external_user_id="pay-u@e.com")
+    payment = _oneoff(svc, "pay-u@e.com", "pay-detail-1")
     db.add(payment)
     await db.commit()
     await _admin(client, db, redis_client)
@@ -99,7 +99,7 @@ async def test_service_detail_events_show_card_events(client, db, redis_client, 
     from app.services.cards import set_card_active
     svc, _, _ = await create_service(db, cipher, name="card-evt-svc")
     fake = FakeTossClient()
-    card = await create_card(db, fake, cipher, svc, external_user_id="evt-u")
+    card = await create_card(db, fake, cipher, svc, external_user_id="evt-u@e.com")
     await set_card_active(db, card_id=card.id, is_active=False)
     await _admin(client, db, redis_client)
 
@@ -114,8 +114,8 @@ async def test_subscription_detail_disables_retry_when_card_inactive(
     svc, _, _ = await create_service(db, cipher, name="sub-inactive-card-svc")
     plan = await create_plan(db, svc, price=10000)
     fake = FakeTossClient()
-    card = await create_card(db, fake, cipher, svc, external_user_id="sub-u")
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="sub-u",
+    card = await create_card(db, fake, cipher, svc, external_user_id="sub-u@e.com")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="sub-u@e.com",
                                     card_id=card.id, status="PAST_DUE", retry_count=1)
     card.is_active = False
     await db.commit()

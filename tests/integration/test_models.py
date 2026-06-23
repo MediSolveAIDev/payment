@@ -26,7 +26,7 @@ async def _mk_card(db, svc, *, suffix="1"):
     """테스트용 Card 행 직접 삽입 — 카드 보관함 전환 후 Subscription의 card_id FK 충족용."""
     card = Card(
         service_id=svc.id,
-        external_user_id="u1",
+        external_user_id="u1@e.com",
         customer_key=f"ck-{suffix}",
         billing_key_encrypted=f"enc-{suffix}",
         billing_key_hash=f"hash-bk-{suffix}",
@@ -44,7 +44,7 @@ def _mk_sub(svc, plan, card, status="ACTIVE"):
     """
     now = utcnow()
     return Subscription(
-        service_id=svc.id, plan_id=plan.id, external_user_id="u1",
+        service_id=svc.id, plan_id=plan.id, external_user_id="u1@e.com",
         card_id=card.id,  # cards.id FK — 카드 보관함 전환 후 필수
         status=status,
         current_period_start=now,
@@ -93,7 +93,7 @@ async def test_card_unique_per_service_user(db):
     # 첫 번째 카드 등록: 정상 삽입이어야 함
     db.add(Card(
         service_id=svc.id,
-        external_user_id="u1",
+        external_user_id="u1@e.com",
         customer_key="c1",
         billing_key_encrypted="enc1",
         billing_key_hash="h1",
@@ -104,7 +104,7 @@ async def test_card_unique_per_service_user(db):
     # 동일 (service_id, external_user_id)로 두 번째 카드 등록 시도 — IntegrityError 기대
     db.add(Card(
         service_id=svc.id,
-        external_user_id="u1",
+        external_user_id="u1@e.com",
         customer_key="c2",
         billing_key_encrypted="enc2",
         billing_key_hash="h2",

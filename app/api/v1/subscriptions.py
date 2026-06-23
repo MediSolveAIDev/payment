@@ -27,6 +27,7 @@ from app.api.openapi import (
 )
 from app.core.crypto import AesGcmCipher
 from app.core.errors import NotFoundError
+from app.core.identifiers import normalize_external_user_id  # 경로 파라미터 이메일 정규화
 from app.models import Plan, Service, Subscription
 from app.schemas.api import (
     SubscriptionCreateRequest,
@@ -113,6 +114,8 @@ async def manual_pay(
     결제 전용 처리율 제한을 적용한다.
     T7 컷오버: 전역 toss 제거 — 서비스별 키로 toss_provider.for_service(service) 해석.
     """
+    # 경로의 external_user_id를 이메일 룰로 정규화 후 대상 구독 조회
+    external_user_id = normalize_external_user_id(external_user_id)
     # T7: 서비스에 등록된 toss_secret_key로 클라이언트 해석
     toss = toss_provider.for_service(service)
     sub = await subscription_service.manual_charge_subscription(
@@ -141,6 +144,8 @@ async def add_usage_days(
     상태는 변경하지 않는다. 토스 결제 호출이 없으므로 일반 HMAC 인증으로 충분.
     대상 상태가 아니면 409(CONFLICT), 구독이 없으면 404를 반환한다.
     """
+    # 경로의 external_user_id를 이메일 룰로 정규화 후 대상 구독 조회
+    external_user_id = normalize_external_user_id(external_user_id)
     sub = await subscription_service.add_usage_days(
         db, service=service, external_user_id=external_user_id, days=payload.days)
     return await _to_response(db, sub)
@@ -163,6 +168,8 @@ async def get_subscription(
     authenticate_service: 읽기 전용이므로 일반 HMAC 인증으로 충분.
     구독이 없으면 404를 반환한다.
     """
+    # 경로의 external_user_id를 이메일 룰로 정규화(소문자/trim) 후 조회 — 저장 형태와 일치
+    external_user_id = normalize_external_user_id(external_user_id)
     sub = await subscription_service.get_latest_subscription(
         db, service_id=service.id, external_user_id=external_user_id)
     if sub is None:
@@ -187,6 +194,8 @@ async def cancel_subscription(
 
     authenticate_service: 결제 API 호출 없이 상태만 변경하므로 일반 인증 적용.
     """
+    # 경로의 external_user_id를 이메일 룰로 정규화 후 대상 구독 조회
+    external_user_id = normalize_external_user_id(external_user_id)
     sub = await subscription_service.cancel_subscription(
         db, service=service, external_user_id=external_user_id, notifier=notifier)
     return await _to_response(db, sub)
@@ -209,6 +218,8 @@ async def resume_subscription(
 
     authenticate_service: 결제 API 호출 없이 상태만 변경하므로 일반 인증 적용.
     """
+    # 경로의 external_user_id를 이메일 룰로 정규화 후 대상 구독 조회
+    external_user_id = normalize_external_user_id(external_user_id)
     sub = await subscription_service.resume_subscription(
         db, service=service, external_user_id=external_user_id, notifier=notifier)
     return await _to_response(db, sub)

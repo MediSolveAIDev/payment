@@ -32,7 +32,7 @@ def email():
     return RecordingEmailSender()
 
 
-async def _pay(db, fake, cipher, svc, *, order_id="oo-001", amount=5000, user="u-1"):
+async def _pay(db, fake, cipher, svc, *, order_id="oo-001", amount=5000, user="u-1@e.com"):
     """단건결제 헬퍼 — Task 9: auth_key/customer_key 없음, 카드 보관함 사용."""
     return await payment_service.create_one_off_payment(
         db, fake, cipher, service=svc, external_user_id=user,
@@ -56,13 +56,13 @@ async def test_one_off_success_card_persists(db, cipher, fake):
     """
     svc, _, _ = await create_service(db, cipher)
     # 카드 먼저 등록
-    await create_card(db, fake, cipher, svc, external_user_id="u-1")
+    await create_card(db, fake, cipher, svc, external_user_id="u-1@e.com")
     p = await _pay(db, fake, cipher, svc)
     assert p.status == PaymentStatus.DONE and p.kind == PaymentKind.ONE_OFF
     assert p.service_id == svc.id and p.subscription_id is None
-    assert p.amount == 5000 and p.external_user_id == "u-1"
+    assert p.amount == 5000 and p.external_user_id == "u-1@e.com"
     # Task 9: 카드 영속 검증 — 단건결제 후에도 카드가 남아 있어야 한다
-    card_after = await get_card(db, service_id=svc.id, external_user_id="u-1")
+    card_after = await get_card(db, service_id=svc.id, external_user_id="u-1@e.com")
     assert card_after is not None, "단건결제 성공 후 카드가 삭제되면 안 됨(영속)"
     # Task 9: 빌링키 삭제 없음 — FakeTossClient.deleted는 False여야 한다
     assert not fake.deleted, "단건결제 성공 후 빌링키(카드) 삭제 호출되면 안 됨(영속 카드)"
@@ -71,7 +71,7 @@ async def test_one_off_success_card_persists(db, cipher, fake):
 async def test_one_off_idempotent_same_order_id(db, cipher, fake):
     """같은 order_id 재시도는 기존 Payment를 반환(재결제 없음)."""
     svc, _, _ = await create_service(db, cipher)
-    await create_card(db, fake, cipher, svc, external_user_id="u-1")
+    await create_card(db, fake, cipher, svc, external_user_id="u-1@e.com")
     p1 = await _pay(db, fake, cipher, svc, order_id="oo-dup")
     n = len(fake.charges)
     p2 = await _pay(db, fake, cipher, svc, order_id="oo-dup")
@@ -88,8 +88,8 @@ async def test_one_off_same_order_id_isolated_per_service(db, cipher, fake):
     svc_a, _, _ = await create_service(db, cipher)
     svc_b, _, _ = await create_service(db, cipher)
     # 각 서비스별로 카드를 먼저 등록
-    await create_card(db, fake, cipher, svc_a, external_user_id="u-1")
-    await create_card(db, fake, cipher, svc_b, external_user_id="u-1")
+    await create_card(db, fake, cipher, svc_a, external_user_id="u-1@e.com")
+    await create_card(db, fake, cipher, svc_b, external_user_id="u-1@e.com")
     pay_a = await _pay(db, fake, cipher, svc_a, order_id="oo-xxx")
     pay_b = await _pay(db, fake, cipher, svc_b, order_id="oo-xxx")  # 충돌 없음
     assert pay_a.id != pay_b.id
@@ -101,14 +101,14 @@ async def test_one_off_same_order_id_isolated_per_service(db, cipher, fake):
 async def test_one_off_card_declined_failed(db, cipher, fake):
     """카드 거절 시 Payment.status = FAILED, 카드는 영속 유지."""
     svc, _, _ = await create_service(db, cipher)
-    await create_card(db, fake, cipher, svc, external_user_id="u-1")
+    await create_card(db, fake, cipher, svc, external_user_id="u-1@e.com")
     fake.fail_charge_with = TossError("REJECT_CARD", "카드 거절")
     with pytest.raises(PaymentFailedError):
         await _pay(db, fake, cipher, svc, order_id="oo-fail")
     row = await db.scalar(select(Payment).where(Payment.order_id == "oo-fail"))
     assert row.status == PaymentStatus.FAILED
     # Task 9: 카드 영속 — 결제 실패 후에도 카드가 남아 있어야 한다
-    card_after = await get_card(db, service_id=svc.id, external_user_id="u-1")
+    card_after = await get_card(db, service_id=svc.id, external_user_id="u-1@e.com")
     assert card_after is not None, "결제 실패 후에도 카드가 삭제되면 안 됨(영속)"
 
 
@@ -122,7 +122,7 @@ async def test_one_off_max_amount_runtime_configurable(db, cipher, fake):
     from app.services.app_settings import update_security_policy
     from tests.factories import create_user
     svc, _, _ = await create_service(db, cipher)
-    await create_card(db, fake, cipher, svc, external_user_id="u-1")
+    await create_card(db, fake, cipher, svc, external_user_id="u-1@e.com")
     admin, _ = await create_user(db, role="SYSTEM_ADMIN")
     await update_security_policy(db, max_failed_logins=5, account_lock_minutes=15,
                                  one_off_max_amount=1000, actor_user_id=admin.id)
@@ -135,7 +135,7 @@ async def test_one_off_max_amount_runtime_configurable(db, cipher, fake):
 async def test_one_off_timeout_pending(db, cipher, fake):
     """타임아웃 시 PENDING 유지, 카드 삭제 없음(영속)."""
     svc, _, _ = await create_service(db, cipher)
-    await create_card(db, fake, cipher, svc, external_user_id="u-1")
+    await create_card(db, fake, cipher, svc, external_user_id="u-1@e.com")
     fake.fail_charge_with = TossTimeoutError()
     with pytest.raises(PaymentFailedError):
         await _pay(db, fake, cipher, svc, order_id="oo-tout")
@@ -143,7 +143,7 @@ async def test_one_off_timeout_pending(db, cipher, fake):
     assert row.status == PaymentStatus.PENDING
     # Task 9: 카드 영속 — 타임아웃 후에도 카드가 남아 있어야 한다
     assert not fake.deleted, "타임아웃 후 카드(빌링키) 삭제 호출되면 안 됨(영속 카드)"
-    card_after = await get_card(db, service_id=svc.id, external_user_id="u-1")
+    card_after = await get_card(db, service_id=svc.id, external_user_id="u-1@e.com")
     assert card_after is not None, "타임아웃 후에도 카드가 삭제되면 안 됨(영속)"
 
 
@@ -156,7 +156,7 @@ async def test_reconcile_confirms_one_off(db, session_factory, redis_client, cip
     from app.toss.fake import FakeTossClient
     from app.toss.provider import TossClientProvider  # T7: process_due는 TossClientProvider를 받음
     svc, _, _ = await create_service(db, cipher)
-    await create_card(db, fake, cipher, svc, external_user_id="u-1")
+    await create_card(db, fake, cipher, svc, external_user_id="u-1@e.com")
     fake.fail_charge_with = TossTimeoutError()                  # 타임아웃 → PENDING
     with pytest.raises(PaymentFailedError):
         await _pay(db, fake, cipher, svc, order_id="oo-recon")
@@ -211,7 +211,7 @@ async def test_keyless_service_payment_returns_422(settings, engine, db, cipher)
     svc, api_key, secret = await create_service(db, cipher)
 
     # 카드를 DB에 직접 삽입(카드 등록 API도 for_service를 호출하므로 우회)
-    await create_card_direct(db, cipher, svc, external_user_id="u-keyless",
+    await create_card_direct(db, cipher, svc, external_user_id="u-keyless@e.com",
                              billing_key="bk-direct-keyless")
 
     async with LifespanManager(application):
@@ -220,7 +220,7 @@ async def test_keyless_service_payment_returns_422(settings, engine, db, cipher)
             resp = await api_request(
                 c, "POST", "/api/v1/payments", api_key, secret,
                 json_body={
-                    "external_user_id": "u-keyless",
+                    "external_user_id": "u-keyless@e.com",
                     "order_id": "oo-keyless-001",
                     "order_name": "키없음테스트",
                     "amount": 1000,

@@ -10,14 +10,14 @@ from tests.helpers import admin_login
 async def _seed(db, cipher):
     svc, _, _ = await create_service(db, cipher, name="대시보드서비스")
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="d-act",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="d-act@e.com",
                                     status="ACTIVE")
     now = utcnow()
-    db.add(Payment(subscription_id=sub.id, service_id=svc.id, external_user_id="d-act",
+    db.add(Payment(subscription_id=sub.id, service_id=svc.id, external_user_id="d-act@e.com",
                    order_id="d-sub", amount=10000, payment_type=PaymentType.RENEWAL,
                    kind=PaymentKind.SUBSCRIPTION, status=PaymentStatus.DONE,
                    idempotency_key="d-sub", requested_at=now, approved_at=now))
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="oo",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="oo@e.com",
                    order_id="d-oo", amount=4000, payment_type=PaymentType.ONE_OFF,
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="d-oo", requested_at=now, approved_at=now))
@@ -78,13 +78,13 @@ async def test_dashboard_recent_subs_and_trial_payment(client, db, redis_client,
     svc, _, _ = await create_service(db, cipher, name="레일서비스")
     plan = await create_plan(db, svc, trial_enabled=True, trial_days=14)
     # 트라이얼 구독(Payment 없음) — 최근 결제에 0원·체험으로 합쳐 표시되어야 함
-    await create_subscription(db, cipher, svc, plan, external_user_id="trial-u",
+    await create_subscription(db, cipher, svc, plan, external_user_id="trial-u@e.com",
                               status="TRIAL")
     admin, pw = await create_user(db, role="SYSTEM_ADMIN")
     await admin_login(client, admin.email, pw)
     html = (await client.get("/admin")).text
     assert "최근 구독" in html                 # 신규 패널
-    assert "trial-u" in html                   # 트라이얼 구독이 레일에 노출
+    assert "trial-u@e.com" in html                   # 트라이얼 구독이 레일에 노출
     assert "0원" in html and "체험" in html     # 최근 결제에 0원·체험 표시
 
 

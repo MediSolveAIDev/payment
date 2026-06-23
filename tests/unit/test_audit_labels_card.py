@@ -17,7 +17,7 @@ def test_card_target_label():
 def test_card_detail_summary_shows_user_and_masked_number():
     """카드 detail은 사용자·카드번호·발급사를 보여주고, 스코프용 service_id는 표시하지 않는다."""
     summary = detail_summary({
-        "external_user_id": "u-1",
+        "external_user_id": "u-1@e.com",
         "service_id": "0c4a-uuid-scope-only",   # 표시되면 안 됨(원시 UUID)
         "card_number": "1234-****-****-5678",
         "issuer": "61",

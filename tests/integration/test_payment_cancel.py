@@ -21,7 +21,7 @@ def fake():
 
 async def _done_oneoff(db, svc, *, order="oc-1", amount=10000):
     """DONE 상태의 ONE_OFF 결제 시드 헬퍼. requested_at은 현재 시각으로 채운다."""
-    p = Payment(subscription_id=None, service_id=svc.id, external_user_id="u",
+    p = Payment(subscription_id=None, service_id=svc.id, external_user_id="u@e.com",
                 order_id=order, amount=amount, payment_type=PaymentType.ONE_OFF,
                 kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                 idempotency_key=order, toss_payment_key=f"pay_{order}",

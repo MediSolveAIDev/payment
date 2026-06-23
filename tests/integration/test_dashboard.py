@@ -15,7 +15,7 @@ async def _pay(db, *, svc, amount, status="DONE", kind=PaymentKind.SUBSCRIPTION,
     now = requested or utcnow()
     db.add(Payment(
         subscription_id=(sub.id if sub else None), service_id=svc.id,
-        external_user_id=(sub.external_user_id if sub else "oo"),
+        external_user_id=(sub.external_user_id if sub else "oo@e.com"),
         order_id=order, amount=amount,
         payment_type=(PaymentType.RENEWAL if kind == PaymentKind.SUBSCRIPTION else PaymentType.ONE_OFF),
         kind=kind, status=status, idempotency_key=order,
@@ -49,7 +49,7 @@ def _status(data, ko_label):
 async def test_revenue_cards_total_sub_oneoff_refund(db, cipher):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u", status="ACTIVE")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u@e.com", status="ACTIVE")
     await _pay(db, svc=svc, sub=sub, amount=10000, kind=PaymentKind.SUBSCRIPTION, order="r-sub")
     await _pay(db, svc=svc, amount=4000, kind=PaymentKind.ONE_OFF, order="r-oo")
     await _pay(db, svc=svc, sub=sub, amount=3000, status="CANCELED", order="r-refund")  # 환불
@@ -68,7 +68,7 @@ async def test_canceled_oneoff_fee_counts_as_revenue(db, cipher):
     await _pay(db, svc=svc, amount=10000, kind=PaymentKind.ONE_OFF, order="oo-done")
     # 취소된 일반결제 10,000원 — 환불 9,000원 / 수수료 1,000원 (승인 후 취소)
     db.add(Payment(
-        service_id=svc.id, external_user_id="oo", order_id="oo-cancel",
+        service_id=svc.id, external_user_id="oo@e.com", order_id="oo-cancel",
         amount=10000, payment_type=PaymentType.ONE_OFF, kind=PaymentKind.ONE_OFF,
         status="CANCELED", idempotency_key="oo-cancel",
         requested_at=now, approved_at=now,
@@ -85,10 +85,10 @@ async def test_canceled_oneoff_fee_counts_as_revenue(db, cipher):
 async def test_sub_cards_counts_and_expired_from_audit(db, cipher):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    s1 = await create_subscription(db, cipher, svc, plan, external_user_id="c1")
-    s2 = await create_subscription(db, cipher, svc, plan, external_user_id="c2")
-    s3 = await create_subscription(db, cipher, svc, plan, external_user_id="e1")
-    await create_subscription(db, cipher, svc, plan, external_user_id="t1", status="TRIAL")
+    s1 = await create_subscription(db, cipher, svc, plan, external_user_id="c1@e.com")
+    s2 = await create_subscription(db, cipher, svc, plan, external_user_id="c2@e.com")
+    s3 = await create_subscription(db, cipher, svc, plan, external_user_id="e1@e.com")
+    await create_subscription(db, cipher, svc, plan, external_user_id="t1@e.com", status="TRIAL")
     await record_audit(db, actor_type="SERVICE", action="subscription.cancel",
                        target_type="subscription", target_id=str(s1.id))
     await record_audit(db, actor_type="SYSTEM", action="subscription.suspended",
@@ -107,8 +107,8 @@ async def test_sub_cards_counts_and_expired_from_audit(db, cipher):
 async def test_status_donut_includes_expired(db, cipher):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    await create_subscription(db, cipher, svc, plan, external_user_id="a1", status="ACTIVE")
-    await create_subscription(db, cipher, svc, plan, external_user_id="x1", status="EXPIRED")
+    await create_subscription(db, cipher, svc, plan, external_user_id="a1@e.com", status="ACTIVE")
+    await create_subscription(db, cipher, svc, plan, external_user_id="x1@e.com", status="EXPIRED")
     data = await build_dashboard(db, None)
     labels = {row["label"]: row["value"] for row in data.status_breakdown}
     assert labels.get("활성") == 1
@@ -119,7 +119,7 @@ async def test_status_donut_includes_expired(db, cipher):
 async def test_twelve_month_series_subs_and_one_off(db, cipher):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u", status="ACTIVE")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u@e.com", status="ACTIVE")
     await _pay(db, svc=svc, amount=4000, kind=PaymentKind.ONE_OFF, order="m-oo")
     data = await build_dashboard(db, None)
     assert len(data.subs_months) == 12
@@ -132,7 +132,7 @@ async def test_twelve_month_series_subs_and_one_off(db, cipher):
 async def test_daily_trend_30_days(db, cipher):
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    await create_subscription(db, cipher, svc, plan, external_user_id="d1", status="ACTIVE")
+    await create_subscription(db, cipher, svc, plan, external_user_id="d1@e.com", status="ACTIVE")
     data = await build_dashboard(db, None)
     assert len(data.daily_trend) == 30
     last = data.daily_trend[-1]
@@ -146,8 +146,8 @@ async def test_sub_cards_cancel_scoped_to_service(db, cipher):
     svc_b, _, _ = await create_service(db, cipher, name="스코프B")
     plan_a = await create_plan(db, svc_a)
     plan_b = await create_plan(db, svc_b)
-    sa = await create_subscription(db, cipher, svc_a, plan_a, external_user_id="sa")
-    sb = await create_subscription(db, cipher, svc_b, plan_b, external_user_id="sb")
+    sa = await create_subscription(db, cipher, svc_a, plan_a, external_user_id="sa@e.com")
+    sb = await create_subscription(db, cipher, svc_b, plan_b, external_user_id="sb@e.com")
     await record_audit(db, actor_type="SERVICE", action="subscription.cancel",
                        target_type="subscription", target_id=str(sa.id))
     await record_audit(db, actor_type="SERVICE", action="subscription.cancel",
@@ -171,12 +171,12 @@ async def test_series_buckets_multi_period(db, cipher):
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
     # 이번달 신규 2개
-    await create_subscription(db, cipher, svc, plan, external_user_id="cur1", status="ACTIVE")
-    await create_subscription(db, cipher, svc, plan, external_user_id="cur2", status="ACTIVE")
+    await create_subscription(db, cipher, svc, plan, external_user_id="cur1@e.com", status="ACTIVE")
+    await create_subscription(db, cipher, svc, plan, external_user_id="cur2@e.com", status="ACTIVE")
 
     # 지난달 중간 시점 신규 1개 — created_at을 지난달 15일로 조작
     last_month_15 = month_start - rd(months=1) + timedelta(days=14)
-    old = await create_subscription(db, cipher, svc, plan, external_user_id="old1", status="ACTIVE")
+    old = await create_subscription(db, cipher, svc, plan, external_user_id="old1@e.com", status="ACTIVE")
     old.created_at = last_month_15
     await db.commit()
 
@@ -202,7 +202,7 @@ async def test_series_buckets_multi_period(db, cipher):
 async def test_service_revenue_and_subs_admin_only(db, cipher):
     svc, _, _ = await create_service(db, cipher, name="서비스X")
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u", status="ACTIVE")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u@e.com", status="ACTIVE")
     await _pay(db, svc=svc, sub=sub, amount=10000, kind=PaymentKind.SUBSCRIPTION, order="sv-sub")
     await _pay(db, svc=svc, amount=2000, kind=PaymentKind.ONE_OFF, order="sv-oo")
     data = await build_dashboard(db, None)

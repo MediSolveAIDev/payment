@@ -38,7 +38,7 @@ class Payment(TimestampMixin, Base):
         ForeignKey("subscriptions.id", ondelete="RESTRICT"), nullable=True, index=True)  # 구독 결제이면 연결 구독 ID; 단건은 NULL
     service_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("services.id", ondelete="RESTRICT"), index=True)  # 결제가 속한 서비스(삭제 불가)
-    external_user_id: Mapped[str | None] = mapped_column(String(255), nullable=True)  # 결제 대상 외부 사용자 ID(단건에서도 추적용으로 사용)
+    external_user_id: Mapped[str | None] = mapped_column(String(255), nullable=True)  # 결제 대상 외부 사용자 ID=이메일(소문자 정규화, 단건에서도 추적용)
     kind: Mapped[str] = mapped_column(
         String(20), default=PaymentKind.SUBSCRIPTION,
         server_default=PaymentKind.SUBSCRIPTION, index=True)  # PaymentKind: SUBSCRIPTION | ONE_OFF

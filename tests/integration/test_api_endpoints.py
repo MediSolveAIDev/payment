@@ -26,10 +26,10 @@ async def _register_card_api(client, api_key, secret, external_user_id, *,
 async def test_create_subscription_endpoint(client, db, cipher, fake_toss):
     # Task 10: 구독 전 카드 먼저 등록(POST /api/v1/cards) → auth_key/customer_key 구독 본문에서 제거
     svc, api_key, secret, plan = await _setup(db, cipher, price=12000)
-    await _register_card_api(client, api_key, secret, "u-api-1",
+    await _register_card_api(client, api_key, secret, "u-api-1@e.com",
                              customer_key="ck-api-1", auth_key="auth-from-sdk")
     resp = await api_request(client, "POST", "/api/v1/subscriptions", api_key, secret,
-                             json_body={"external_user_id": "u-api-1",
+                             json_body={"external_user_id": "u-api-1@e.com",
                                         "plan_id": str(plan.id)})
     assert resp.status_code == 201
     body = resp.json()
@@ -46,10 +46,10 @@ async def test_create_subscription_ignores_injected_amount(client, db, cipher, f
     Task 10: 카드 선등록 후 구독 생성. amount 필드는 스키마에 없으므로 무시된다.
     """
     svc, api_key, secret, plan = await _setup(db, cipher, price=50000)
-    await _register_card_api(client, api_key, secret, "u-amt",
+    await _register_card_api(client, api_key, secret, "u-amt@e.com",
                              customer_key="ck-amt")
     resp = await api_request(client, "POST", "/api/v1/subscriptions", api_key, secret,
-                             json_body={"external_user_id": "u-amt",
+                             json_body={"external_user_id": "u-amt@e.com",
                                         "plan_id": str(plan.id),
                                         "amount": 1})
     assert resp.status_code == 201
@@ -59,9 +59,9 @@ async def test_create_subscription_ignores_injected_amount(client, db, cipher, f
 async def test_duplicate_subscription_409(client, db, cipher):
     # Task 10: 카드 선등록 후 구독 중복 시도 — 카드는 1개 공유, 구독만 중복 검사
     svc, api_key, secret, plan = await _setup(db, cipher)
-    await _register_card_api(client, api_key, secret, "u-dup",
+    await _register_card_api(client, api_key, secret, "u-dup@e.com",
                              customer_key="ck-dup")
-    sub_body = {"external_user_id": "u-dup", "plan_id": str(plan.id)}
+    sub_body = {"external_user_id": "u-dup@e.com", "plan_id": str(plan.id)}
     first = await api_request(client, "POST", "/api/v1/subscriptions", api_key, secret,
                               json_body=sub_body)
     assert first.status_code == 201
@@ -74,11 +74,11 @@ async def test_duplicate_subscription_409(client, db, cipher):
 async def test_payment_failure_402_with_code(client, db, cipher, fake_toss):
     # Task 10: 카드 선등록 후 결제 실패 시나리오
     svc, api_key, secret, plan = await _setup(db, cipher)
-    await _register_card_api(client, api_key, secret, "u-pf",
+    await _register_card_api(client, api_key, secret, "u-pf@e.com",
                              customer_key="ck-pf")
     fake_toss.fail_charge_with = TossError("INSUFFICIENT_FUNDS", "잔액 부족", 400)
     resp = await api_request(client, "POST", "/api/v1/subscriptions", api_key, secret,
-                             json_body={"external_user_id": "u-pf",
+                             json_body={"external_user_id": "u-pf@e.com",
                                         "plan_id": str(plan.id)})
     assert resp.status_code == 402
     assert resp.json()["error"]["code"] == "INSUFFICIENT_FUNDS"
@@ -87,31 +87,31 @@ async def test_payment_failure_402_with_code(client, db, cipher, fake_toss):
 async def test_malformed_body_422_error_format(client, db, cipher):
     svc, api_key, secret, plan = await _setup(db, cipher)
     resp = await api_request(client, "POST", "/api/v1/subscriptions", api_key, secret,
-                             json_body={"external_user_id": "u-bad"})  # 필수 필드 누락
+                             json_body={"external_user_id": "u-bad@e.com"})  # 필수 필드 누락
     assert resp.status_code == 422
     assert resp.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
 async def test_get_subscription_status(client, db, cipher):
     svc, api_key, secret, plan = await _setup(db, cipher)
-    await create_subscription(db, cipher, svc, plan, external_user_id="u-get")
-    resp = await api_request(client, "GET", "/api/v1/subscriptions/u-get",
+    await create_subscription(db, cipher, svc, plan, external_user_id="u-get@e.com")
+    resp = await api_request(client, "GET", "/api/v1/subscriptions/u-get@e.com",
                              api_key, secret)
     assert resp.status_code == 200
-    assert resp.json()["external_user_id"] == "u-get"
-    missing = await api_request(client, "GET", "/api/v1/subscriptions/ghost",
+    assert resp.json()["external_user_id"] == "u-get@e.com"
+    missing = await api_request(client, "GET", "/api/v1/subscriptions/ghost@e.com",
                                 api_key, secret)
     assert missing.status_code == 404
 
 
 async def test_cancel_and_resume_endpoints(client, db, cipher):
     svc, api_key, secret, plan = await _setup(db, cipher)
-    await create_subscription(db, cipher, svc, plan, external_user_id="u-cr")
-    cancel = await api_request(client, "POST", "/api/v1/subscriptions/u-cr/cancel",
+    await create_subscription(db, cipher, svc, plan, external_user_id="u-cr@e.com")
+    cancel = await api_request(client, "POST", "/api/v1/subscriptions/u-cr@e.com/cancel",
                                api_key, secret)
     assert cancel.status_code == 200
     assert cancel.json()["status"] == "CANCELED"
-    resume = await api_request(client, "POST", "/api/v1/subscriptions/u-cr/resume",
+    resume = await api_request(client, "POST", "/api/v1/subscriptions/u-cr@e.com/resume",
                                api_key, secret)
     assert resume.status_code == 200
     assert resume.json()["status"] == "ACTIVE"
@@ -120,11 +120,11 @@ async def test_cancel_and_resume_endpoints(client, db, cipher):
 async def test_list_payments_endpoint(client, db, cipher, fake_toss):
     # Task 10: 카드 선등록 후 구독 생성 → 결제 내역 조회
     svc, api_key, secret, plan = await _setup(db, cipher, price=7000)
-    await _register_card_api(client, api_key, secret, "u-pay",
+    await _register_card_api(client, api_key, secret, "u-pay@e.com",
                              customer_key="ck-pay")
     await api_request(client, "POST", "/api/v1/subscriptions", api_key, secret,
-                      json_body={"external_user_id": "u-pay", "plan_id": str(plan.id)})
-    resp = await api_request(client, "GET", "/api/v1/payments/u-pay", api_key, secret)
+                      json_body={"external_user_id": "u-pay@e.com", "plan_id": str(plan.id)})
+    resp = await api_request(client, "GET", "/api/v1/payments/u-pay@e.com", api_key, secret)
     assert resp.status_code == 200
     payments = resp.json()["payments"]
     assert len(payments) == 1
@@ -139,13 +139,13 @@ async def test_list_payments_includes_cancel_fee(client, db, cipher, fake_toss):
 
     svc, api_key, secret = await create_service(db, cipher)
     svc.cancellation_fee_percent = 10  # 취소 수수료 10%
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u-cf",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u-cf@e.com",
                    order_id="cf-1", amount=10000, payment_type=PaymentType.ONE_OFF,
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="cf-1", toss_payment_key="pay_cf",
                    requested_at=utcnow()))
     await db.commit()
-    resp = await api_request(client, "GET", "/api/v1/payments/u-cf", api_key, secret)
+    resp = await api_request(client, "GET", "/api/v1/payments/u-cf@e.com", api_key, secret)
     pay = resp.json()["payments"][0]
     assert pay["cancelable"] is True
     assert pay["cancel_fee_percent"] == 10
@@ -158,8 +158,8 @@ async def test_cross_service_isolation(client, db, cipher):
     svc_a, key_a, secret_a = await create_service(db, cipher, name="svc-iso-a")
     svc_b, _, _ = await create_service(db, cipher, name="svc-iso-b")
     plan_b = await create_plan(db, svc_b)
-    await create_subscription(db, cipher, svc_b, plan_b, external_user_id="u-iso")
-    resp = await api_request(client, "GET", "/api/v1/subscriptions/u-iso",
+    await create_subscription(db, cipher, svc_b, plan_b, external_user_id="u-iso@e.com")
+    resp = await api_request(client, "GET", "/api/v1/subscriptions/u-iso@e.com",
                              key_a, secret_a)
     assert resp.status_code == 404  # A 범위에는 존재하지 않음
 
@@ -169,18 +169,18 @@ async def test_cross_service_mutation_isolation(client, db, cipher):
     svc_a, key_a, secret_a = await create_service(db, cipher, name="mut-iso-a")
     svc_b, _, _ = await create_service(db, cipher, name="mut-iso-b")
     plan_b = await create_plan(db, svc_b)
-    await create_subscription(db, cipher, svc_b, plan_b, external_user_id="u-bmut")
+    await create_subscription(db, cipher, svc_b, plan_b, external_user_id="u-bmut@e.com")
 
-    for method, path in [("POST", "/api/v1/subscriptions/u-bmut/cancel"),
-                         ("POST", "/api/v1/subscriptions/u-bmut/resume")]:
+    for method, path in [("POST", "/api/v1/subscriptions/u-bmut@e.com/cancel"),
+                         ("POST", "/api/v1/subscriptions/u-bmut@e.com/resume")]:
         resp = await api_request(client, method, path, key_a, secret_a)
         assert resp.status_code == 404
-    cc = await api_request(client, "POST", "/api/v1/subscriptions/u-bmut/change-card",
+    cc = await api_request(client, "POST", "/api/v1/subscriptions/u-bmut@e.com/change-card",
                            key_a, secret_a,
                            json_body={"auth_key": "a", "customer_key": "ck-x"})
     assert cc.status_code == 404
     # 결제 이력도 빈 목록(타 서비스 결제 비노출)
-    pays = await api_request(client, "GET", "/api/v1/payments/u-bmut", key_a, secret_a)
+    pays = await api_request(client, "GET", "/api/v1/payments/u-bmut@e.com", key_a, secret_a)
     assert pays.json()["payments"] == []
 
 
@@ -188,10 +188,10 @@ async def test_create_trial_subscription_api(client, db, cipher, fake_toss):
     # Task 10: 카드 선등록 후 체험 구독 생성 — auth_key/customer_key 구독 본문에서 제거
     svc, api_key, secret, plan = await _setup(db, cipher, price=12000,
                                               trial_enabled=True, trial_days=7)
-    await _register_card_api(client, api_key, secret, "u-trial-api",
+    await _register_card_api(client, api_key, secret, "u-trial-api@e.com",
                              customer_key="ck-trial-api")
     resp = await api_request(client, "POST", "/api/v1/subscriptions", api_key, secret,
-                             json_body={"external_user_id": "u-trial-api",
+                             json_body={"external_user_id": "u-trial-api@e.com",
                                         "plan_id": str(plan.id), "trial": True})
     assert resp.status_code == 201
     body = resp.json()
@@ -203,9 +203,9 @@ async def test_create_trial_subscription_api(client, db, cipher, fake_toss):
 
 async def test_access_allowed_flag_for_suspended(client, db, cipher):
     svc, api_key, secret, plan = await _setup(db, cipher)
-    await create_subscription(db, cipher, svc, plan, external_user_id="u-susp-api",
+    await create_subscription(db, cipher, svc, plan, external_user_id="u-susp-api@e.com",
                               status="SUSPENDED", next_billing_at=None)
-    resp = await api_request(client, "GET", "/api/v1/subscriptions/u-susp-api",
+    resp = await api_request(client, "GET", "/api/v1/subscriptions/u-susp-api@e.com",
                              api_key, secret)
     assert resp.status_code == 200
     assert resp.json()["status"] == "SUSPENDED"
@@ -221,11 +221,11 @@ async def test_manual_pay_api_revives_suspended(client, db, cipher, fake_toss):
     from tests.factories import create_card
     svc, api_key, secret, plan = await _setup(db, cipher, price=9900)
     # 카드 등록 후 card_id를 구독에 연결 — 수동결제 시 카드 조회에 필요
-    card = await create_card(db, fake_toss, cipher, svc, external_user_id="u-pay-api")
-    await create_subscription(db, cipher, svc, plan, external_user_id="u-pay-api",
+    card = await create_card(db, fake_toss, cipher, svc, external_user_id="u-pay-api@e.com")
+    await create_subscription(db, cipher, svc, plan, external_user_id="u-pay-api@e.com",
                               status="SUSPENDED", next_billing_at=None,
                               card_id=card.id)
-    resp = await api_request(client, "POST", "/api/v1/subscriptions/u-pay-api/pay",
+    resp = await api_request(client, "POST", "/api/v1/subscriptions/u-pay-api@e.com/pay",
                              api_key, secret)
     assert resp.status_code == 200
     assert resp.json()["status"] == "ACTIVE"
@@ -239,9 +239,9 @@ async def test_add_days_endpoint(client, db, cipher, fake_toss):
     from app.core.clock import utcnow
     svc, api_key, secret, plan = await _setup(db, cipher, price=7000)
     base = utcnow().replace(microsecond=0)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-add",
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-add@e.com",
                                     status="ACTIVE", period_end=base, next_billing_at=base)
-    resp = await api_request(client, "POST", "/api/v1/subscriptions/u-add/add-days",
+    resp = await api_request(client, "POST", "/api/v1/subscriptions/u-add@e.com/add-days",
                              api_key, secret, json_body={"days": 15})
     assert resp.status_code == 200
     await db.refresh(sub)
@@ -254,9 +254,9 @@ async def test_add_days_cross_service_404(client, db, cipher):
     svc_a, key_a, secret_a = await create_service(db, cipher, name="add-iso-a")
     svc_b, _, _ = await create_service(db, cipher, name="add-iso-b")
     plan_b = await create_plan(db, svc_b)
-    await create_subscription(db, cipher, svc_b, plan_b, external_user_id="u-iso-b",
+    await create_subscription(db, cipher, svc_b, plan_b, external_user_id="u-iso-b@e.com",
                               status="ACTIVE")
-    resp = await api_request(client, "POST", "/api/v1/subscriptions/u-iso-b/add-days",
+    resp = await api_request(client, "POST", "/api/v1/subscriptions/u-iso-b@e.com/add-days",
                              key_a, secret_a, json_body={"days": 10})
     assert resp.status_code == 404
 

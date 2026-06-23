@@ -45,9 +45,9 @@ async def test_manager_with_two_services_sees_both(client, db, redis_client, cip
     plan_a = await create_plan(db, svc_a)
     plan_b = await create_plan(db, svc_b)
     plan_c = await create_plan(db, svc_c)
-    await create_subscription(db, cipher, svc_a, plan_a, external_user_id="u-in-a")
-    await create_subscription(db, cipher, svc_b, plan_b, external_user_id="u-in-b")
-    await create_subscription(db, cipher, svc_c, plan_c, external_user_id="u-in-c")
+    await create_subscription(db, cipher, svc_a, plan_a, external_user_id="u-in-a@e.com")
+    await create_subscription(db, cipher, svc_b, plan_b, external_user_id="u-in-b@e.com")
+    await create_subscription(db, cipher, svc_c, plan_c, external_user_id="u-in-c@e.com")
     # 매니저: svc_a(주) + svc_b(추가)
     mgr, pw = await create_user(db, role="SERVICE_MANAGER", service_id=svc_a.id)
     db.add(UserService(user_id=mgr.id, service_id=svc_b.id))
@@ -55,8 +55,8 @@ async def test_manager_with_two_services_sees_both(client, db, redis_client, cip
 
     await admin_login(client, mgr.email, pw)
     html = (await client.get("/admin/subscriptions")).text
-    assert "u-in-a" in html and "u-in-b" in html
-    assert "u-in-c" not in html  # 담당 아닌 서비스는 안 보임
+    assert "u-in-a@e.com" in html and "u-in-b@e.com" in html
+    assert "u-in-c@e.com" not in html  # 담당 아닌 서비스는 안 보임
 
 
 async def test_service_detail_assign_and_remove_manager(client, db, redis_client,

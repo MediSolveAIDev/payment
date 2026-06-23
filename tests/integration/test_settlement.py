@@ -21,8 +21,8 @@ async def _seed_two_services(db, cipher):
     svc_b, _, _ = await create_service(db, cipher, name="정산B")
     plan_a = await create_plan(db, svc_a)
     plan_b = await create_plan(db, svc_b)
-    sub_a = await create_subscription(db, cipher, svc_a, plan_a, external_user_id="sa")
-    sub_b = await create_subscription(db, cipher, svc_b, plan_b, external_user_id="sb")
+    sub_a = await create_subscription(db, cipher, svc_a, plan_a, external_user_id="sa@e.com")
+    sub_b = await create_subscription(db, cipher, svc_b, plan_b, external_user_id="sb@e.com")
     await _done(db, sub_a, 10000, datetime(2026, 5, 10, tzinfo=UTC), order="st-a1")
     await _done(db, sub_a, 20000, datetime(2026, 5, 20, tzinfo=UTC), order="st-a2")
     await _done(db, sub_b, 5000, datetime(2026, 5, 15, tzinfo=UTC), order="st-b1")
@@ -50,7 +50,7 @@ async def test_summary_boundary_half_open(db, cipher):
     """[start, end) 반개구간 — end 정각 결제는 제외."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="bd")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="bd@e.com")
     await _done(db, sub, 1000, datetime(2026, 5, 1, tzinfo=UTC), order="bd-start")
     await _done(db, sub, 2000, datetime(2026, 6, 1, tzinfo=UTC), order="bd-end")
     count, amount, _ = await settlement_summary(
@@ -79,13 +79,13 @@ async def test_settlement_split_counts_and_plan_filter(db, cipher):
     UTC = timezone.utc
     svc, _, _ = await create_service(db, cipher, name="정산011")
     plan = await create_plan(db, svc, name="정산플랜")
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u@e.com")
     when = datetime(2026, 5, 10, tzinfo=UTC)
-    db.add(Payment(subscription_id=sub.id, service_id=svc.id, external_user_id="u",
+    db.add(Payment(subscription_id=sub.id, service_id=svc.id, external_user_id="u@e.com",
                    order_id="s011-sub", amount=10000, payment_type=PaymentType.RENEWAL,
                    kind=PaymentKind.SUBSCRIPTION, status=PaymentStatus.DONE,
                    idempotency_key="s011-sub", requested_at=when, approved_at=when))
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u2",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u2@e.com",
                    order_id="s011-oo", amount=3000, payment_type=PaymentType.ONE_OFF,
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="s011-oo", requested_at=when, approved_at=when))
@@ -105,12 +105,12 @@ async def test_settlement_reflects_canceled_refund(db, cipher):
     svc, _, _ = await create_service(db, cipher, name="정산취소")
     when = datetime(2026, 5, 10, tzinfo=UTC)
     # 정상 단건 결제(취소 안 됨)
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u1",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u1@e.com",
                    order_id="c-done", amount=10000, payment_type="ONE_OFF",
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="c-done", requested_at=when, approved_at=when))
     # 취소된 단건 결제 — 10% 수수료(환불 9000, 보유 1000)
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u2",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u2@e.com",
                    order_id="c-cancel", amount=10000, payment_type="ONE_OFF",
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.CANCELED,
                    idempotency_key="c-cancel", requested_at=when, approved_at=when,
@@ -131,13 +131,13 @@ async def test_settlement_splits_subscription_and_one_off(db, cipher):
     UTC = timezone.utc
     svc, _, _ = await create_service(db, cipher, name="정산분리")
     plan = await create_plan(db, svc)
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u@e.com")
     when = datetime(2026, 5, 10, tzinfo=UTC)
-    db.add(Payment(subscription_id=sub.id, service_id=svc.id, external_user_id="u",
+    db.add(Payment(subscription_id=sub.id, service_id=svc.id, external_user_id="u@e.com",
                    order_id="ss-sub", amount=10000, payment_type="RENEWAL",
                    kind=PaymentKind.SUBSCRIPTION, status=PaymentStatus.DONE,
                    idempotency_key="ss-sub", requested_at=when, approved_at=when))
-    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u2",
+    db.add(Payment(subscription_id=None, service_id=svc.id, external_user_id="u2@e.com",
                    order_id="ss-oo", amount=3000, payment_type="ONE_OFF",
                    kind=PaymentKind.ONE_OFF, status=PaymentStatus.DONE,
                    idempotency_key="ss-oo", requested_at=when, approved_at=when))

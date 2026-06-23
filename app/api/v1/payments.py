@@ -21,6 +21,7 @@ from app.api.deps import (
 from app.core.deps import get_toss_provider  # 서비스별 토스 클라이언트 해석기(Task 5)
 from app.api.openapi import AUTH_RESPONSES, NOT_FOUND_RESPONSE, PAYMENT_RESPONSES, VALIDATION_RESPONSE
 from app.core.crypto import AesGcmCipher
+from app.core.identifiers import normalize_external_user_id  # 경로 파라미터 이메일 정규화
 from app.models import Payment, Service
 from app.schemas.api import (
     OneOffCancelRequest,
@@ -52,6 +53,8 @@ async def list_payments(
     조회되어, 응답의 취소 수수료 필드로 '취소 시 수수료/환불액'을 화면에 안내할 수 있다.
     authenticate_service: 읽기 전용이므로 일반 HMAC 인증으로 충분.
     """
+    # 경로의 external_user_id를 이메일 룰로 정규화(소문자/trim) 후 조회 — 저장 형태와 일치
+    external_user_id = normalize_external_user_id(external_user_id)
     rows = await db.scalars(
         select(Payment)
         .where(Payment.service_id == service.id,

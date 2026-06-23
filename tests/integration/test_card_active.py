@@ -43,7 +43,7 @@ async def _register(db, fake, cipher, svc, uid):
 async def test_set_card_active_toggles_and_audits(db, cipher, fake):
     """set_card_active로 비활성→활성 전환 + 감사로그(card.deactivate/activate) 기록."""
     svc, _, _ = await create_service(db, cipher)
-    card = await _register(db, fake, cipher, svc, "u-toggle")
+    card = await _register(db, fake, cipher, svc, "u-toggle@e.com")
     assert card.is_active is True  # 기본 활성
 
     await set_card_active(db, card_id=card.id, is_active=False)
@@ -64,7 +64,7 @@ async def test_set_card_active_toggles_and_audits(db, cipher, fake):
 async def test_set_card_active_is_idempotent(db, cipher, fake):
     """이미 같은 상태면 감사로그를 남기지 않는다(멱등)."""
     svc, _, _ = await create_service(db, cipher)
-    card = await _register(db, fake, cipher, svc, "u-idem")
+    card = await _register(db, fake, cipher, svc, "u-idem@e.com")
     await set_card_active(db, card_id=card.id, is_active=True)  # 이미 활성
     deact = (await db.scalars(
         select(AuditLog).where(AuditLog.target_type == "card",
@@ -79,12 +79,12 @@ async def test_inactive_card_blocks_subscription_create(db, cipher, fake):
     """비활성 카드로는 구독을 생성할 수 없다(ConflictError)."""
     svc, _, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
-    card = await _register(db, fake, cipher, svc, "u-sub")
+    card = await _register(db, fake, cipher, svc, "u-sub@e.com")
     await set_card_active(db, card_id=card.id, is_active=False)
 
     with pytest.raises(ConflictError):
         await subs.create_subscription(db, fake, cipher, service=svc,
-                                       plan_id=plan.id, external_user_id="u-sub")
+                                       plan_id=plan.id, external_user_id="u-sub@e.com")
     # 토스 청구가 발생하지 않아야 한다
     assert len(fake.charges) == 0
 
@@ -92,12 +92,12 @@ async def test_inactive_card_blocks_subscription_create(db, cipher, fake):
 async def test_inactive_card_blocks_one_off(db, cipher, fake):
     """비활성 카드로는 일반결제(one-off)를 할 수 없다(ConflictError)."""
     svc, _, _ = await create_service(db, cipher)
-    card = await _register(db, fake, cipher, svc, "u-oneoff")
+    card = await _register(db, fake, cipher, svc, "u-oneoff@e.com")
     await set_card_active(db, card_id=card.id, is_active=False)
 
     with pytest.raises(ConflictError):
         await payment_service.create_one_off_payment(
-            db, fake, cipher, service=svc, external_user_id="u-oneoff",
+            db, fake, cipher, service=svc, external_user_id="u-oneoff@e.com",
             order_id="oo-inactive-1", order_name="단건", amount=5000)
     assert len(fake.charges) == 0
 
@@ -106,8 +106,8 @@ async def test_inactive_card_blocks_manual_retry(db, cipher, fake):
     """비활성 카드면 어드민 수동 재결제가 차단된다(PaymentFailedError CARD_INACTIVE)."""
     svc, admin_email, _ = await create_service(db, cipher)
     plan = await create_plan(db, svc, price=10000, billing_cycle="MONTH")
-    card = await create_card(db, fake, cipher, svc, external_user_id="u-retry")
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-retry",
+    card = await create_card(db, fake, cipher, svc, external_user_id="u-retry@e.com")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-retry@e.com",
                                     card_id=card.id, status="PAST_DUE", retry_count=1)
     await set_card_active(db, card_id=card.id, is_active=False)
 
@@ -127,8 +127,8 @@ async def test_inactive_card_blocks_renewal_to_past_due(
     # 만료가 도래한 ACTIVE 구독 + 등록 카드
     start = utcnow() - timedelta(days=31)
     end = utcnow() - timedelta(minutes=5)
-    card = await create_card(db, fake, cipher, svc, external_user_id="u-renew")
-    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-renew",
+    card = await create_card(db, fake, cipher, svc, external_user_id="u-renew@e.com")
+    sub = await create_subscription(db, cipher, svc, plan, external_user_id="u-renew@e.com",
                                     card_id=card.id, period_start=start,
                                     period_end=end, next_billing_at=end)
     await set_card_active(db, card_id=card.id, is_active=False)

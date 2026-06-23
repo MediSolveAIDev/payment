@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.crypto import AesGcmCipher
 from app.core.errors import ConflictError, InputValidationError, NotFoundError
+from app.core.identifiers import normalize_external_user_id  # 이메일 룰 정규화/검증
 from app.core.security import sha256_hex
 from app.models import Card, Service
 from app.models.enums import SubscriptionStatus
@@ -194,9 +195,9 @@ async def register_or_replace_card(
     # customer_key 형식 검증 — payment_utils와 동일한 정규식 사용
     if not CUSTOMER_KEY_RE.fullmatch(customer_key or ""):
         raise InputValidationError("customer_key 형식이 올바르지 않습니다")
-    # external_user_id 길이 검증
-    if not external_user_id or len(external_user_id) > 255:
-        raise InputValidationError("external_user_id가 올바르지 않습니다")
+    # external_user_id 는 이메일만 허용 — 정규화(소문자/trim)한 값으로 저장해
+    # (service, external_user_id) 키가 대소문자/공백 차이로 중복되지 않게 한다.
+    external_user_id = normalize_external_user_id(external_user_id)
 
     # 토스에서 빌링키 발급(auth_key + customer_key → BillingKeyResult)
     bk = await toss.issue_billing_key(auth_key, customer_key)

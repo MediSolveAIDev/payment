@@ -54,16 +54,16 @@ async def test_add_bonus_days(db, cipher):
     svc, _, _ = await create_service(db, cipher)
     plan = await make_plan(db, svc)
     base = utcnow().replace(microsecond=0)
-    act = await create_subscription(db, cipher, svc, plan, external_user_id="b-act",
+    act = await create_subscription(db, cipher, svc, plan, external_user_id="b-act@e.com",
                                     status="ACTIVE", period_end=base, next_billing_at=base)
-    ext = await create_subscription(db, cipher, svc, plan, external_user_id="b-ext",
+    ext = await create_subscription(db, cipher, svc, plan, external_user_id="b-ext@e.com",
                                     status="EXTENDED", period_end=base, next_billing_at=base)
-    pdue = await create_subscription(db, cipher, svc, plan, external_user_id="b-pdue",
+    pdue = await create_subscription(db, cipher, svc, plan, external_user_id="b-pdue@e.com",
                                      status="PAST_DUE", period_end=base, next_billing_at=None)
     # 대상 아님: 취소예약(CANCELED)·만료(EXPIRED)
-    canc = await create_subscription(db, cipher, svc, plan, external_user_id="b-canc",
+    canc = await create_subscription(db, cipher, svc, plan, external_user_id="b-canc@e.com",
                                      status="CANCELED", period_end=base, next_billing_at=None)
-    exp = await create_subscription(db, cipher, svc, plan, external_user_id="b-exp",
+    exp = await create_subscription(db, cipher, svc, plan, external_user_id="b-exp@e.com",
                                     status="EXPIRED", period_end=base, next_billing_at=None)
     affected = await add_bonus_days(db, plan_id=plan.id, service_id=svc.id, days=30,
                                     actor_user_id=None)

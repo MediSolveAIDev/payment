@@ -29,7 +29,7 @@ class Subscription(TimestampMixin, Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     service_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("services.id", ondelete="RESTRICT"))   # 소속 서비스(구독 있으면 서비스 삭제 불가)
     plan_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plans.id", ondelete="RESTRICT"))         # 가입 요금제(구독 있으면 요금제 삭제 불가)
-    external_user_id: Mapped[str] = mapped_column(String(255))   # 외부 서비스 측 사용자 식별자(내부 users 테이블과 무관)
+    external_user_id: Mapped[str] = mapped_column(String(255))   # 외부 서비스 측 사용자 식별자=이메일(소문자 정규화 저장, 내부 users 테이블과 무관)
     card_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("cards.id", ondelete="RESTRICT"), index=True, nullable=True)
     # 결제에 사용할 등록 카드(cards 테이블 참조).
