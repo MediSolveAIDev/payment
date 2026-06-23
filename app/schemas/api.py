@@ -59,9 +59,12 @@ class PlanResponse(BaseModel):
     amount: int = Field(
         description="실제 정기 청구 금액(원). 상시 할인 적용 후 값이며, 할인이 없으면 price와 동일.")
     currency: str = Field(description="통화 코드(예: KRW).")
-    billing_cycle: str = Field(description="결제 주기: YEAR | MONTH | WEEK | DAY.")
+    billing_cycle: str = Field(description="결제 주기: YEAR | MONTH | WEEK | DAY | MINUTE.")
     cycle_days: int | None = Field(
         description="DAY 주기일 때의 실제 일수. 그 외 주기에서는 null.")
+    cycle_minutes: int | None = Field(
+        default=None,
+        description="MINUTE 주기일 때의 실제 분(5 이상). 그 외 주기에서는 null. 테스트용·비운영 전용.")
     first_payment_type: str = Field(
         description="첫 결제 혜택 유형: NONE | FREE | DISCOUNT_AMOUNT | DISCOUNT_PERCENT.")
     first_payment_value: int | None = Field(
@@ -77,6 +80,7 @@ class PlanResponse(BaseModel):
         return cls(id=plan.id, name=plan.name, price=plan.price,
                    amount=plan_recurring_amount(plan), currency=plan.currency,
                    billing_cycle=plan.billing_cycle, cycle_days=plan.cycle_days,
+                   cycle_minutes=plan.cycle_minutes,
                    first_payment_type=plan.first_payment_type,
                    first_payment_value=plan.first_payment_value,
                    trial_enabled=plan.trial_enabled, trial_days=plan.trial_days,

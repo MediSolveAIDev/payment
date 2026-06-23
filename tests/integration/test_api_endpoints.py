@@ -259,3 +259,13 @@ async def test_add_days_cross_service_404(client, db, cipher):
     resp = await api_request(client, "POST", "/api/v1/subscriptions/u-iso-b/add-days",
                              key_a, secret_a, json_body={"days": 10})
     assert resp.status_code == 404
+
+
+async def test_plan_response_exposes_cycle_minutes(db, cipher):
+    """Task 5: PlanResponse가 MINUTE 주기 요금제의 cycle_minutes를 노출한다."""
+    from app.schemas.api import PlanResponse
+    svc, _, _ = await create_service(db, cipher)
+    plan = await create_plan(db, svc, billing_cycle="MINUTE", cycle_minutes=5)
+    resp = PlanResponse.from_model(plan)
+    assert resp.billing_cycle == "MINUTE"
+    assert resp.cycle_minutes == 5
