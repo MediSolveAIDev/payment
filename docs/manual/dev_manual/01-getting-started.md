@@ -72,7 +72,6 @@ payment_system/
 │   ├── toss/
 │   │   ├── client.py       # TossClient Protocol + HttpTossClient 구현체
 │   │   ├── fake.py         # 테스트용 FakeTossClient
-│   │   ├── provider.py     # TossClientProvider — 서비스별 클라이언트 해석·캐시
 │   │   └── types.py / errors.py
 │   ├── scheduler/
 │   │   └── runner.py       # APScheduler 시작 + 갱신 배치 잡 등록
