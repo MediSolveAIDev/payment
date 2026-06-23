@@ -530,7 +530,15 @@ def decrypt(self, token: str) -&gt; str:
 <p>어디에 저장되나:
 - <code>Service.hmac_secret_encrypted</code> (<code class="loc">app/models/service.py:26</code>) — HMAC 시크릿
 - <code>Service.api_key_encrypted</code> (<code class="loc">app/models/service.py:28</code>) — 표시용 평문 키(AES 암호화)
+- <code>Service.toss_secret_key_encrypted</code> (<code class="loc">app/models/service.py:39</code>) — 서비스별 토스 시크릿(AES 암호화, nullable)
 - 구독 빌링키 — <code>Subscription</code> 모델에 암호화 저장</p>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>서비스별 토스 시크릿</strong>: 2026-06-23부터 전역 <code>TOSS_SECRET_KEY</code> 환경변수가 제거되고,
+각 서비스마다 독립 토스 시크릿 키를 <code>toss_secret_key_encrypted</code>에 암호화 저장한다.
+어드민 콘솔 → 서비스 상세 → Toss 시크릿 키 카드에서 등록. 평문은 화면·로그에 절대 표시하지 않는다.
+키가 미등록된 서비스에서 결제를 시도하면 <code>TossKeyNotConfiguredError</code> (HTTP 422, 코드 <code>TOSS_KEY_NOT_CONFIGURED</code>)가 발생한다.
+→ <code>app/toss/provider.py</code>, <code>app/core/errors.py</code></p>
+</div></blockquote>
 <h3 id="5-2-api-sha-256">5-2. API 키 — SHA-256 해시 비교</h3>
 <p><code class="loc">app/models/service.py:25</code>:</p>
 <pre><code class="language-python">api_key_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)

@@ -76,10 +76,11 @@ DATABASE_URL=postgresql+asyncpg://payment:XXXXXXXX@localhost:5432/payment
 REDIS_URL=redis://localhost:6380/0
 # AES-256-GCM 키:  python -c "import base64,os;print(base64.b64encode(os.urandom(32)).decode())"
 ENCRYPTION_KEY=
-TOSS_SECRET_KEY=test_sk_xxxx
 ```
 
 > 팁: `ENCRYPTION_KEY`는 위 한 줄로 새로 생성. 분실·변경 시 기존 암호화 데이터(카드 빌링키 등)를 복호화할 수 없다.
+
+> **토스 시크릿 키**: 2026-06-23부터 전역 `TOSS_SECRET_KEY` 환경변수가 제거됨. 서비스별 토스 시크릿은 앱 기동 후 어드민 콘솔 → 서비스 상세 → **Toss 시크릿 키** 카드에서 각 서비스마다 등록한다(AES 암호화 저장, 평문 미노출). 키 미등록 서비스에서 결제 시도 시 HTTP 422 (`TOSS_KEY_NOT_CONFIGURED`) 반환.
 
 ---
 
@@ -94,14 +95,15 @@ TOSS_SECRET_KEY=test_sk_xxxx
 | `DATABASE_URL`                                     | PostgreSQL 접속(반드시 `asyncpg`). 운영(같은 VM docker)은 `host.docker.internal` | `postgresql+asyncpg://payment:...@host.docker.internal:5432/payment` |
 | `REDIS_URL`                                        | Redis 접속(운영은 compose가 `redis://redis:6379/0`으로 덮어씀)                   | `redis://localhost:6380/0`                                           |
 | `ENCRYPTION_KEY`                                   | AES-256-GCM 키(base64 32바이트).**필수**                                         | (직접 생성)                                                          |
-| `TOSS_SECRET_KEY`                                  | 토스 시크릿(dev=`test_sk_*`, prod=`live_sk_*`). **필수**                         | `test_sk_xxxx`                                                       |
+| ~~`TOSS_SECRET_KEY`~~                              | **제거됨** — 서비스별 키는 어드민 콘솔에서 등록(AES 암호화 저장)                | —                                                                    |
 | `TRUST_PROXY` / `TRUST_PROXY_HOPS`                 | 프록시 뒤면 `true` + XFF hop 수(nginx 1단=1)                                     | `true` / `1`                                                         |
 | `WEBHOOK_IP_CHECK_ENABLED`                         | 토스 발신 IP 외 웹훅 거부(운영 `true`)                                           | `true`                                                               |
 | `SWAGGER_ID` / `SWAGGER_PW`                        | `/docs` HTTP Basic 계정. 비우면 docs 404                                         | `admin` / (강력값)                                                   |
 | `SCHEDULER_ENABLED` / `SCHEDULER_INTERVAL_MINUTES` | 자동 갱신 배치 사용·주기                                                         | `true` / `5`                                                         |
 | `DB_POOL_SIZE` / `DB_MAX_OVERFLOW`                 | DB 커넥션 풀(총 최대 = 합)                                                       | `10` / `20`                                                          |
 
-> 중요: `ENCRYPTION_KEY`·`TOSS_SECRET_KEY`·DB 비밀번호 등 비밀값은 Git에 커밋하지 않는다. `.env.example`만 추적한다.
+> 중요: `ENCRYPTION_KEY`·DB 비밀번호 등 비밀값은 Git에 커밋하지 않는다. `.env.example`만 추적한다.
+> `TOSS_SECRET_KEY`는 2026-06-23부로 제거됨 — `.env.example`에서도 삭제 대상.
 
 > 참고: 운영에서 `REDIS_URL`·`TRUST_PROXY`·`TRUST_PROXY_HOPS`·`APP_ENV`는 compose `environment`가 고정 주입한다(`.env.prod`에 적어도 compose 값이 우선, `docker-compose.prod.yml`).
 
@@ -197,11 +199,16 @@ BASE_URL=https://api-stg-pay.medisolveai.com        # prod: https://api-pay.medi
 # 같은 VM의 docker A(payment-postgres)에 접속 — 호스트 게이트웨이 경유
 DATABASE_URL=postgresql+asyncpg://payment:__DB비밀번호__@host.docker.internal:5432/payment
 ENCRYPTION_KEY=                                      # 위 명령으로 생성한 값
-TOSS_SECRET_KEY=live_sk_xxxx                         # stg는 test_sk_* 가능
+# TOSS_SECRET_KEY 는 전역 설정에서 제거됨 — 어드민에서 서비스별 등록 필요
 SWAGGER_ID=admin
 SWAGGER_PW=강력한값
 WEBHOOK_IP_CHECK_ENABLED=true
 ```
+
+> **토스 시크릿 키 등록 순서(운영 전환 시 필수)**:
+> 1. `alembic upgrade head` (toss_secret_key_encrypted 컬럼 추가 마이그레이션 적용)
+> 2. 어드민 콘솔 → 각 서비스 상세 → **Toss 시크릿 키** 카드에서 키 등록
+> 3. `.env.prod`에서 `TOSS_SECRET_KEY` 항목 제거 (이미 없으면 생략)
 
 > 주의: `DATABASE_URL`을 `localhost`/`127.0.0.1`로 두면 **app 컨테이너 자신**을 가리켜 접속 실패한다. 같은 VM의 DB docker에는 반드시 `host.docker.internal:5432`(또는 VM 사설 IP)를 쓴다.
 
@@ -330,7 +337,7 @@ docker start payment-postgres / docker stop payment-postgres
 
 - **컴포즈 프로젝트명 분리**: 운영 app 스택은 `name: payment_system`(app·redis 2개; nginx는 호스트), 개발 인프라는 `name: payment-dev`(redis만). DB(docker A)는 compose가 아니라 `db_server/run.sh`로 독립 기동한다.
 - **DB는 별도 docker(docker A)**: app compose에 postgres가 없다. app은 `host.docker.internal:5432`로 docker A에 접속한다. 같은 VM이지만 컨테이너가 분리돼 있어 DB를 따로 재시작·백업·이전하기 쉽다.
-- **비밀값 관리**: `ENCRYPTION_KEY`(운영 전용 새 값)·`TOSS_SECRET_KEY`(`live_sk_*`)·`SWAGGER_PW`·`POSTGRES_PASSWORD`는 각 `.env`에 두고 Git 커밋 금지.
+- **비밀값 관리**: `ENCRYPTION_KEY`(운영 전용 새 값)·`SWAGGER_PW`·`POSTGRES_PASSWORD`는 각 `.env`에 두고 Git 커밋 금지. `TOSS_SECRET_KEY`는 제거됨 — 서비스별 토스 키는 어드민 콘솔에서 등록(DB에 AES 암호화 저장).
 - **마이그레이션**: 엔트리포인트가 매 기동 시 `alembic upgrade head`. 앱을 여러 대로 늘리면 한 대만 기본값, 나머지는 `RUN_MIGRATIONS=0`(`docker/entrypoint.sh`).
 - **클라이언트 IP**: 호스트 nginx가 `X-Forwarded-For`/`X-Forwarded-Proto`를 세팅, 앱은 `TRUST_PROXY=true`·`TRUST_PROXY_HOPS=1`로 읽는다(compose 고정). 앞단에 LB가 더 있으면 `2`.
 - **인증서 갱신**: 호스트 certbot이 **systemd 타이머로 자동 갱신**. 점검 `sudo certbot renew --dry-run`, 반영 `sudo systemctl reload nginx`.

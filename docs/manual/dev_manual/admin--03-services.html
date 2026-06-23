@@ -213,9 +213,11 @@ SERVICE_MANAGER 는 이 화면에 <strong>접근 불가</strong> (403 Permission
 <p>각 동작은 <strong>변경 전 → 변경 후</strong>(<code>detail_summary()</code>)로 표시된다. 예: "상태 ACTIVE → INACTIVE", "허용 IP 10.0.0.1 → 10.0.0.1, 10.0.0.2", "취소 수수료율(%) 0 → 10". 우상단 "감사로그" 버튼은 서비스명으로 검색된 <code>/admin/audit</code>로 이동.</p>
 <hr />
 <h2 id="3">3. 할 수 있는 동작</h2>
-<h3 id="3-1-ip">3-1. 운영자 흐름: 서비스 등록 → 키 전달 → 담당자 지정 → IP/취소정책 설정</h3>
+<h3 id="3-1-ip-toss">3-1. 운영자 흐름: 서비스 등록 → 키 전달 → 담당자 지정 → IP/취소정책 설정 → Toss 키 등록</h3>
 <pre><code>① 서비스 등록 (new.html) → ② API 키 / HMAC Secret 1회 표시 (keys.html) → 복사 후 담당자 전달
-→ ③ 상세에서 담당자 추가/대표 지정 → ④ 허용 IP 설정 → ⑤ 취소 정책 설정 → 운영 시작
+→ ③ 상세에서 담당자 추가/대표 지정 → ④ 허용 IP 설정 → ⑤ 취소 정책 설정
+→ ⑥ Toss 시크릿 키 등록 (필수: 결제 사용 전)
+→ 운영 시작
 </code></pre>
 <blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
 <p>키는 등록 직후 또는 재발급 직후에만 평문으로 표시된다. 이후 상세 화면에서 <strong>키 복사</strong> 버튼(모달)으로 재확인할 수 있지만, 서버 AES-GCM 복호화가 필요하므로 환경 변수 <code>CIPHER_KEY</code> 설정이 일치해야 한다.</p>
@@ -385,7 +387,26 @@ SERVICE_MANAGER 는 이 화면에 <strong>접근 불가</strong> (403 Permission
 <li>성공: <code>saved_redirect("/admin/services", "삭제되었습니다")</code></li>
 </ul>
 <hr />
-<h3 id="3-12">3-12. 엑셀 다운로드</h3>
+<h3 id="3-12-toss">3-12. Toss 시크릿 키 등록</h3>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p><strong>배경</strong>: 2026-06-23부터 전역 <code>TOSS_SECRET_KEY</code> 환경변수가 제거됨.
+결제 기능을 사용하려면 각 서비스마다 개별 토스 시크릿 키를 어드민에서 등록해야 한다.</p>
+</div></blockquote>
+<ul>
+<li>위치: 서비스 상세 → <strong>Toss 시크릿 키</strong> 카드</li>
+<li>경로: <code>POST /admin/services/{id}/toss-secret-key</code></li>
+<li>폼 필드: <code>toss_secret_key</code> — 빈 값이면 기존 키 유지 (삭제 불가)</li>
+<li>저장 방식: AES-256-GCM 암호화 (<code>services.toss_secret_key_encrypted</code>). 평문은 화면·로그에 절대 표시하지 않음.</li>
+<li>감사 로그:</li>
+<li>최초 등록: <code>service.toss_secret_key.set</code></li>
+<li>교체: <code>service.toss_secret_key.changed</code></li>
+<li>(값 미기록 — set/changed 사실만 기록)</li>
+</ul>
+<p><strong>키 미설정 시 결제 거부</strong>:
+키가 등록되지 않은 서비스에서 결제·갱신·정산·웹훅 처리를 시도하면
+<code>TossKeyNotConfiguredError</code> (HTTP 422, 코드 <code>TOSS_KEY_NOT_CONFIGURED</code>) 가 반환된다.</p>
+<hr />
+<h3 id="3-13">3-13. 엑셀 다운로드</h3>
 <table>
 <thead>
 <tr>
@@ -534,6 +555,13 @@ SERVICE_MANAGER 는 이 화면에 <strong>접근 불가</strong> (403 Permission
 <td><code>services_delete</code></td>
 <td><code class="loc">services.py:527</code></td>
 <td><code>registry.delete_service</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/admin/services/{id}/toss-secret-key</code></td>
+<td><code>services_set_toss_secret_key</code></td>
+<td><code class="loc">services.py:421</code></td>
+<td><code>registry.set_toss_secret_key</code></td>
 </tr>
 <tr>
 <td>GET</td>
@@ -700,6 +728,12 @@ ONEOFF_SORT = {&quot;requested_at&quot;: Payment.requested_at}
 <li><code>cancellation_enabled</code> 체크박스는 미체크 시 폼 데이터에 키 자체가 없다(HTML 표준). 서버가 <code>"on"</code> 값 유무로 처리하므로 JavaScript 없이도 정상 동작한다.</li>
 <li>수수료율 0%는 전액 환불, 0% 초과는 해당 비율 차감 후 환불.</li>
 </ul>
+<h3 id="toss">Toss 시크릿 키</h3>
+<ul>
+<li><strong>결제 사용 전 필수 등록</strong>: Toss 시크릿 키가 없으면 구독 생성·결제·갱신 등 모든 토스 호출이 422로 거부된다. 서비스 등록 직후 꼭 키를 등록할 것.</li>
+<li>키 값은 화면(입력 후 저장 즉시 사라짐)·로그·감사 상세에 절대 표시되지 않는다.</li>
+<li>기존 키 교체: 폼에 새 키 입력 → 저장. 빈 값으로 저장하면 기존 키가 유지된다(삭제 불가).</li>
+</ul>
 <h3 id="htmx">htmx</h3>
 <ul>
 <li>요금제 탭의 비활성화/활성화/삭제 동작은 <code>hx-push-url</code> 를 <strong>사용하지 않는다</strong> (<code class="loc">_plans_table.html:38-39</code>). 변이 요청이 URL 히스토리를 오염시키지 않도록 의도된 설계.</li>
@@ -715,7 +749,7 @@ ONEOFF_SORT = {&quot;requested_at&quot;: Payment.requested_at}
 <a class="toc-h3" href="#2-1">2-1. 서비스 목록</a>
 <a class="toc-h3" href="#2-2">2-2. 서비스 상세</a>
 <a class="toc-h2" href="#3">3. 할 수 있는 동작</a>
-<a class="toc-h3" href="#3-1-ip">3-1. 운영자 흐름: 서비스 등록 → 키 전달 → 담당자 지정 → IP/취소정책 설정</a>
+<a class="toc-h3" href="#3-1-ip-toss">3-1. 운영자 흐름: 서비스 등록 → 키 전달 → 담당자 지정 → IP/취소정책 설정 → Toss 키 등록</a>
 <a class="toc-h3" href="#3-2">3-2. 서비스 등록</a>
 <a class="toc-h3" href="#3-3-api-keyshtml">3-3. API 키 발급 화면 (keys.html) / 키 모달</a>
 <a class="toc-h3" href="#3-4">3-4. 키 재발급</a>
@@ -726,7 +760,8 @@ ONEOFF_SORT = {&quot;requested_at&quot;: Payment.requested_at}
 <a class="toc-h3" href="#3-9">3-9. 취소 정책 설정</a>
 <a class="toc-h3" href="#3-10">3-10. 상태 변경 (활성화 / 비활성화)</a>
 <a class="toc-h3" href="#3-11">3-11. 서비스 삭제</a>
-<a class="toc-h3" href="#3-12">3-12. 엑셀 다운로드</a>
+<a class="toc-h3" href="#3-12-toss">3-12. Toss 시크릿 키 등록</a>
+<a class="toc-h3" href="#3-13">3-13. 엑셀 다운로드</a>
 <a class="toc-h2" href="#4">4. 개발 참조</a>
 <a class="toc-h3" href="#4-1">4-1. 라우트 함수 일람</a>
 <a class="toc-h3" href="#4-2">4-2. 서비스 레이어</a>
@@ -741,6 +776,7 @@ ONEOFF_SORT = {&quot;requested_at&quot;: Payment.requested_at}
 <a class="toc-h3" href="#_3">삭제 관련</a>
 <a class="toc-h3" href="#ip">IP 관련</a>
 <a class="toc-h3" href="#_4">취소 정책</a>
+<a class="toc-h3" href="#toss">Toss 시크릿 키</a>
 <a class="toc-h3" href="#htmx">htmx</a>
   </aside>
 </main>

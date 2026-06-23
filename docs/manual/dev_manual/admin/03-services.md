@@ -98,11 +98,13 @@
 
 ## 3. 할 수 있는 동작
 
-### 3-1. 운영자 흐름: 서비스 등록 → 키 전달 → 담당자 지정 → IP/취소정책 설정
+### 3-1. 운영자 흐름: 서비스 등록 → 키 전달 → 담당자 지정 → IP/취소정책 설정 → Toss 키 등록
 
 ```
 ① 서비스 등록 (new.html) → ② API 키 / HMAC Secret 1회 표시 (keys.html) → 복사 후 담당자 전달
-→ ③ 상세에서 담당자 추가/대표 지정 → ④ 허용 IP 설정 → ⑤ 취소 정책 설정 → 운영 시작
+→ ③ 상세에서 담당자 추가/대표 지정 → ④ 허용 IP 설정 → ⑤ 취소 정책 설정
+→ ⑥ Toss 시크릿 키 등록 (필수: 결제 사용 전)
+→ 운영 시작
 ```
 
 > 키는 등록 직후 또는 재발급 직후에만 평문으로 표시된다. 이후 상세 화면에서 **키 복사** 버튼(모달)으로 재확인할 수 있지만, 서버 AES-GCM 복호화가 필요하므로 환경 변수 `CIPHER_KEY` 설정이 일치해야 한다.
@@ -230,7 +232,27 @@
 
 ---
 
-### 3-12. 엑셀 다운로드
+### 3-12. Toss 시크릿 키 등록
+
+> **배경**: 2026-06-23부터 전역 `TOSS_SECRET_KEY` 환경변수가 제거됨.
+> 결제 기능을 사용하려면 각 서비스마다 개별 토스 시크릿 키를 어드민에서 등록해야 한다.
+
+- 위치: 서비스 상세 → **Toss 시크릿 키** 카드
+- 경로: `POST /admin/services/{id}/toss-secret-key`
+- 폼 필드: `toss_secret_key` — 빈 값이면 기존 키 유지 (삭제 불가)
+- 저장 방식: AES-256-GCM 암호화 (`services.toss_secret_key_encrypted`). 평문은 화면·로그에 절대 표시하지 않음.
+- 감사 로그:
+  - 최초 등록: `service.toss_secret_key.set`
+  - 교체: `service.toss_secret_key.changed`
+  - (값 미기록 — set/changed 사실만 기록)
+
+**키 미설정 시 결제 거부**:
+키가 등록되지 않은 서비스에서 결제·갱신·정산·웹훅 처리를 시도하면
+`TossKeyNotConfiguredError` (HTTP 422, 코드 `TOSS_KEY_NOT_CONFIGURED`) 가 반환된다.
+
+---
+
+### 3-13. 엑셀 다운로드
 
 | 화면 | 버튼 위치 | URL | 컬럼 |
 |------|-----------|-----|------|
@@ -263,6 +285,7 @@
 | POST | `/admin/services/{id}/cancel-policy` | `services_cancel_policy` | `services.py:480` | `registry.update_cancel_policy` |
 | POST | `/admin/services/{id}/status` | `services_set_status` | `services.py:514` | `registry.set_service_status` |
 | POST | `/admin/services/{id}/delete` | `services_delete` | `services.py:527` | `registry.delete_service` |
+| POST | `/admin/services/{id}/toss-secret-key` | `services_set_toss_secret_key` | `services.py:421` | `registry.set_toss_secret_key` |
 | GET | `/admin/services/{id}/subs.xlsx` | `service_subs_export` | `services.py:100` | — |
 | GET | `/admin/services/{id}/oneoff.xlsx` | `service_oneoff_export` | `services.py:125` | — |
 | GET | `/admin/services/{id}/plans.xlsx` | `service_plans_export` | `services.py:144` | — |
@@ -385,6 +408,11 @@ ONEOFF_SORT = {"requested_at": Payment.requested_at}
 ### 취소 정책
 - `cancellation_enabled` 체크박스는 미체크 시 폼 데이터에 키 자체가 없다(HTML 표준). 서버가 `"on"` 값 유무로 처리하므로 JavaScript 없이도 정상 동작한다.
 - 수수료율 0%는 전액 환불, 0% 초과는 해당 비율 차감 후 환불.
+
+### Toss 시크릿 키
+- **결제 사용 전 필수 등록**: Toss 시크릿 키가 없으면 구독 생성·결제·갱신 등 모든 토스 호출이 422로 거부된다. 서비스 등록 직후 꼭 키를 등록할 것.
+- 키 값은 화면(입력 후 저장 즉시 사라짐)·로그·감사 상세에 절대 표시되지 않는다.
+- 기존 키 교체: 폼에 새 키 입력 → 저장. 빈 값으로 저장하면 기존 키가 유지된다(삭제 불가).
 
 ### htmx
 - 요금제 탭의 비활성화/활성화/삭제 동작은 `hx-push-url` 를 **사용하지 않는다** (`_plans_table.html:38-39`). 변이 요청이 URL 히스토리를 오염시키지 않도록 의도된 설계.
