@@ -116,6 +116,52 @@
 <p>쉽게 말하면 <strong>1~5는 "가게를 여는 준비"</strong>(서비스·토스 키·요금제 세팅), <strong>6~9는 "손님이 와서 결제하고 매달 자동결제되는 일상"</strong>입니다.</p>
 <p>함께 보기: 1~5단계를 순서대로 따라 하려면 <a href="01-admin-console.html">관리자 콘솔 시작</a>과 <a href="04-admin-plan.html">요금제 관리</a>를, 6~9단계의 API 연동은 <a href="11-service-api.html">서비스 API 연동</a>을 보세요.</p>
 </div></blockquote>
+<p>아래 그림은 같은 1~9 단계를 <strong>역할별 레인</strong>으로 다시 정리한 것입니다. 왼쪽 <strong>준비(1~5)</strong>는 관리자·담당자가 콘솔에서, 오른쪽 <strong>일상(6~9)</strong>은 외부 서비스·서버가 진행합니다. 파란 화살표가 ①→⑨ 진행 순서입니다.</p>
+<div class="seqwrap" role="img" aria-label="전체 프로세스 역할 스윔레인: 준비(시스템관리자 서비스등록·API키발급·토스시크릿키, 서비스담당자 로그인·요금제) → 일상(외부서비스 카드등록·구독, 결제서버 자동연장·정산·알림)">
+<svg viewBox="0 0 1040 380" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="fp" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#476CFF"/></marker>
+  </defs>
+  <!-- 구간 밴드: 준비(1~5) / 일상(6~9) -->
+  <rect class="band" x="158" y="34" width="476" height="336" rx="10"/>
+  <rect class="band" x="646" y="34" width="380" height="336" rx="10"/>
+  <text class="band-t" x="396" y="52" text-anchor="middle">준비 — 관리자·담당자 설정 (1~5)</text>
+  <text class="band-t" x="836" y="52" text-anchor="middle">일상 — 외부 서비스·서버 (6~9)</text>
+  <!-- 역할 레인 라벨(왼쪽) -->
+  <rect class="lane" x="12" y="68" width="138" height="56" rx="9"/>
+  <text class="lane-t" x="81" y="100" text-anchor="middle">시스템 관리자</text>
+  <rect class="lane" x="12" y="140" width="138" height="56" rx="9"/>
+  <text class="lane-t" x="81" y="172" text-anchor="middle">서비스 담당자</text>
+  <rect class="lane" x="12" y="212" width="138" height="56" rx="9"/>
+  <text class="lane-t" x="81" y="244" text-anchor="middle">외부 서비스(앱)</text>
+  <rect class="lane" x="12" y="284" width="138" height="56" rx="9"/>
+  <text class="lane-t" x="81" y="316" text-anchor="middle">결제 서버·스케줄러</text>
+  <!-- 레인 구분선 -->
+  <line class="life" x1="158" y1="132" x2="1026" y2="132"/>
+  <line class="life" x1="158" y1="204" x2="1026" y2="204"/>
+  <line class="life" x1="158" y1="276" x2="1026" y2="276"/>
+  <!-- 진행 화살표 ①→⑨ (노드 가장자리에서 끊어 그림) -->
+  <line class="msg" x1="228" y1="96" x2="282" y2="96" marker-end="url(#fp)"/>
+  <line class="msg" x1="318" y1="96" x2="382" y2="96" marker-end="url(#fp)"/>
+  <line class="msg" x1="414" y1="109" x2="457" y2="155" marker-end="url(#fp)"/>
+  <line class="msg" x1="488" y1="168" x2="542" y2="168" marker-end="url(#fp)"/>
+  <line class="msg" x1="576" y1="176" x2="694" y2="232" marker-end="url(#fp)"/>
+  <line class="msg" x1="728" y1="240" x2="782" y2="240" marker-end="url(#fp)"/>
+  <line class="msg" x1="814" y1="251" x2="877" y2="301" marker-end="url(#fp)"/>
+  <line class="msg" x1="908" y1="312" x2="962" y2="312" marker-end="url(#fp)"/>
+  <!-- 노드(번호 원 + 라벨) -->
+  <circle cx="210" cy="96" r="16" fill="#476CFF"/><text x="210" y="100" text-anchor="middle" fill="#fff" font-weight="800" font-size="13">1</text><text class="lbl" x="210" y="130" text-anchor="middle" font-weight="600">서비스 등록</text>
+  <circle cx="300" cy="96" r="16" fill="#476CFF"/><text x="300" y="100" text-anchor="middle" fill="#fff" font-weight="800" font-size="13">2</text><text class="lbl" x="300" y="130" text-anchor="middle" font-weight="600">API 키 발급</text>
+  <circle cx="400" cy="96" r="16" fill="#476CFF"/><text x="400" y="100" text-anchor="middle" fill="#fff" font-weight="800" font-size="13">3</text><text class="lbl" x="400" y="130" text-anchor="middle" font-weight="600">토스 시크릿 키</text>
+  <circle cx="470" cy="168" r="16" fill="#476CFF"/><text x="470" y="172" text-anchor="middle" fill="#fff" font-weight="800" font-size="13">4</text><text class="lbl" x="470" y="202" text-anchor="middle" font-weight="600">담당자 로그인</text>
+  <circle cx="560" cy="168" r="16" fill="#476CFF"/><text x="560" y="172" text-anchor="middle" fill="#fff" font-weight="800" font-size="13">5</text><text class="lbl" x="560" y="202" text-anchor="middle" font-weight="600">요금제 생성</text>
+  <circle cx="710" cy="240" r="16" fill="#476CFF"/><text x="710" y="244" text-anchor="middle" fill="#fff" font-weight="800" font-size="13">6</text><text class="lbl" x="710" y="274" text-anchor="middle" font-weight="600">카드 등록</text>
+  <circle cx="800" cy="240" r="16" fill="#476CFF"/><text x="800" y="244" text-anchor="middle" fill="#fff" font-weight="800" font-size="13">7</text><text class="lbl" x="800" y="274" text-anchor="middle" font-weight="600">구독 요청</text>
+  <circle cx="890" cy="312" r="16" fill="#476CFF"/><text x="890" y="316" text-anchor="middle" fill="#fff" font-weight="800" font-size="13">8</text><text class="lbl" x="890" y="346" text-anchor="middle" font-weight="600">자동 연장</text>
+  <circle cx="980" cy="312" r="16" fill="#476CFF"/><text x="980" y="316" text-anchor="middle" fill="#fff" font-weight="800" font-size="13">9</text><text class="lbl" x="980" y="346" text-anchor="middle" font-weight="600">정산·알림</text>
+</svg>
+</div>
+
 <h3 id="_1">(개발자용) 서비스가 실제로 호출하는 순서 — 연동 시퀀스</h3>
 <blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
 <p>참고(개발자용): 아래 시퀀스 다이어그램과 엔드포인트(<code>POST /api/v1/...</code>)·HMAC·웹훅은 <strong>연동 개발자</strong>를 위한 내용입니다. 콘솔에서 운영·관리만 한다면 건너뛰고 아래 <strong>0-3 핵심 개념</strong>으로 가도 됩니다. 실제 연동은 <a href="11-service-api.html">서비스 API 연동</a>에서 자세히 다룹니다.</p>
