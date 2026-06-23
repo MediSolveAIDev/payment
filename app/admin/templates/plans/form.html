@@ -19,21 +19,35 @@
   <label for="billing_cycle">결제 주기 (반복회차)</label>
   {% if plan %}
   {# 수정 모드 — 결제 주기는 변경 불가. 현재 값을 비활성 입력으로만 표시(폼 전송 안 함). #}
-  {% set _cycle_ko = {'MONTH': '월', 'YEAR': '년', 'WEEK': '주', 'DAY': '일'} %}
+  {# MINUTE는 테스트용이므로 한국어 맵에 추가해 깨지지 않게 처리 #}
+  {% set _cycle_ko = {'MONTH': '월', 'YEAR': '년', 'WEEK': '주', 'DAY': '일', 'MINUTE': '분(테스트)'} %}
   <input type="text" disabled
-         value="{{ _cycle_ko.get(plan.billing_cycle, plan.billing_cycle) }}{% if plan.cycle_days %} ({{ plan.cycle_days }}일) {% endif %}">
+         value="{{ _cycle_ko.get(plan.billing_cycle, plan.billing_cycle) }}{% if plan.cycle_days %} ({{ plan.cycle_days }}일) {% endif %}{% if plan.cycle_minutes %} ({{ plan.cycle_minutes }}분) {% endif %}">
   <p class="muted" style="font-size:12px;margin-top:6px">결제 주기는 수정할 수 없습니다. 주기를 바꾸려면 새 요금제를 만들어 주세요.</p>
   {% else %}
+  {# 결제 주기 선택: DAY이면 'cd'(일수 입력칸), MINUTE이면 'cm'(분 입력칸)을 토글 표시 #}
   <select id="billing_cycle" name="billing_cycle"
-          onchange="document.getElementById('cd').style.display=this.value==='DAY'?'block':'none'">
+          onchange="document.getElementById('cd').style.display=this.value==='DAY'?'block':'none';
+                    document.getElementById('cm').style.display=this.value==='MINUTE'?'block':'none'">
     <option value="MONTH">월</option>
     <option value="YEAR">년</option>
     <option value="WEEK">주</option>
     <option value="DAY">일(일수 지정)</option>
+    {# 비운영(개발/테스트) 환경에서만 분 단위 주기 옵션 노출 #}
+    {% if not is_prod %}
+    <option value="MINUTE">분 (테스트용)</option>
+    {% endif %}
   </select>
+  {# DAY 주기 일수 입력칸 — DAY 선택 시에만 표시(기존 'cd' 유지) #}
   <div id="cd" style="display:none">
     <label for="cycle_days">반복 일수 (DAY 주기)</label>
     <input id="cycle_days" name="cycle_days" type="number" min="1" placeholder="예: 30">
+  </div>
+  {# MINUTE 주기 분 입력칸 — MINUTE 선택 시에만 표시, 최소 5분, 테스트용 #}
+  <div id="cm" style="display:none">
+    <label for="cycle_minutes">결제 주기(분) — 최소 5분, 테스트용</label>
+    <input id="cycle_minutes" name="cycle_minutes" type="number" min="5" step="1"
+           value="{{ plan.cycle_minutes or '' }}">
   </div>
   {% endif %}
   {# 첫구독 할인: 유형 select + 할인 값 input을 한 줄(.field-row)에 배치 #}

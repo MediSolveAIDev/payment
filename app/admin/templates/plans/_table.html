@@ -4,7 +4,7 @@
 {{ L.toolbar('/admin/plans', pp, '요금제명 검색',
    [('service_id', service_options, service_filter),
     ('plan_name', plan_options, plan_filter),
-    ('billing_cycle', [('','전체 주기'),('YEAR','연'),('MONTH','월'),('WEEK','주'),('DAY','일')], cycle_filter),
+    ('billing_cycle', [('','전체 주기'),('YEAR','연'),('MONTH','월'),('WEEK','주'),('DAY','일'),('MINUTE','분')], cycle_filter),
     ('status', [('','전체 상태'),('ACTIVE','활성'),('ARCHIVED','보관')], status_filter)],
    target='list-plans', export_url='/admin/plans/export.xlsx') }}
 <div class="card">
@@ -42,7 +42,8 @@
         {%- else -%}−{%- endif -%}
       </td>
       <td title="{{ plan.recurring_tooltip }}" style="font-weight:600">{{ "{:,}".format(plan.recurring_amount) }}원</td>
-      <td>{{ plan.billing_cycle }}{% if plan.cycle_days %}({{ plan.cycle_days }}일){% endif %}</td>
+      {# 주기 표시: DAY이면 일수, MINUTE이면 분수 병기 #}
+      <td>{{ plan.billing_cycle }}{% if plan.cycle_days %}({{ plan.cycle_days }}일){% elif plan.cycle_minutes %}({{ plan.cycle_minutes }}분){% endif %}</td>
       <td><span class="badge badge-{{ plan.status }}">{{ plan.status }}</span></td>
       <td style="white-space:nowrap">
         {% if ctx.user.role == 'SERVICE_MANAGER' %}
