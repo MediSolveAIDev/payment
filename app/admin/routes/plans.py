@@ -17,7 +17,8 @@ from app.admin.deps import AdminContext, require_any, require_role, validate_csr
 from app.admin.filters import plan_name_options, service_options as build_service_options
 from app.admin.export import xlsx_response
 from app.admin.pagination import PageParams, paginate
-from app.core.deps import get_db, get_notifier
+from app.core.config import Settings
+from app.core.deps import get_db, get_notifier, get_settings
 from app.core.errors import DomainError, InputValidationError, NotFoundError, PermissionDeniedError
 from app.models import Plan, Service, UserRole
 from app.services import plans as plan_service
@@ -177,7 +178,12 @@ async def plans_export(request: Request, ctx: AdminContext = Depends(require_any
     items_q = _build_plans_query(pp, ctx).order_by(pp.order_by(_PLAN_SORT))
     rows = []
     for plan, svc in (await db.execute(items_q)).all():
-        cycle = plan.billing_cycle + (f" {plan.cycle_days}일" if plan.cycle_days else "")
+        # cycle_days 우선, 없으면 cycle_minutes(분) 표시 — MINUTE 주기 비운영 전용(Task 6)
+        cycle = plan.billing_cycle
+        if plan.cycle_days:
+            cycle += f" {plan.cycle_days}일"
+        elif plan.cycle_minutes:
+            cycle += f" {plan.cycle_minutes}분"
         rows.append([svc.name, plan.name, cycle, plan.price,
                      plan_first_amount(plan), plan_recurring_amount(plan), plan.status])
     return xlsx_response("plans", ["서비스", "요금제", "결제주기", "정가",
@@ -223,23 +229,29 @@ async def plans_list(request: Request, ctx: AdminContext = Depends(require_any),
 
 
 @router.get("/plans/new")
-async def plans_new(request: Request, ctx: AdminContext = Depends(require_manager)):
+async def plans_new(request: Request, ctx: AdminContext = Depends(require_manager),
+                    settings: Settings = Depends(get_settings)):
     """요금제 생성 폼 (SERVICE_MANAGER 전용 진입점).
 
     SERVICE_MANAGER가 자신의 주 서비스(ctx.user.service_id)에 요금제를 추가할 때 사용한다.
     service는 템플릿에 전달되지 않으므로 form action은 /admin/plans 고정.
+    is_prod: 운영(prod) 환경 여부 — 비운영에서만 MINUTE(분) 주기 옵션 노출(Task 6).
     """
     return render(request, "plans/form.html", ctx=ctx, plan=None, error=None,
-                  action="/admin/plans", next_url="/admin/plans")
+                  action="/admin/plans", next_url="/admin/plans",
+                  is_prod=(settings.environment == "prod"))
 
 
 @router.post("/plans")
 async def plans_create(request: Request, ctx: AdminContext = Depends(require_manager),
-                       db: AsyncSession = Depends(get_db)):
+                       db: AsyncSession = Depends(get_db),
+                       settings: Settings = Depends(get_settings)):
     """담당자가 본인의 주 서비스에 요금제 생성(기존 플로우)."""
     await validate_csrf(request, ctx)
     form = await request.form()
     cycle_days_raw = str(form.get("cycle_days", "")).strip()
+    # MINUTE 주기 지원: 폼에서 cycle_minutes 파싱(Task 6)
+    cycle_minutes_raw = str(form.get("cycle_minutes", "")).strip()
     try:
         # _form_plan_fields 를 try 안으로 이동: _collect_extra_info가 InputValidationError
         # (DomainError 서브클래스)를 던질 수 있으므로 except DomainError에서 form_error로 처리해야 함
@@ -248,10 +260,14 @@ async def plans_create(request: Request, ctx: AdminContext = Depends(require_man
             db, service_id=ctx.user.service_id,
             billing_cycle=str(form.get("billing_cycle", "")),
             cycle_days=int(cycle_days_raw) if cycle_days_raw else None,
+            cycle_minutes=int(cycle_minutes_raw) if cycle_minutes_raw else None,
+            environment=settings.environment,  # 비운영 가드 전달(Task 6)
             actor_user_id=ctx.user.id, **fields)
     except DomainError as exc:
+        # 에러 재렌더 시 is_prod 유지 — 분 옵션이 사라지지 않게(Task 6)
         return render(request, "plans/form.html", ctx=ctx, plan=None, error=exc.message,
-                      action="/admin/plans", next_url="/admin/plans")
+                      action="/admin/plans", next_url="/admin/plans",
+                      is_prod=(settings.environment == "prod"))
     # 요금제 생성 성공 → 완료 모달 트리거
     return saved_redirect("/admin/plans", "저장되었습니다")
 
@@ -259,12 +275,14 @@ async def plans_create(request: Request, ctx: AdminContext = Depends(require_man
 @router.get("/services/{service_id}/plans/new")
 async def service_plan_new(service_id: uuid.UUID, request: Request,
                            ctx: AdminContext = Depends(require_any),
-                           db: AsyncSession = Depends(get_db)):
+                           db: AsyncSession = Depends(get_db),
+                           settings: Settings = Depends(get_settings)):
     """서비스 상세 화면에서 특정 서비스에 요금제 생성 폼 진입.
 
     require_any(SYSTEM_ADMIN or SERVICE_MANAGER)로 접근하되,
     _can_manage로 담당 서비스인지 추가 검사한다.
     SYSTEM_ADMIN은 모든 서비스에 진입 가능하다.
+    is_prod: 운영(prod) 환경 여부 — 비운영에서만 MINUTE(분) 주기 옵션 노출(Task 6).
     """
     if not _can_manage(ctx, service_id):
         raise PermissionDeniedError("권한이 없습니다")
@@ -273,19 +291,23 @@ async def service_plan_new(service_id: uuid.UUID, request: Request,
         raise NotFoundError("서비스를 찾을 수 없습니다")
     return render(request, "plans/form.html", ctx=ctx, plan=None, error=None,
                   service=service, action=f"/admin/services/{service_id}/plans",
-                  next_url=f"/admin/services/{service_id}")
+                  next_url=f"/admin/services/{service_id}",
+                  is_prod=(settings.environment == "prod"))
 
 
 @router.post("/services/{service_id}/plans")
 async def service_plan_create(service_id: uuid.UUID, request: Request,
                               ctx: AdminContext = Depends(require_any),
-                              db: AsyncSession = Depends(get_db)):
+                              db: AsyncSession = Depends(get_db),
+                              settings: Settings = Depends(get_settings)):
     """서비스 상세에서 요금제 생성(관리자 또는 해당 서비스 담당자)."""
     if not _can_manage(ctx, service_id):
         raise PermissionDeniedError("권한이 없습니다")
     await validate_csrf(request, ctx)
     form = await request.form()
     cycle_days_raw = str(form.get("cycle_days", "")).strip()
+    # MINUTE 주기 지원: 폼에서 cycle_minutes 파싱(Task 6)
+    cycle_minutes_raw = str(form.get("cycle_minutes", "")).strip()
     try:
         # _form_plan_fields 를 try 안으로 이동: _collect_extra_info가 InputValidationError
         # (DomainError 서브클래스)를 던질 수 있으므로 except DomainError에서 form_error로 처리해야 함
@@ -294,12 +316,16 @@ async def service_plan_create(service_id: uuid.UUID, request: Request,
             db, service_id=service_id,
             billing_cycle=str(form.get("billing_cycle", "")),
             cycle_days=int(cycle_days_raw) if cycle_days_raw else None,
+            cycle_minutes=int(cycle_minutes_raw) if cycle_minutes_raw else None,
+            environment=settings.environment,  # 비운영 가드 전달(Task 6)
             actor_user_id=ctx.user.id, **fields)
     except DomainError as exc:
         service = await db.get(Service, service_id)
+        # 에러 재렌더 시 is_prod 유지 — 분 옵션이 사라지지 않게(Task 6)
         return render(request, "plans/form.html", ctx=ctx, plan=None, error=exc.message,
                       service=service, action=f"/admin/services/{service_id}/plans",
-                      next_url=f"/admin/services/{service_id}")
+                      next_url=f"/admin/services/{service_id}",
+                      is_prod=(settings.environment == "prod"))
     # 서비스 상세에서 요금제 생성 성공 → 완료 모달 트리거
     return saved_redirect(f"/admin/services/{service_id}", "저장되었습니다")
 
