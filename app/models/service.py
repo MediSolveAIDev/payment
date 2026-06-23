@@ -34,3 +34,6 @@ class Service(TimestampMixin, Base):
     # 서비스 알림(아웃고잉 웹훅) 수신 URL — 구독·결제·카드·요금제 이벤트를 이 URL로 POST한다.
     # 비어 있으면(NULL) 알림을 보내지 않는다. 서명은 서비스의 hmac_secret_encrypted를 재사용한다.
     notification_url: Mapped[str | None] = mapped_column(String(512), nullable=True)  # 알림 수신 URL(없으면 미발송)
+    # 서비스별 토스 시크릿 키(AES-GCM 암호화 보관). 미설정(NULL)이면 결제·승인·갱신이 TOSS_KEY_NOT_CONFIGURED로 거부된다.
+    # 평문은 저장·응답·감사로그 어디에도 남기지 않는다(api_key/hmac과 동일 정책).
+    toss_secret_key_encrypted: Mapped[str | None] = mapped_column(String(512), nullable=True)
