@@ -1,0 +1,89 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# 운영용 오케스트레이션 — 클라우드 단일 인스턴스에 2개 컨테이너를 띄운다.
+#   app(payment_system/FastAPI) · redis(세션·캐시)
+# TLS 종단·리버스 프록시는 컨테이너가 아니라 **호스트(VM)에 설치된 nginx**가 담당한다.
+#   인터넷 ──443/80──▶ 호스트 nginx(TLS) ──127.0.0.1:8000──▶ app 컨테이너
+# PostgreSQL은 여기에 없음: 같은 VM의 별도 docker(db_server/) 또는 외부 관리형 DB를
+#   .env.prod 의 DATABASE_URL 로 연결한다(앱·테스트 모두 외부 DB 엔드포인트 사용).
+#
+# 실행:  docker compose -f docker-compose.dev.yml up -d --build
+# 로그:  docker compose -f docker-compose.dev.yml logs -f app
+# 상태:  docker compose -f docker-compose.dev.yml ps
+# 종료:  docker compose -f docker-compose.dev.yml down        (redis 볼륨은 유지)
+#
+# 사전 준비: .env.prod 값 채우기 + 호스트 nginx 사이트 설정(docker/nginx/host/payment-host.conf 참고)
+#            + certbot으로 TLS 발급(certbot --nginx). app은 127.0.0.1:8000 으로만 노출된다.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# 프로젝트명 고정 — 운영 스택은 'payment_system'(app·redis 2개. nginx는 호스트가 담당).
+# 개발 인프라(docker-compose.yml)는 'payment-dev'로 분리해 서로 섞이지 않게 한다.
+name: payment_system
+
+services:
+  # ── app: FastAPI 애플리케이션(상태 없음/stateless) ───────────────────────────
+  app:
+    build:
+      context: .                 # 빌드 컨텍스트 = 현재 폴더(.dockerignore로 군더더기 제외)
+      dockerfile: Dockerfile     # 위 Dockerfile로 이미지 빌드
+    # .env(공통) → .env.dev(개발) 순서로 환경변수 주입. "뒤가 우선"이라 개발값이 덮는다.
+    # pydantic-settings가 환경변수를 우선 읽으므로 .env 파일을 이미지에 굽지 않아도 된다.
+    env_file:
+      - .env
+      - .env.dev
+    # 아래 environment 는 .env 파일보다도 우선한다 → 인프라 결선을 컨테이너 네트워크
+    # 기준으로 "고정"하는 용도(사람이 .env에 무엇을 적든 흔들리지 않게).
+    environment:
+      APP_ENV: dev                      # 실행 환경을 운영으로 강제(.env 로딩 분기·개발편의 차단)
+      REDIS_URL: redis://redis:6379/0    # 같은 네트워크의 컨테이너 이름 'redis'로 결선(고정)
+      # DB는 호스트의 별도 컨테이너(payment-postgres, 호스트 5432 publish)에 붙는다.
+      # .env의 @localhost 는 '컨테이너 자신'을 가리켜 닿지 않으므로(REDIS와 동일 이유)
+      # host.docker.internal(=호스트)로 고정 덮어쓴다. extra_hosts 로 이 이름이 호스트로 해석됨.
+      # 비밀번호는 추적 파일에 박지 않고 gitignore된 .env 의 ${DB_PASSWORD} 로 치환(compose가 .env에서 주입).
+      DATABASE_URL: postgresql+asyncpg://payment:${DB_PASSWORD}@host.docker.internal:5432/payment
+      # 호스트 nginx 뒤에 있으므로 X-Forwarded-For 를 신뢰해 진짜 클라이언트 IP를 식별한다.
+      TRUST_PROXY: "true"                # 프록시 헤더 신뢰 켜기
+      TRUST_PROXY_HOPS: "1"              # XFF에서 오른쪽 1번째를 클라이언트 IP로(호스트 nginx 1단 기준)
+      # ENCRYPTION_KEY / TOSS_SECRET_KEY / BASE_URL 등 나머지 비밀값은 .env / .env.dev 에서 주입.
+    depends_on:
+      redis:
+        condition: service_healthy       # redis 헬스체크 통과 후에 app 기동(캐시 미준비 기동 방지)
+    # 로컬 테스트 시 host.docker.internal 로 호스트의 개발용 Postgres에 닿게 함(리눅스 포함).
+    # 실제 배포(외부 관리형 DB)에선 쓰이지 않으므로 남겨도 무해하다.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      # 호스트의 루프백(127.0.0.1)에만 publish → 호스트 nginx가 proxy_pass http://127.0.0.1:8000 로 접근.
+      # 0.0.0.0 이 아니라 127.0.0.1 바인딩이라 인터넷/사설망에 직접 노출되지 않는다(앞단은 nginx만).
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped              # 죽으면 자동 재시작(사람이 down 한 경우만 예외)
+    # 8000 포트에 TCP로 붙어 보고 앱이 살아있는지 확인.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket,sys; s=socket.create_connection(('127.0.0.1',8000),3); s.close()"]
+      interval: 15s       # 15초마다 점검
+      timeout: 5s         # 한 번 점검에 5초 넘으면 실패로 간주
+      retries: 5          # 5회 연속 실패하면 unhealthy
+      start_period: 30s   # 기동·마이그레이션 동안(30초)은 실패로 세지 않는 유예
+
+  # ── redis: 세션·nonce·레이트리밋·킬스위치 캐시 ──────────────────────────────
+  redis:
+    image: redis:7-alpine                # 경량 Redis 7. 내부 네트워크 전용(포트 미공개)
+    # --save 60 1   : 60초 내 키 1개 이상 변경되면 스냅샷(RDB) 저장
+    # --appendonly no: AOF 로그는 끔 — 세션·캐시 용도라 강한 영속성이 불필요(약한 영속성 충분)
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "no"]
+    volumes:
+      - redis-data:/data                 # 스냅샷을 명명 볼륨에 보관 → 재시작해도 세션 유지
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]  # PONG 응답이면 정상
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+# nginx 컨테이너는 없다 — TLS 종단·리버스 프록시는 호스트(VM)에 설치된 nginx가 담당한다.
+# 호스트 nginx 사이트 설정 예시: docker/nginx/host/payment-host.conf (이 파일을 VM에 복사 후 certbot --nginx).
+
+# app(127.0.0.1:8000)은 호스트 루프백에만, redis(6379)는 docker 내부 네트워크에만 노출되어
+# 인터넷에 직접 노출되지 않는다. 외부 입구는 호스트 nginx의 80/443 뿐이다.
+
+volumes:
+  redis-data:        # redis 스냅샷용 명명 볼륨(컨테이너를 지워도 데이터 보존)
