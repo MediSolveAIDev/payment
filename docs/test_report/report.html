@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>테스트 실행 리포트 — 2026-06-24 01:51:10 KST</title>
+<title>테스트 실행 리포트 — 2026-06-24 11:32:12 KST</title>
 <style>
  :root{--primary:#476CFF;--g200:#F3F3F3;--g300:#E3E3E3;--g600:#9F9F9F;--g800:#3E3E3E;
    --green:#1FA463;--red:#FF4E51;--font:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
@@ -25,11 +25,11 @@
  .ok{color:var(--green)}
 </style></head><body>
  <h1>테스트 실행 리포트</h1>
- <div class="sub">2026-06-24 01:51:10 KST · <span class="status ok">✅ 성공</span> (exit status 0)
-   · 소요시간 4.8s</div>
+ <div class="sub">2026-06-24 11:32:12 KST · <span class="status bad">❌ 실패</span> (exit status 1)
+   · 소요시간 0.4s</div>
  <div class="cards">
-   <div class="card"><div class="n">57</div><div class="l">전체</div></div>
-   <div class="card"><div class="n pass">57</div><div class="l">통과</div></div>
+   <div class="card"><div class="n">1</div><div class="l">전체</div></div>
+   <div class="card"><div class="n pass">1</div><div class="l">통과</div></div>
    <div class="card"><div class="n fail">0</div><div class="l">실패</div></div>
    <div class="card"><div class="n fail">0</div><div class="l">에러</div></div>
    <div class="card"><div class="n">0</div><div class="l">스킵</div></div>
@@ -39,6 +39,6 @@
  <h2>실패 / 에러 (0)</h2>
  <p class="ok">없음 — 전부 통과했습니다. 🎉</p>
  <h2>가장 느린 테스트 (상위 10)</h2>
- <table><tr><td>0.06s</td><td><code>tests/integration/test_one_off_payment.py::test_one_off_max_amount_runtime_configurable</code></td></tr><tr><td>0.06s</td><td><code>tests/integration/test_one_off_payment.py::test_keyless_service_payment_returns_422</code></td></tr><tr><td>0.06s</td><td><code>tests/integration/test_subscription_create.py::test_create_subscription_records_actor_service_id</code></td></tr><tr><td>0.05s</td><td><code>tests/integration/test_api_endpoints.py::test_get_subscription_status</code></td></tr><tr><td>0.05s</td><td><code>tests/integration/test_api_endpoints.py::test_duplicate_subscription_409</code></td></tr><tr><td>0.05s</td><td><code>tests/integration/test_card_active.py::test_inactive_card_blocks_renewal_to_past_due</code></td></tr><tr><td>0.05s</td><td><code>tests/integration/test_api_endpoints.py::test_list_payments_endpoint</code></td></tr><tr><td>0.05s</td><td><code>tests/integration/test_one_off_payment.py::test_reconcile_confirms_one_off</code></td></tr><tr><td>0.05s</td><td><code>tests/integration/test_api_endpoints.py::test_cancel_and_resume_endpoints</code></td></tr><tr><td>0.04s</td><td><code>tests/integration/test_api_endpoints.py::test_create_subscription_endpoint</code></td></tr></table>
+ <table><tr><td>0.02s</td><td><code>tests/integration/test_payment_cancel.py::test_partial_cancel_exposed_in_api_response</code></td></tr></table>
  <p class="sub" style="margin-top:24px">생성: tests/conftest.py 의 리포트 훅 · 매 <code>uv run pytest</code> 실행 시 갱신</p>
 </body></html>

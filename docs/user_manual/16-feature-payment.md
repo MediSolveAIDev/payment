@@ -31,7 +31,7 @@
 
 ### 진입점
 
-외부 서비스의 `POST /v1/payments` 요청은 `app/api/v1/payments.py:73`의 `create_payment`로 들어온다. 카드 정보가 아니라 `external_user_id`/`order_id`/`order_name`/`amount`만 받고, 서버가 카드 보관함에서 빌링키를 자동 조회한다.
+외부 서비스의 `POST /v1/payments` 요청은 `app/api/v1/payments.py:73`의 `create_payment`로 들어온다. 카드 정보가 아니라 `external_user_id`<span style="color:#e5484d">(이메일)</span>/`order_id`/`order_name`/`amount`만 받고, 서버가 카드 보관함에서 빌링키를 자동 조회한다.
 
 ```python
 # app/api/v1/payments.py:90
@@ -51,7 +51,7 @@ return PaymentResponse.from_model(payment, service)
 
 `app/services/payments.py:44`의 `create_one_off_payment`가 **결제 3원칙**(PENDING 선커밋 / 타임아웃은 PENDING 유지 / 멱등 `order_id`)에 따라 처리한다.
 
-1. **입력 검증** — `order_id` 형식, `external_user_id` 길이, `amount > 0`. 상한은 `GlobalSettings.one_off_max_amount`(런타임 조정 가능)로 검사하고 초과 시 `InputValidationError` (`app/services/payments.py:75`~`86`).
+1. **입력 검증** — `order_id` 형식, `external_user_id`<span style="color:#e5484d">(이메일)</span> 길이, `amount > 0`. 상한은 `GlobalSettings.one_off_max_amount`(런타임 조정 가능)로 검사하고 초과 시 `InputValidationError` (`app/services/payments.py:75`~`86`).
 2. **카드 보관함 조회** — `get_card(...)`로 등록 카드를 찾는다. 없으면 `NotFoundError`, **비활성 카드면 `ConflictError`로 차단** (`app/services/payments.py:90`~`95`).
 3. **멱등성 검사** — 같은 `(service_id, order_id)`가 이미 있으면 재결제 없이 기존 Payment 반환 (`app/services/payments.py:99`~`102`).
 4. **PENDING 선커밋** — 토스 전달용 전역 고유 `toss_order_id`(`t` + uuid4 hex)를 만들어 Payment를 `PENDING`으로 저장하고 감사 로그(`payment.one_off`) 후 **commit** (`app/services/payments.py:104`~`142`).
@@ -170,12 +170,13 @@ if new_total >= payment.amount:
 | --- | --- |
 | `status` | `PENDING / DONE / FAILED / CANCELED` |
 | `kind` / `payment_type` | `SUBSCRIPTION/ONE_OFF` / `FIRST/RENEWAL/RETRY/ONE_OFF` |
+| `receipt_url` | 토스 매출전표(영수증) 링크. 카드결제(DONE)만 보통 존재, 그 외 `null` |
 | `cancelable` | 단건·DONE·서비스 취소허용일 때만 `true` |
 | `cancel_fee_percent` / `cancel_fee` / `cancel_refund_amount` | 취소 가능 결제는 예상액, 이미 취소된 결제는 실제값 |
 | `canceled_amount` | 실제 누적 환불액(어드민 부분취소 시 `DONE`이어도 `>0`) |
 | `net_amount` | 순매출(`amount − canceled_amount`) |
 
-> 참고: `toss_payment_key`·`raw_response` 같은 내부 필드는 노출하지 않는다.
+> 참고: `toss_payment_key`·`raw_response` 같은 내부 필드는 노출하지 않는다. 단, 매출전표 링크(`receipt_url`)만은 `raw_response.receipt.url`에서 안전 추출해 노출한다(`app/models/payment.py`의 `Payment.receipt_url`). 어드민 결제목록과 서비스단(샘플 `/history`)이 같은 링크를 사용해 영수증을 새 탭으로 연다.
 
 ## 16.6 흐름 4 — 매출·환불·순매출 집계
 

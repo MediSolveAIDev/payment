@@ -17,13 +17,13 @@
   <div class="flow-step"><span class="fn">4</span><b>요금제·구독</b><span><code>POST /subscriptions</code> · 등록 카드로</span></div>
   <div class="flow-step"><span class="fn">5</span><b>내 구독</b><span>취소·재개·카드변경·수동결제</span></div>
   <div class="flow-step"><span class="fn">6</span><b>일반결제</b><span><code>POST /payments</code> · 단건</span></div>
-  <div class="flow-step"><span class="fn">7</span><b>결제 내역</b><span><code>GET /payments</code> · 단건 취소</span></div>
+  <div class="flow-step"><span class="fn">7</span><b>결제 내역</b><span><code>GET /payments</code> · 매출전표 · 단건 취소</span></div>
   <div class="flow-step"><span class="fn">8</span><b>알림 수신</b><span><code>POST /notify</code> · 웹훅 수신</span></div>
 </div>
 
 > 흐름 요지: **③ 카드 등록**이 **④ 구독·⑥ 일반결제**의 전제다(카드 보관함 모델). 카드가 없으면 결제서버가 `404`를 반환한다.
 
-**① 이메일 선택 (`/login`)** — 고른 이메일이 결제서버의 사용자 식별자 `external_user_id`가 된다.
+**① 이메일 선택 (`/login`)** — 고른 이메일이 결제서버의 사용자 식별자 `external_user_id`<span style="color:#e5484d">(이메일)</span>가 된다.
 
 ![샘플 — 로그인(이메일 선택)](assets/img/sample-01-login.png)
 
@@ -47,9 +47,13 @@
 
 ![샘플 — 일반(단건) 결제](assets/img/sample-05-oneoff.png)
 
-**⑦ 결제 내역 (`/history`)** — 구독 결제(서버 API)와 단건 결제(로컬 DB)를 한 화면에서 통합 조회하고, 단건은 취소(환불)할 수 있다.
+**⑦ 결제 내역 (`/history`)** — 구독 결제(서버 API)와 단건 결제(로컬 DB)를 한 화면에서 통합 조회하고, 단건은 취소(환불)할 수 있다. 각 결제의 **매출전표(영수증)** 열에서 서버 응답의 `receipt_url`을 링크로 노출해, 카드결제 완료 건은 토스 영수증을 새 탭으로 열어 볼 수 있다(영수증이 없는 건은 `-`).
 
 ![샘플 — 결제 내역](assets/img/sample-07-history.png)
+
+> 참고(매출전표 보기): 결제 내역의 **매출전표** 열에 있는 링크를 클릭하면 토스가 호스팅하는 매출전표(영수증) 페이지가 새 탭으로 열린다. 서버는 `GET /api/v1/payments/{uid}` 응답의 각 결제에 `receipt_url`을 함께 내려주며(카드결제 완료 건만 보통 존재), 서비스는 이 값을 그대로 링크로 쓰면 된다 — 어드민 결제목록과 동일한 링크다. 자세한 응답 필드는 [서비스 API — 결제 내역 조회](13-service-api.md) 참고.
+
+![샘플 — 매출전표(영수증) 보기](assets/img/sample-07-receipt.png)
 
 **⑧ 받은 알림 (`/notifications`)** — 결제서버가 보낸 웹훅(상태 변화 알림)을 서명 검증해 받은 내역.
 
@@ -132,14 +136,14 @@
 
 | 화면(경로) | 시연하는 일 | 호출 API | `payment_client.py` |
 |---|---|---|---|
-| 로그인 `/login` | 사용자 식별자(`external_user_id`) 선택 | — | — |
+| 로그인 `/login` | 사용자 식별자(`external_user_id`<span style="color:#e5484d">(이메일)</span>) 선택 | — | — |
 | 서비스 선택 `/services` | 결제서버의 서비스 목록·키 입력 | `GET /api/v1/services`(무인증) | `list_services` |
 | 카드 `/card` | **카드 등록/변경/조회/삭제**(연동의 전제) | `POST·GET·DELETE /api/v1/cards` | `register_card`/`get_card`/`delete_card` |
 | 요금제 `/plans` | 구독 가능한 요금제·금액 | `GET /api/v1/plans` | `get_plans` |
 | 구독 `/subscribe/{plan_id}` | 등록 카드로 구독 생성 | `POST /api/v1/subscriptions` | `create_subscription` |
 | 내 구독 `/my` | 조회·취소·재개·수동결제·카드변경 | `GET·.../cancel·/resume·/pay` | `get_subscription`/`cancel`/`resume`/`manual_pay` |
 | 일반결제 `/pay` | 구독과 무관한 단건 결제 | `POST /api/v1/payments` | `create_one_off_payment` |
-| 결제 내역 `/history` | 구독+단건 내역, 단건 취소 | `GET /api/v1/payments/{uid}` · `POST .../{order_id}/cancel` | `get_payments`/`cancel_one_off_payment` |
+| 결제 내역 `/history` | 구독+단건 내역, 매출전표 링크, 단건 취소 | `GET /api/v1/payments/{uid}`(응답 `receipt_url`) · `POST .../{order_id}/cancel` | `get_payments`/`cancel_one_off_payment` |
 | 받은 알림 `/notifications` | 웹훅 수신·서명검증 데모 | `POST /notify`(수신측) | — (수신 뷰 `views.notify_receive_view`) |
 
 ---
@@ -220,9 +224,9 @@ cd sample_service && docker compose up -d --build   # http://localhost:8001 (호
 
 `shop/payment_client.py`를 복사하는 게 출발점입니다. 그리고 「개발자 노트」에도 반복되는 **연동 4규칙**을 지킵니다.
 
-### 19.8.1 사용자 식별자(`external_user_id`)는 반드시 이메일
+### 19.8.1 사용자 식별자(`external_user_id`<span style="color:#e5484d">(이메일)</span>)는 반드시 이메일
 
-결제 서버의 모든 사용자 키 `external_user_id`에는 **이메일만** 넣어야 합니다. 샘플은 로그인한 사용자의 이메일을 그대로 식별자로 전달합니다 — `shop/views.py`에서 `external_user_id=user.email`로 호출합니다(카드 등록·구독 생성·결제·조회 전부 동일한 이메일 사용).
+결제 서버의 모든 사용자 키 `external_user_id`<span style="color:#e5484d">(이메일)</span>에는 **이메일만** 넣어야 합니다. 샘플은 로그인한 사용자의 이메일을 그대로 식별자로 전달합니다 — `shop/views.py`에서 `external_user_id=user.email`로 호출합니다(카드 등록·구독 생성·결제·조회 전부 동일한 이메일 사용).
 
 - **서버가 정규화합니다**: 받는 즉시 **앞뒤 공백 제거 + 소문자**로 바꿔 저장·조회합니다(`app/core/identifiers.py`). 그래서 `Han@Han.com`과 `han@han.com`은 **같은 사용자**로 취급됩니다.
 - **형식이 틀리면 거부**: 이메일이 아니면 `422`(InputValidationError)로 거부됩니다. 회원 PK 같은 임의 문자열을 넣으면 안 됩니다.

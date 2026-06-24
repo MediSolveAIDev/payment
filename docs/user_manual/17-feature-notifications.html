@@ -365,7 +365,7 @@ return RedirectResponse(
 <h3 id="payload">payload 필드 함정</h3>
 <ul>
 <li><code>subscribe_id</code>는 <strong>구독 ID</strong>다(키 이름이 <code>subscription_id</code>가 아님에 주의).</li>
-<li><code>email</code>은 키 이름과 달리 <strong><code>external_user_id</code>(외부 서비스 측 사용자 식별자)</strong>가 담긴다 — 실제 이메일이 아닐 수 있다.</li>
+<li><code>email</code>은 키 이름과 달리 <strong><code>external_user_id</code><span style="color:#e5484d">(이메일)</span>(외부 서비스 측 사용자 식별자)</strong>가 담긴다 — 실제 이메일이 아닐 수 있다.</li>
 <li>요금제 이벤트(<code>plan.*</code>)는 사용자 비귀속이라 <code>subscribe_id</code>/<code>order_id</code>/<code>email</code>이 빈 문자열이고 <code>DESC</code>에 상세가 담긴다.</li>
 </ul>
 <h3 id="_8">서명 검증은 운영에서 필수</h3>

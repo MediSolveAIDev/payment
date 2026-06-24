@@ -16,6 +16,23 @@ from app.models.base import Base, TimestampMixin
 from app.models.enums import PaymentKind, PaymentStatus
 
 
+def receipt_url_from_raw(raw) -> str | None:
+    """토스 응답 원문(raw_response)에서 매출전표(영수증) URL을 안전하게 추출한다.
+
+    토스 Payment 객체의 receipt.url = 카드결제 매출전표 링크. 카드결제(DONE)면 보통
+    존재하고, 실패·대기·과거 미보유 건은 None이다. 구조가 다르거나 url이 문자열이
+    아닌 경우(방어) 모두 None을 반환한다. 어드민 헬퍼(app/admin)와 Payment.receipt_url
+    프로퍼티가 공통으로 사용해 추출 로직을 한 곳에 둔다.
+    """
+    if not isinstance(raw, dict):
+        return None
+    receipt = raw.get("receipt")
+    if not isinstance(receipt, dict):
+        return None
+    url = receipt.get("url")
+    return url if isinstance(url, str) and url else None
+
+
 class Payment(TimestampMixin, Base):
     """개별 결제 시도 레코드. 승인 성공·실패 모두 기록되며 삭제하지 않는다."""
 
@@ -64,6 +81,15 @@ class Payment(TimestampMixin, Base):
     canceled_amount: Mapped[int | None] = mapped_column(BigInteger, nullable=True)  # 실제 환불액(금액-수수료); 부분취소 시 amount와 다름
     cancel_fee: Mapped[int | None] = mapped_column(BigInteger, nullable=True)        # 차감 수수료(수수료율 × amount // 100)
     canceled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # 취소 완료 시각(UTC)
+
+    @property
+    def receipt_url(self) -> str | None:
+        """토스 매출전표(영수증) URL — raw_response.receipt.url에서 안전 추출(없으면 None).
+
+        외부 서비스 결제조회 응답(PaymentResponse)과 어드민 결제목록 링크가 함께 사용한다.
+        raw_response 전체는 노출하지 않고 이 영수증 링크만 추출해 노출한다.
+        """
+        return receipt_url_from_raw(self.raw_response)
 
 
 @event.listens_for(Payment, "before_insert", propagate=True)

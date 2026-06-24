@@ -28,3 +28,4 @@
 | `settings.png` | 07-admin-settings | 전체 설정(킬스위치 등) |
 | `audit.png` | 08-admin-audit | 감사 로그 |
 | `settlement.png` | 09-dashboard | 정산 보기 |
+| `sample-07-receipt.png` | 19-sample-service | 결제 내역 → 매출전표(영수증) 보기(토스 영수증 새 탭) — *현재 플레이스홀더, 실제 캡처로 교체* |

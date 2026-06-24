@@ -128,7 +128,7 @@
 <td>소속 서비스</td>
 </tr>
 <tr>
-<td><code>external_user_id</code></td>
+<td><code>external_user_id</code><span style="color:#e5484d">(이메일)</span></td>
 <td>VARCHAR(255)</td>
 <td>외부 서비스 사용자 ID</td>
 </tr>
@@ -223,7 +223,7 @@ async def register_card(
 </tr>
 <tr>
 <td>2</td>
-<td><code>external_user_id</code> 빈값/255자 초과 검증</td>
+<td><code>external_user_id</code><span style="color:#e5484d">(이메일)</span> 빈값/255자 초과 검증</td>
 <td><code class="loc">cards.py:198</code></td>
 <td>—</td>
 </tr>
@@ -498,7 +498,7 @@ if blocking_sub is not None:
 <td>422</td>
 </tr>
 <tr>
-<td><code>external_user_id</code> 빈값/255자 초과</td>
+<td><code>external_user_id</code><span style="color:#e5484d">(이메일)</span> 빈값/255자 초과</td>
 <td><code>InputValidationError</code></td>
 <td>422</td>
 </tr>
@@ -582,7 +582,7 @@ if blocking_sub is not None:
 </tr>
 </tbody>
 </table>
-<p>모든 카드 이벤트는 <code>_card_audit_detail</code>(<code class="loc">cards.py:77</code>)로 동일한 상세(<code>external_user_id</code>, <code>service_id</code>, 마스킹 <code>card_number</code>, <code>issuer</code>)를 남깁니다. <strong>빌링키 암호문·해시는 감사로그에 넣지 않습니다.</strong></p>
+<p>모든 카드 이벤트는 <code>_card_audit_detail</code>(<code class="loc">cards.py:77</code>)로 동일한 상세(<code>external_user_id</code><span style="color:#e5484d">(이메일)</span>, <code>service_id</code>, 마스킹 <code>card_number</code>, <code>issuer</code>)를 남깁니다. <strong>빌링키 암호문·해시는 감사로그에 넣지 않습니다.</strong></p>
 <p>알림은 best-effort이며(<code>_notify_card</code>, <code class="loc">cards.py:58</code>), notifier가 없거나 서비스 알림 URL 미등록이면 조용히 건너뜁니다.</p>
 <hr />
 <h2 id="145">14.5. 유지보수 팁</h2>

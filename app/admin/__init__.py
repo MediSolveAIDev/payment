@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from app.admin.deps import AdminContext
 from app.admin.payment_error_labels import payment_error_meaning
 from app.core.clock import kst_format
+from app.models.payment import receipt_url_from_raw  # 매출전표 URL 공통 추출(모델과 로직 통일)
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"   # app/static
@@ -30,20 +31,12 @@ templates.env.globals["sub_status_ko"] = lambda s: _SUB_STATUS_KO.get(s, s)
 
 
 def receipt_url(payment) -> str | None:
-    """결제의 토스 매출전표(영수증) URL을 반환한다(없으면 None).
+    """결제의 토스 매출전표(영수증) URL을 반환한다(없으면 None) — 어드민 결제목록 템플릿 전용.
 
-    승인 시 저장한 raw_response의 receipt.url을 안전하게 읽는다(토스 Payment 객체의
-    receipt.url = 카드결제 매출전표 링크). 카드결제(DONE)면 보통 존재하고,
-    실패·대기·과거 미보유 건은 None이다. 어드민 결제 목록 링크 전용.
+    추출 로직은 모델의 receipt_url_from_raw로 통일(서비스 응답·Payment.receipt_url과 동일).
+    raw_response를 갖는 어떤 객체에도 동작하도록 getattr로 안전하게 읽는다.
     """
-    raw = getattr(payment, "raw_response", None)
-    if not isinstance(raw, dict):
-        return None
-    receipt = raw.get("receipt")
-    if not isinstance(receipt, dict):
-        return None
-    url = receipt.get("url")
-    return url if isinstance(url, str) and url else None
+    return receipt_url_from_raw(getattr(payment, "raw_response", None))
 
 
 # 매출전표(영수증) 링크. 사용: {{ receipt_url(p) }} (어드민 결제 목록)

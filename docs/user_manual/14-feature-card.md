@@ -34,7 +34,7 @@
 |------|------|------|
 | `id` | UUID PK | 카드 고유 ID |
 | `service_id` | UUID FK → services (RESTRICT) | 소속 서비스 |
-| `external_user_id` | VARCHAR(255) | 외부 서비스 사용자 ID |
+| `external_user_id`<span style="color:#e5484d">(이메일)</span> | VARCHAR(255) | 외부 서비스 사용자 ID |
 | `customer_key` | VARCHAR(300) | 토스 customerKey |
 | `billing_key_encrypted` | VARCHAR(1024) | 빌링키 AES-GCM 암호문(평문 저장 안 함) |
 | `billing_key_hash` | VARCHAR(64) | 빌링키 SHA-256 해시(중복탐지·조회용) |
@@ -98,7 +98,7 @@ async def register_or_replace_card(
 | # | 단계 | 코드 위치 | 외부호출/DB |
 |---|------|-----------|-------------|
 | 1 | `customer_key` 형식 검증(`CUSTOMER_KEY_RE`) | `cards.py:195` | — |
-| 2 | `external_user_id` 빈값/255자 초과 검증 | `cards.py:198` | — |
+| 2 | `external_user_id`<span style="color:#e5484d">(이메일)</span> 빈값/255자 초과 검증 | `cards.py:198` | — |
 | 3 | 토스 빌링키 발급 | `cards.py:202` | `toss.issue_billing_key(auth_key, customer_key)` → `BillingKeyResult` |
 | 4 | 기존 카드 조회로 교체/신규 분기 | `cards.py:205` | `SELECT cards` |
 | 5a | 교체: 기존 행 갱신 | `cards.py:208-215` | UPDATE(메모리) |
@@ -261,7 +261,7 @@ CARD_DELETE_BLOCKING_STATUSES = frozenset({
 | 조건 | 예외 | HTTP |
 |------|------|------|
 | `customer_key` 형식 오류 | `InputValidationError` | 422 |
-| `external_user_id` 빈값/255자 초과 | `InputValidationError` | 422 |
+| `external_user_id`<span style="color:#e5484d">(이메일)</span> 빈값/255자 초과 | `InputValidationError` | 422 |
 | 동시 첫 등록 경쟁(유니크 위반) | `ConflictError` | 409 |
 | 토스 빌링키 발급 실패 | `TossError`(전파) | 4xx/5xx |
 | 카드 미등록(조회/삭제) | `NotFoundError` | 404 |
@@ -298,7 +298,7 @@ async def safe_delete_billing_key(toss: TossClient, billing_key: str) -> bool:
 | 활성화 | `card.activate` | USER | `EVENT_CARD_ACTIVATED` |
 | 비활성화 | `card.deactivate` | USER | `EVENT_CARD_DEACTIVATED` |
 
-모든 카드 이벤트는 `_card_audit_detail`(`cards.py:77`)로 동일한 상세(`external_user_id`, `service_id`, 마스킹 `card_number`, `issuer`)를 남깁니다. **빌링키 암호문·해시는 감사로그에 넣지 않습니다.**
+모든 카드 이벤트는 `_card_audit_detail`(`cards.py:77`)로 동일한 상세(`external_user_id`<span style="color:#e5484d">(이메일)</span>, `service_id`, 마스킹 `card_number`, `issuer`)를 남깁니다. **빌링키 암호문·해시는 감사로그에 넣지 않습니다.**
 
 알림은 best-effort이며(`_notify_card`, `cards.py:58`), notifier가 없거나 서비스 알림 URL 미등록이면 조용히 건너뜁니다.
 

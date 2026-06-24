@@ -107,7 +107,7 @@
 </table>
 <h2 id="162-1">16.2 흐름 1 — 단건 결제 생성</h2>
 <h3 id="_3">진입점</h3>
-<p>외부 서비스의 <code>POST /v1/payments</code> 요청은 <code class="loc">app/api/v1/payments.py:73</code>의 <code>create_payment</code>로 들어온다. 카드 정보가 아니라 <code>external_user_id</code>/<code>order_id</code>/<code>order_name</code>/<code>amount</code>만 받고, 서버가 카드 보관함에서 빌링키를 자동 조회한다.</p>
+<p>외부 서비스의 <code>POST /v1/payments</code> 요청은 <code class="loc">app/api/v1/payments.py:73</code>의 <code>create_payment</code>로 들어온다. 카드 정보가 아니라 <code>external_user_id</code><span style="color:#e5484d">(이메일)</span>/<code>order_id</code>/<code>order_name</code>/<code>amount</code>만 받고, 서버가 카드 보관함에서 빌링키를 자동 조회한다.</p>
 <pre><code class="language-python"># app/api/v1/payments.py:90
 payment = await payment_service.create_one_off_payment(
     db, toss, cipher,
@@ -123,7 +123,7 @@ return PaymentResponse.from_model(payment, service)
 <h3 id="_4">도메인 처리 단계</h3>
 <p><code class="loc">app/services/payments.py:44</code>의 <code>create_one_off_payment</code>가 <strong>결제 3원칙</strong>(PENDING 선커밋 / 타임아웃은 PENDING 유지 / 멱등 <code>order_id</code>)에 따라 처리한다.</p>
 <ol>
-<li><strong>입력 검증</strong> — <code>order_id</code> 형식, <code>external_user_id</code> 길이, <code>amount &gt; 0</code>. 상한은 <code>GlobalSettings.one_off_max_amount</code>(런타임 조정 가능)로 검사하고 초과 시 <code>InputValidationError</code> (<code class="loc">app/services/payments.py:75</code>~<code>86</code>).</li>
+<li><strong>입력 검증</strong> — <code>order_id</code> 형식, <code>external_user_id</code><span style="color:#e5484d">(이메일)</span> 길이, <code>amount &gt; 0</code>. 상한은 <code>GlobalSettings.one_off_max_amount</code>(런타임 조정 가능)로 검사하고 초과 시 <code>InputValidationError</code> (<code class="loc">app/services/payments.py:75</code>~<code>86</code>).</li>
 <li><strong>카드 보관함 조회</strong> — <code>get_card(...)</code>로 등록 카드를 찾는다. 없으면 <code>NotFoundError</code>, <strong>비활성 카드면 <code>ConflictError</code>로 차단</strong> (<code class="loc">app/services/payments.py:90</code>~<code>95</code>).</li>
 <li><strong>멱등성 검사</strong> — 같은 <code>(service_id, order_id)</code>가 이미 있으면 재결제 없이 기존 Payment 반환 (<code class="loc">app/services/payments.py:99</code>~<code>102</code>).</li>
 <li><strong>PENDING 선커밋</strong> — 토스 전달용 전역 고유 <code>toss_order_id</code>(<code>t</code> + uuid4 hex)를 만들어 Payment를 <code>PENDING</code>으로 저장하고 감사 로그(<code>payment.one_off</code>) 후 <strong>commit</strong> (<code class="loc">app/services/payments.py:104</code>~<code>142</code>).</li>
@@ -269,6 +269,10 @@ if new_total &gt;= payment.amount:
 <td><code>SUBSCRIPTION/ONE_OFF</code> / <code>FIRST/RENEWAL/RETRY/ONE_OFF</code></td>
 </tr>
 <tr>
+<td><code>receipt_url</code></td>
+<td>토스 매출전표(영수증) 링크. 카드결제(DONE)만 보통 존재, 그 외 <code>null</code></td>
+</tr>
+<tr>
 <td><code>cancelable</code></td>
 <td>단건·DONE·서비스 취소허용일 때만 <code>true</code></td>
 </tr>
@@ -287,7 +291,7 @@ if new_total &gt;= payment.amount:
 </tbody>
 </table>
 <blockquote class="cal note"><span class="cal-i">💡</span><div class="cal-b">
-<p>참고: <code>toss_payment_key</code>·<code>raw_response</code> 같은 내부 필드는 노출하지 않는다.</p>
+<p>참고: <code>toss_payment_key</code>·<code>raw_response</code> 같은 내부 필드는 노출하지 않는다. 단, 매출전표 링크(<code>receipt_url</code>)만은 <code>raw_response.receipt.url</code>에서 안전 추출해 노출한다(<code>app/models/payment.py</code>의 <code>Payment.receipt_url</code>). 어드민 결제목록과 서비스단(샘플 <code>/history</code>)이 같은 링크를 사용해 영수증을 새 탭으로 연다.</p>
 </div></blockquote>
 <h2 id="166-4">16.6 흐름 4 — 매출·환불·순매출 집계</h2>
 <p>매출/환불의 핵심은 <strong>취소 수수료는 매출로 보유</strong>하고 <strong>환불액만 빼는</strong> 것이다. 정산(<code>settlement.py</code>)과 대시보드(<code>dashboard.py</code>)가 동일 결과가 되도록 맞춰져 있다.</p>

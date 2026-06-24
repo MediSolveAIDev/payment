@@ -203,7 +203,9 @@ class OneOffCancelRequest(BaseModel):
 class PaymentResponse(BaseModel):
     """결제 결과 응답. Payment 모델 + 서비스 취소 정책에서 변환(from_model).
 
-    toss_payment_key · raw_response 등 내부 필드는 노출하지 않는다.
+    toss_payment_key · raw_response 등 내부 필드는 노출하지 않는다. 다만 매출전표
+    링크(receipt_url)만은 raw_response.receipt.url에서 안전 추출해 노출 — 서비스가
+    결제 내역 화면에서 영수증을 클릭해 볼 수 있게 한다.
     failure_code/failure_message는 status=FAILED일 때만 채워진다.
     취소 수수료 필드(cancel_*)는 서비스가 결제 취소 전에 "지금 취소하면 얼마가
     수수료로 빠지고 얼마가 환불되는지"를 화면에 안내할 수 있도록 함께 반환한다.
@@ -223,6 +225,11 @@ class PaymentResponse(BaseModel):
     requested_at: datetime = Field(description="결제 요청 시각.")
     approved_at: datetime | None = Field(
         description="승인 시각. 실패·대기 중에는 null.")
+    # 토스 매출전표(영수증) 링크 — 서비스가 결제 내역에서 클릭 노출. 카드결제(DONE)는
+    # 보통 존재, 가상계좌·실패·대기·과거 미보유 건은 null.
+    receipt_url: str | None = Field(
+        default=None,
+        description="토스 매출전표(영수증) URL. 카드결제(DONE)는 보통 존재, 그 외 null.")
     # ── 취소 수수료 안내(서비스가 취소 화면에 노출) ─────────────────────────────
     cancelable: bool = Field(
         default=False,
@@ -276,6 +283,7 @@ class PaymentResponse(BaseModel):
                    kind=payment.kind, payment_type=payment.payment_type,
                    failure_code=payment.failure_code, failure_message=payment.failure_message,
                    requested_at=payment.requested_at, approved_at=payment.approved_at,
+                   receipt_url=payment.receipt_url,  # 매출전표 링크(없으면 None)
                    cancelable=cancelable, cancel_fee_percent=fee_percent,
                    cancel_fee=fee, cancel_refund_amount=refund,
                    canceled_amount=refunded, net_amount=payment.amount - refunded)

@@ -20,7 +20,9 @@ services:
       - .env.dev
     environment:
       # 같은 도커 네트워크의 결제서버 app 컨테이너를 이름으로 직접 호출(TLS·포트 매핑 불필요).
-      PAYMENT_API_BASE: http://localhost:8000
+      # 주의: 컨테이너 내부에서 localhost:8000 은 이 sample(Django) 자신을 가리켜
+      #       /api/v1/* 가 Django 404로 돌아온다. 반드시 app 컨테이너 이름으로 호출한다.
+      PAYMENT_API_BASE: http://app:8000
       DEBUG: "True"
       # SQLite를 볼륨에 둬서 컨테이너를 내려도(down) 데이터 유지(아래 sample-db 볼륨).
       SQLITE_PATH: /app/data/db.sqlite3

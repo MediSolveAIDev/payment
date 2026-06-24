@@ -614,6 +614,7 @@ def history_view(request):
         rec.refunded = info.get("canceled_amount", 0)        # 누적 환불액(부분취소 포함)
         rec.net_amount = info.get("net_amount", rec.amount)  # 실수령 = 금액 − 환불
         rec.server_status = info.get("status", "")           # DONE / CANCELED
+        rec.receipt_url = info.get("receipt_url")            # 토스 매출전표 링크(없으면 None)
         # 표시용 취소 상태: 전액(CANCELED) → 취소됨, 일부 환불(DONE+refunded>0) → 부분취소
         if rec.server_status == "CANCELED":
             rec.cancel_state = "취소됨"

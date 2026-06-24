@@ -192,7 +192,7 @@ return RedirectResponse(
 ### payload 필드 함정
 
 - `subscribe_id`는 **구독 ID**다(키 이름이 `subscription_id`가 아님에 주의).
-- `email`은 키 이름과 달리 **`external_user_id`(외부 서비스 측 사용자 식별자)**가 담긴다 — 실제 이메일이 아닐 수 있다.
+- `email`은 키 이름과 달리 **`external_user_id`<span style="color:#e5484d">(이메일)</span>(외부 서비스 측 사용자 식별자)**가 담긴다 — 실제 이메일이 아닐 수 있다.
 - 요금제 이벤트(`plan.*`)는 사용자 비귀속이라 `subscribe_id`/`order_id`/`email`이 빈 문자열이고 `DESC`에 상세가 담긴다.
 
 ### 서명 검증은 운영에서 필수

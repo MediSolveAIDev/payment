@@ -19,7 +19,7 @@
 <div class="table-card">
   <table class="list">
     <thead><tr>
-      <th>주문번호</th><th>유형</th><th>상태</th><th class="num">금액</th><th>요청일시</th><th>승인일시</th><th>실패정보</th>
+      <th>주문번호</th><th>유형</th><th>상태</th><th class="num">금액</th><th>요청일시</th><th>승인일시</th><th>실패정보</th><th>매출전표</th>
     </tr></thead>
     <tbody>
       {% for p in sub_payments %}
@@ -33,6 +33,8 @@
         <td style="font-size:12px;color:var(--red)">
           {% if p.failure_code %}{{ p.failure_code }}{% if p.failure_message %}<br><span class="muted">{{ p.failure_message }}</span>{% endif %}{% else %}<span class="muted">-</span>{% endif %}
         </td>
+        {# 매출전표: 서버 응답의 receipt_url(토스 영수증). 카드결제(DONE)만 보통 존재 #}
+        <td style="font-size:12px">{% if p.receipt_url %}<a href="{{ p.receipt_url }}" target="_blank" rel="noopener">매출전표</a>{% else %}<span class="muted">-</span>{% endif %}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -48,7 +50,7 @@
   <table class="list">
     <thead><tr>
       <th>상품명</th><th class="num">금액</th><th class="num">취소 수수료</th><th class="num">환불액</th><th class="num">실수령액</th>
-      <th>주문번호</th><th>일시</th><th>상태</th><th></th>
+      <th>주문번호</th><th>일시</th><th>상태</th><th>매출전표</th><th></th>
     </tr></thead>
     <tbody>
       {% for rec in oneoff_records %}
@@ -67,6 +69,8 @@
         <td>{% if rec.cancel_state == '취소됨' %}<span class="badge st-CANCELED">취소됨</span>
             {% elif rec.cancel_state == '부분취소' %}<span class="badge st-PAST_DUE">부분취소</span>
             {% else %}<span class="badge st-DONE">완료</span>{% endif %}</td>
+        {# 매출전표: 서버 응답의 receipt_url(view에서 order_id로 매칭해 부착). 카드결제(DONE)만 보통 존재 #}
+        <td style="font-size:12px">{% if rec.receipt_url %}<a href="{{ rec.receipt_url }}" target="_blank" rel="noopener">매출전표</a>{% else %}<span class="muted">-</span>{% endif %}</td>
         <td>
           {# 서버가 취소 가능(cancelable)이라고 한 건만 취소 버튼 노출 — 이미 (부분)취소된 건은 숨김 #}
           {% if rec.cancelable %}
@@ -100,6 +104,7 @@
       <ul>
         <li>응답의 각 결제에 <code>cancelable / cancel_fee / cancel_refund_amount / cancel_fee_percent</code>가 포함 —
           <b style="color:#fff">취소 전엔 예상값, 취소 후엔 실제값</b>. 수수료 계산을 직접 구현하지 말 것</li>
+        <li>응답의 각 결제에 <code>receipt_url</code>(토스 매출전표 링크)이 포함 — 있으면 새 탭으로 영수증을 연다(카드결제 완료건만 보통 존재, 없으면 <code>-</code>)</li>
         <li>단건 결제의 상품명·취소여부는 이 서비스의 로컬 DB(<code>OneOffRecord</code>)와 <code>order_id</code>로 매칭해 표시</li>
         <li>취소 정책이 꺼진 서비스(<code>cancellation_enabled=False</code>)는 취소 시 <code>CANCEL_DISABLED</code> 에러가 반환된다</li>
       </ul>

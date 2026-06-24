@@ -203,6 +203,8 @@ def get_payments(external_user_id: str, creds=None) -> list[dict]:
     각 결제에는 취소 수수료 안내 필드가 포함된다:
       cancelable, cancel_fee_percent, cancel_fee, cancel_refund_amount
     (취소 가능 결제는 '취소 시 예상' 값, 이미 취소된 결제는 실제 차감/환불액)
+    또한 receipt_url(토스 매출전표 링크)이 포함된다 — 카드결제(DONE)는 보통 존재,
+    그 외(가상계좌·실패·대기)는 None. 서비스는 이 링크를 새 탭으로 열어 영수증을 보여준다.
     """
     return _request("GET", f"/api/v1/payments/{external_user_id}",
                     creds=creds)["payments"]

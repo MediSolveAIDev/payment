@@ -36,7 +36,7 @@
 | 컬럼 | 설명 |
 |------|------|
 | `service_id` / `plan_id` | 소속 서비스·가입 요금제(둘 다 FK RESTRICT) |
-| `external_user_id` | 외부 서비스 사용자 식별자 |
+| `external_user_id`<span style="color:#e5484d">(이메일)</span> | 외부 서비스 사용자 식별자 |
 | `card_id` | 결제에 쓸 등록 카드(cards 참조, nullable) |
 | `status` | 상태 머신 현재 위치 |
 | `current_period_start`/`current_period_end` | 현재 주기 시작/종료(=접근 만료) |
@@ -83,7 +83,7 @@ return await _to_response(db, sub)
 
 | # | 단계 | 코드 위치 | DB/외부 |
 |---|------|-----------|---------|
-| 1 | `external_user_id` 검증 | `subscriptions.py:191` | — |
+| 1 | `external_user_id`<span style="color:#e5484d">(이메일)</span> 검증 | `subscriptions.py:191` | — |
 | 2 | 요금제 유효성(ACTIVE·소속) | `subscriptions.py:193` | `db.get(Plan)` |
 | 3 | 체험 가능 여부(`trial_enabled`·`trial_days≥1`) | `subscriptions.py:197` | — |
 | 4 | 중복 구독(열린 슬롯) 확인 | `subscriptions.py:200` | `get_open_subscription` |
