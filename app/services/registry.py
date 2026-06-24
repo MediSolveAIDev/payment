@@ -262,6 +262,27 @@ async def set_toss_secret_key(db: AsyncSession, cipher: AesGcmCipher, *,
     await db.commit()
 
 
+async def clear_toss_secret_key(db: AsyncSession, *, service_id: uuid.UUID,
+                                actor_user_id: uuid.UUID | None = None) -> None:
+    """서비스의 토스 시크릿 키를 삭제(제거)한다.
+
+    키가 이미 없으면 변화 없이 반환한다(멱등). 삭제는 'deleted' 액션으로 감사 기록하며,
+    설정/교체와 마찬가지로 시크릿 값 자체는 절대 남기지 않는다.
+    키 삭제 후에는 그 서비스의 결제·구독 첫 결제·자동연장이 거부된다(키 미설정 상태).
+    """
+    service = await db.get(Service, service_id)
+    if service is None:
+        raise NotFoundError("서비스를 찾을 수 없습니다")
+    if not service.toss_secret_key_encrypted:
+        return  # 이미 미설정 — 멱등 no-op
+    service.toss_secret_key_encrypted = None
+    await record_audit(db, actor_type="USER", actor_user_id=actor_user_id,
+                       action="service.toss_secret_key.deleted",
+                       target_type="service", target_id=str(service_id),
+                       detail={"service_name": service.name})   # 시크릿 값 미기록
+    await db.commit()
+
+
 async def update_allowed_ips(db: AsyncSession, service_id: uuid.UUID, ips: list[str],
                              actor_user_id: uuid.UUID | None = None) -> Service:
     """허용 IP 목록 전체 교체. 빈 목록 허용 = IP 제한 없음(모든 IP 허용, HMAC로만 보호)."""

@@ -155,30 +155,52 @@
   </form>
 </div>
 </div>
-{# 토스 시크릿 키 카드 — 설정됨/미설정 상태 표시 + 쓰기 전용 입력(평문 재표시 절대 금지, Task 8) #}
-<div class="card" style="max-width:480px">
-  <h3>토스 시크릿 키</h3>
-  <div class="kv" style="margin-bottom:10px">
-    <span class="muted">현재 상태</span>
-    <span>
+{# 토스 시크릿 키 — 한 줄 레이아웃: 라벨 (등록여부) [입력박스] [저장] [삭제] (설명).
+   쓰기 전용 입력(평문 재표시 절대 금지, Task 8). 설정됨이면 박스에 '***' 표시 + 삭제 버튼 노출.
+   저장 폼과 삭제 폼은 별개 form이라 한 줄(flex)에 나란히 둔다. 좁은 화면은 flex-wrap. #}
+<div class="card">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <strong style="white-space:nowrap">토스 시크릿 키</strong>
+    {# 등록여부 배지 — 설정됨은 빨간색·크게 강조('이미 설정됨'), 미설정은 기본 #}
+    {% if service.toss_secret_key_encrypted %}
+      <span class="badge" style="background:#e5484d;color:#fff;font-size:15px;font-weight:700;padding:5px 12px">이미 설정됨</span>
+    {% else %}
+      <span class="badge badge-INACTIVE">미설정</span>
+    {% endif %}
+    {# 설정/교체 폼 — 입력 + 저장. 설정됨이면 placeholder를 '***'로(키 보유 표시), 미설정이면 안내 문구 #}
+    <form method="post" action="/admin/services/{{ service.id }}/toss-secret-key"
+          style="display:flex;align-items:center;gap:8px;flex:1;min-width:240px;margin:0">
+      <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+      {# type="password" autocomplete="off" — 쓰기 전용, 저장값 재표시 금지 #}
+      {# 설정됨: 실제 값이 저장된 것처럼 마스킹 점(•)으로 표시(placeholder일 뿐 실제 값/길이 미노출). 미설정: 입력 안내 #}
+      <input id="toss_secret_key" name="toss_secret_key" type="password" autocomplete="off"
+             placeholder="{% if service.toss_secret_key_encrypted %}••••••••••••••••••••••••••••••{% else %}시크릿키 입력해주세요{% endif %}"
+             style="flex:1;min-width:160px">
+      <button class="btn btn-sm btn-danger" type="submit">저장</button>
+    </form>
+    {# 삭제 버튼 + 상세설명을 한 묶음으로 항상 '붙여서' 같은 줄에 둔다(inline-flex).
+       설정됨일 때만 삭제 버튼이 앞에 붙고, 설명은 두 경우 모두 노출. #}
+    <span style="display:inline-flex;align-items:center;gap:10px;flex:1 1 320px;min-width:260px">
       {% if service.toss_secret_key_encrypted %}
-        <span class="badge badge-ACTIVE">설정됨</span>
-      {% else %}
-        <span class="badge badge-INACTIVE">미설정</span>
+      {# 삭제 폼 — 삭제 시 그 서비스 결제가 거부되므로 확인 모달 #}
+      <form method="post" action="/admin/services/{{ service.id }}/toss-secret-key/delete" style="margin:0;flex:0 0 auto"
+            data-confirm="삭제하면 이 서비스의 카드 등록·구독 첫 결제·자동연장·단건결제가 모두 거부됩니다. 정말 삭제할까요?"
+            data-confirm-title="토스 시크릿 키를 삭제할까요?" data-confirm-ok="삭제">
+        <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
+        <button class="btn btn-sm" type="submit">삭제</button>
+      </form>
       {% endif %}
+      {# 상세설명 — 무엇인지·필수성·발급처·보안·삭제 영향까지 #}
+      <span class="muted" style="font-size:12px;line-height:1.55">
+        이 서비스가 <b>토스페이먼츠로 결제(빌링)를 호출</b>할 때 쓰는 시크릿 키입니다
+        (토스 개발자센터의 <code>test_sk_…</code>/<code>live_sk_…</code>).
+        <b>키가 없으면 이 서비스의 카드 등록·구독 첫 결제·자동연장·단건결제가 모두 거부</b>됩니다.
+        입력값은 <b>AES로 암호화</b>되어 저장되고, 저장 후에는 화면·로그·감사 어디에도 다시 표시되지 않습니다(<b>쓰기 전용</b>).
+        교체하려면 새 키를 입력해 [저장]하고, <b>빈 값으로 저장하면 기존 키가 그대로 유지</b>됩니다.
+        키를 없애려면 <b>[삭제]</b>를 누르세요(설정/교체/삭제는 감사 로그에 남고, 시크릿 값 자체는 기록되지 않습니다).
+      </span>
     </span>
   </div>
-  <form method="post" action="/admin/services/{{ service.id }}/toss-secret-key"
-        style="display:flex;align-items:center;gap:8px">
-    <input type="hidden" name="csrf_token" value="{{ ctx.csrf_token }}">
-    {# type="password" autocomplete="off" — 쓰기 전용, 저장값 재표시 금지 #}
-    <input id="toss_secret_key" name="toss_secret_key" type="password" autocomplete="off"
-           placeholder="{% if service.toss_secret_key_encrypted %}설정됨 — 변경 시에만 입력{% else %}미설정 — 입력 시 저장{% endif %}"
-           style="flex:1">
-    <button class="btn btn-sm btn-danger" type="submit">저장</button>
-  </form>
-  <p class="muted" style="font-size:12px;margin-top:6px">
-    AES 암호화 저장. 저장 후에는 다시 표시되지 않습니다(변경 시 재입력).</p>
 </div>
 {# 알림 이벤트 설명 모달 — '상세' 버튼으로 열림 #}
 {% include "services/_notify_help_modal.html" %}

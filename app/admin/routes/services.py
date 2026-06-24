@@ -438,6 +438,21 @@ async def services_set_toss_secret_key(service_id: uuid.UUID, request: Request,
     return saved_redirect(f"/admin/services/{service_id}", "저장되었습니다")
 
 
+@router.post("/services/{service_id}/toss-secret-key/delete")
+async def services_delete_toss_secret_key(service_id: uuid.UUID, request: Request,
+                                          ctx: AdminContext = Depends(require_admin),
+                                          db: AsyncSession = Depends(get_db)):
+    """서비스별 토스 시크릿 키 삭제(제거).
+
+    이미 설정된 키를 지운다. 키가 없으면 멱등 no-op. 감사 액션: service.toss_secret_key.deleted.
+    삭제 후에는 그 서비스의 결제·구독 첫 결제·자동연장이 거부된다(키 미설정 상태).
+    """
+    await validate_csrf(request, ctx)
+    await registry.clear_toss_secret_key(db, service_id=service_id,
+                                         actor_user_id=ctx.user.id)
+    return saved_redirect(f"/admin/services/{service_id}", "토스 시크릿 키를 삭제했습니다")
+
+
 @router.post("/services/{service_id}/notification-url")
 async def services_notification_url(service_id: uuid.UUID, request: Request,
                                     ctx: AdminContext = Depends(require_admin),
