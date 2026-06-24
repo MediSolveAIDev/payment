@@ -10,7 +10,7 @@
   <svg viewBox="0 0 {{ w }} {{ h }}" class="chart" preserveAspectRatio="none" style="height:{{ height }}px">
     {%- for g in range(4) -%}
       {%- set gy = pad + ih * g / 3 -%}
-      <line x1="{{ pad }}" y1="{{ gy }}" x2="{{ w - pad }}" y2="{{ gy }}" stroke="rgba(28,28,28,.06)" stroke-width="1"/>
+      <line x1="{{ pad }}" y1="{{ gy }}" x2="{{ w - pad }}" y2="{{ gy }}" class="chart-grid" stroke-width="1"/>
     {%- endfor -%}
     {%- set ns = (n - 1) if n > 1 else 1 -%}
     {%- set pts = [] -%}
@@ -25,7 +25,7 @@
               stroke-linejoin="round" stroke-linecap="round"/>
     {%- for p in series -%}
       {%- set x = pad + iw * loop.index0 / ns -%}
-      <text x="{{ x }}" y="{{ h - 4 }}" font-size="10" fill="rgba(28,28,28,.4)" text-anchor="middle">{{ p.label }}</text>
+      <text x="{{ x }}" y="{{ h - 4 }}" font-size="10" class="chart-axis" text-anchor="middle">{{ p.label }}</text>
     {%- endfor -%}
   </svg>
 {%- endmacro -%}
@@ -37,7 +37,7 @@
   {%- set offset = [0.0] -%}
   <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
     <svg viewBox="0 0 180 180" style="width:{{ size }}px;height:{{ size }}px;flex:none">
-      <circle cx="{{ cx }}" cy="{{ cy }}" r="{{ r }}" fill="none" stroke="rgba(28,28,28,.06)" stroke-width="22"/>
+      <circle cx="{{ cx }}" cy="{{ cy }}" r="{{ r }}" fill="none" class="chart-track" stroke-width="22"/>
       {%- for it in items -%}
         {%- set frac = it.value / total -%}
         {%- set dash = circ * frac -%}
@@ -47,8 +47,8 @@
           stroke-linecap="butt"/>
         {%- set _ = offset.append(offset.pop() + dash) -%}
       {%- endfor -%}
-      <text x="{{ cx }}" y="{{ cy - 2 }}" font-size="22" font-weight="600" fill="var(--black)" text-anchor="middle">{{ total }}</text>
-      <text x="{{ cx }}" y="{{ cy + 16 }}" font-size="11" fill="rgba(28,28,28,.4)" text-anchor="middle">전체</text>
+      <text x="{{ cx }}" y="{{ cy - 2 }}" font-size="22" font-weight="600" class="chart-total" text-anchor="middle">{{ total }}</text>
+      <text x="{{ cx }}" y="{{ cy + 16 }}" font-size="11" class="chart-axis" text-anchor="middle">전체</text>
     </svg>
     <div style="flex:1;min-width:160px">
       {%- for it in items -%}
@@ -90,7 +90,7 @@
       {%- set fh = ih * p[key_b] / vmax -%}
       <rect x="{{ gx + slot/2 - bw - 3 }}" y="{{ pad + ih - dh }}" width="{{ bw }}" height="{{ dh }}" rx="4" fill="{{ color_a }}"/>
       <rect x="{{ gx + slot/2 + 3 }}" y="{{ pad + ih - fh }}" width="{{ bw }}" height="{{ fh }}" rx="4" fill="{{ color_b }}"/>
-      <text x="{{ gx + slot/2 }}" y="{{ h - 4 }}" font-size="10" fill="rgba(28,28,28,.4)" text-anchor="middle">{{ p.label }}</text>
+      <text x="{{ gx + slot/2 }}" y="{{ h - 4 }}" font-size="10" class="chart-axis" text-anchor="middle">{{ p.label }}</text>
     {%- endfor -%}
   </svg>
   <div class="legend">
@@ -109,7 +109,7 @@
   <svg viewBox="0 0 {{ w }} {{ h }}" class="chart" preserveAspectRatio="none" style="height:{{ height }}px">
     {%- for g in range(4) -%}
       {%- set gy = pad + ih * g / 3 -%}
-      <line x1="{{ pad }}" y1="{{ gy }}" x2="{{ w - pad }}" y2="{{ gy }}" stroke="rgba(28,28,28,.06)" stroke-width="1"/>
+      <line x1="{{ pad }}" y1="{{ gy }}" x2="{{ w - pad }}" y2="{{ gy }}" class="chart-grid" stroke-width="1"/>
     {%- endfor -%}
     {%- for key, _label, color in lines -%}
       {%- set pts = [] -%}
@@ -124,7 +124,7 @@
     {%- for p in series -%}
       {%- if loop.index0 % 5 == 0 or loop.last -%}
         {%- set x = pad + iw * loop.index0 / ns -%}
-        <text x="{{ x }}" y="{{ h - 4 }}" font-size="10" fill="rgba(28,28,28,.4)" text-anchor="middle">{{ p.label }}</text>
+        <text x="{{ x }}" y="{{ h - 4 }}" font-size="10" class="chart-axis" text-anchor="middle">{{ p.label }}</text>
       {%- endif -%}
     {%- endfor -%}
     {%- for p in series -%}

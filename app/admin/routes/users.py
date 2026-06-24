@@ -17,7 +17,7 @@ from app.admin.deps import AdminContext, require_admin, validate_csrf
 from app.admin.export import xlsx_response
 from app.admin.flash import email_flash_qs
 from app.admin.pagination import PageParams, paginate
-from app.core.deps import get_db, get_email_sender, get_redis, get_settings
+from app.core.deps import get_admin_notifier, get_db, get_email_sender, get_redis, get_settings
 from app.core.errors import DomainError, NotFoundError
 from app.models import Service, User, UserStatus
 from app.services import accounts as account_service
@@ -124,11 +124,13 @@ async def users_new(request: Request, ctx: AdminContext = Depends(require_admin)
 async def users_create(request: Request, ctx: AdminContext = Depends(require_admin),
                        db: AsyncSession = Depends(get_db),
                        email_sender=Depends(get_email_sender),
+                       admin_notifier=Depends(get_admin_notifier),
                        settings=Depends(get_settings)):
     """계정 생성 처리.
 
     생성 성공 시 계정 설정 메일 발송 여부를 flash 메시지로 전달한다.
     메일 발송 실패 여부에 따라 다른 flash 메시지가 표시된다(email_flash_qs 참조).
+    생성 성공 시 시스템 관리자 전원에게 '새 계정 생성' 알림 메일을 보낸다(best-effort).
     """
     await validate_csrf(request, ctx)
     form = await request.form()
@@ -137,12 +139,13 @@ async def users_create(request: Request, ctx: AdminContext = Depends(require_adm
             db, email_sender, email=str(form.get("email", "")),
             role=str(form.get("role", "")), service_ids=_parse_service_ids(form),
             phone=str(form.get("phone", "")),
-            base_url=settings.base_url, actor_user_id=ctx.user.id)
+            base_url=settings.base_url, actor_user_id=ctx.user.id,
+            admin_notifier=admin_notifier)
     except DomainError as exc:
         services = await registry.list_services(db)
         return render(request, "users/new.html", ctx=ctx, services=services,
                       error=exc.message)
-    qs = email_flash_qs(sent, "계정 설정 메일을 발송했습니다")
+    qs = email_flash_qs(sent, "계정 설정 메일 발송을 요청했습니다(대기열)")
     # 계정 생성 성공 → 완료 모달 + 이메일 발송 결과 토스트를 함께 전달
     return saved_redirect(f"/admin/users?{qs}", "저장되었습니다")
 
@@ -281,13 +284,14 @@ async def users_reset_password(user_id: uuid.UUID, request: Request,
                                redis: Redis = Depends(get_redis),
                                email_sender=Depends(get_email_sender),
                                settings=Depends(get_settings)):
-    """비밀번호 재설정 메일 발송.
+    """비밀번호 재설정 메일 발송(요청).
 
-    발송 성공/실패 여부를 email_flash_qs로 인코딩해 상세 페이지에 flash 토스트로 표시한다.
+    운영에서는 메일을 메모리 큐에 적재만 하고 즉시 반환한다(실제 전송·감사로그는 큐 워커가
+    순차 처리). 따라서 '발송을 요청했습니다(대기열)' 토스트를 표시하며, 화면을 차단하지 않는다.
     """
     await validate_csrf(request, ctx)
     sent = await issue_password_reset(db, email_sender, user_id=user_id,
                                       base_url=settings.base_url, actor_user_id=ctx.user.id,
                                       redis=redis)
-    qs = email_flash_qs(sent, "비밀번호 재설정 메일을 발송했습니다")
+    qs = email_flash_qs(sent, "비밀번호 재설정 메일 발송을 요청했습니다(대기열)")
     return RedirectResponse(f"/admin/users/{user_id}?{qs}", status_code=303)

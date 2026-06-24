@@ -7,6 +7,13 @@
   {# Pretendard 웹폰트 — Centurion Suite 디자인 적용 #}
   <link rel="stylesheet" crossorigin
         href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  {# 다크/라이트 테마 초기화 — CSS 적용 전에 data-theme를 정해 깜빡임(FOUC) 방지.
+     저장값 우선, 없으면 OS 선호(prefers-color-scheme)를 따른다. #}
+  <script>
+  (function(){try{var t=localStorage.getItem('admin-theme');
+    if(t!=='dark'&&t!=='light'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}
+    document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+  </script>
   {# ?v=mtime 캐시버스팅: CSS/JS 변경 시 브라우저가 새 파일을 받도록 함 #}
   <link rel="stylesheet" href="/static/admin.css?v={{ asset_v() }}">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -74,27 +81,20 @@
       <span>{% block crumb %}{{ self.title() }}{% endblock %}</span>
     </nav>
     <span class="spacer"></span>
-    {% set guide_map = {
-      '/admin': 'dashboard',
-      '/admin/subscriptions': 'subscriptions',
-      '/admin/payments': 'payments',
-      '/admin/settlement': 'settlement',
-      '/admin/plans': 'plans',
-      '/admin/services': 'services',
-      '/admin/users': 'audit',
-      '/admin/audit': 'audit'
-    } %}
-    {% set current_guide = 'dashboard' %}
-    {% for p_prefix, g_id in guide_map.items() %}
-      {% if path.startswith(p_prefix) %}{% set current_guide = g_id %}{% endif %}
-    {% endfor %}
-    <a href="/admin/guide/{{ current_guide }}" class="iconbtn" title="이 페이지 도움말" style="color:inherit">
-      <span data-lucide="help-circle"></span>
+    {# 매뉴얼 링크 — 새 창(탭)으로 사용·개발 매뉴얼 사이트를 연다 #}
+    <a href="/user-manual/" target="_blank" rel="noopener" class="iconbtn"
+       title="매뉴얼 열기(새 창)" style="color:inherit">
+      <span data-lucide="book-open"></span>
     </a>
+    {# 다크/라이트 모드 토글 — 클릭 시 즉시 전환(아이콘은 CSS가 테마에 따라 표시) #}
+    <button class="iconbtn theme-toggle" type="button" id="theme-toggle"
+            aria-label="다크/라이트 모드 전환" title="다크/라이트 모드">
+      <span class="ic-moon"><span data-lucide="moon"></span></span>
+      <span class="ic-sun"><span data-lucide="sun"></span></span>
+    </button>
     <label class="compact-toggle" style="margin-right: 8px;">
       <input type="checkbox" id="compact-view-checkbox"> 컴팩트 뷰
     </label>
-    <button class="iconbtn" type="button" aria-label="알림"><span data-lucide="bell"></span></button>
   </header>
   {% endif %}
   <div style="flex:1;display:flex;min-height:0">

@@ -58,6 +58,11 @@ def get_notifier(request: Request) -> "ServiceNotifier":
     return request.app.state.notifier
 
 
+def get_admin_notifier(request: Request) -> "AdminNotifier":
+    """시스템 관리자 이벤트 알림(메일) 발송기를 반환한다(Email/Recording 주입)."""
+    return request.app.state.admin_notifier
+
+
 def get_client_ip(request: Request, settings: Settings) -> str:
     """클라이언트 IP를 판별한다. (감사 Phase 1 — 보안 M-5 강화)
 

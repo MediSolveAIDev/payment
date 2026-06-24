@@ -187,7 +187,8 @@ async def create_plan(db: AsyncSession, *, service_id: uuid.UUID, name: str, pri
                       auto_renew: bool = True,            # 자동결제 여부(요청 013): False=첫 주기 후 만료
                       extra_info: dict | None = None,     # 추가정보(요청 013): 서비스 측 설명 key/value
                       environment: str | None = None,     # MINUTE 비운영 가드용(None=현재 실행 환경, Task 3)
-                      actor_user_id: uuid.UUID | None = None) -> Plan:
+                      actor_user_id: uuid.UUID | None = None,
+                      admin_notifier=None) -> Plan:
     """요금제 생성.
 
     흐름:
@@ -235,6 +236,9 @@ async def create_plan(db: AsyncSession, *, service_id: uuid.UUID, name: str, pri
                                "trial_days": plan.trial_days,
                                "auto_renew": auto_renew})  # auto_renew를 감사 로그에 기록(요청 013)
     await db.commit()
+    # 시스템 관리자 전원에게 '새 요금제 등록' 알림 메일(best-effort, 커밋 후라 실패해도 무해)
+    if admin_notifier is not None:
+        await admin_notifier.plan_created(db, plan=plan, actor_user_id=actor_user_id)
     return plan
 
 

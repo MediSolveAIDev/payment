@@ -218,3 +218,60 @@ return RedirectResponse(
 3. **테스트는 RecordingServiceNotifier로** — 실제 네트워크 없이 발송 내역을 검사한다(`service_notify.py:153`). URL 미등록 서비스는 기록하지 않으므로 테스트에서 URL을 먼저 세팅한다.
 4. **best-effort를 깨지 말 것** — 발송 경로에서 예외를 다시 던지면 결제/구독이 함께 실패한다. `send`의 광범위한 `except`(`# noqa: BLE001`)는 의도된 것이다.
 5. **HMAC 시크릿 재사용** — 알림 서명은 별도 시크릿이 아니라 서비스 API와 같은 `hmac_secret_encrypted`를 쓴다. 시크릿 로테이션 시 알림 검증도 함께 영향받는 점을 기억한다.
+
+## 17.10 관리자 이벤트 알림 메일(시스템 관리자)
+
+서비스가 등록한 웹훅(위 17.1~17.9)과 별개로, **운영 이벤트가 생기면 시스템 관리자에게 메일**을 보낸다. 외부 서비스가 아니라 **사내 운영자**가 받는 알림이다.
+
+### 대상 이벤트·수신자
+
+| 이벤트 | 발생 지점 | 수신자 |
+| --- | --- | --- |
+| `account.created` (새 관리자 계정 생성) | `app/services/accounts.py` `create_account` | 활성(ACTIVE) `SYSTEM_ADMIN` 전원 |
+| `service.created` (새 서비스 등록) | `app/services/registry.py` `register_service` | 〃 |
+| `plan.created` (새 구독 요금제 등록) | `app/services/plans.py` `create_plan` | 〃 |
+| `subscription.created` (새 구독 생성 — **모든 구독**, 외부 API 포함) | `app/services/subscriptions.py` `create_subscription` | 〃 |
+
+- 수신자는 DB에서 `role=SYSTEM_ADMIN AND status=ACTIVE`인 계정 이메일을 조회한다(`admin_notify._active_admin_emails`). 활성 관리자가 없으면 발송을 생략한다.
+- 메일은 **HTML 서식**(상세 표) + 평문 대체 본문으로 보낸다(`EmailSender.send(..., html=...)`). 각 이벤트별로 핵심 항목(역할·담당 서비스·취소 정책·요금제 가격/주기/할인·청구 금액·구독 기간 등)을 표로 정리한다.
+
+### 발송 성질 — best-effort
+
+- 본 처리(계정·서비스·구독 생성)가 **커밋된 뒤** 호출하므로, 메일 발송이 실패해도 트랜잭션은 영향받지 않는다.
+- 수신자 조회는 호출자의 DB 세션으로 즉시 수행하고, 각 수신처 메일을 **이메일 발송 큐(§17.11)** 에 적재한다. 적재는 즉시 반환되므로 API 응답이 SMTP를 기다리지 않는다(`EmailAdminNotifier._dispatch`).
+
+### 관련 파일
+
+| 파일 | 역할 |
+| --- | --- |
+| `app/notifications/admin_notify.py` | `AdminNotifier` 프로토콜 · `EmailAdminNotifier`(운영) · `RecordingAdminNotifier`(테스트) · HTML 템플릿 |
+| `app/notifications/email.py` | `EmailSender.send(to, subject, body, html=None)` — `html` 인자로 멀티파트(text/plain+text/html) 발송 |
+| `app/main.py` · `app/core/deps.py` | `app.state.admin_notifier` 등록 · `get_admin_notifier` 의존성(테스트는 Recording 주입) |
+
+> 유지보수: 새 관리자 이벤트를 추가하려면 `admin_notify.py`에 메서드·템플릿을 추가하고, 해당 도메인 서비스 함수가 커밋 후 `admin_notifier.<event>(...)`를 호출하게 한다. 테스트는 `RecordingAdminNotifier`로 호출 내역을 검사한다(실제 메일 없음).
+
+## 17.11 이메일 발송 큐(메모리·순차)·감사 로그
+
+모든 이메일(계정 설정 메일, 비밀번호 재설정 메일, 관리자 이벤트 알림)은 **메모리 큐에 먼저 적재**되고 **한 건씩 순서대로(FIFO)** 발송된다.
+
+### 동작
+
+- `QueuedEmailSender.send(...)`는 실제 발송 대신 **메모리 큐(asyncio.Queue)에 적재만 하고 즉시 반환**한다 → 요청 핸들러(계정 생성·비밀번호 재설정 등)는 SMTP 완료를 기다리지 않는다.
+- **단일 워커 태스크**가 큐에서 한 건씩 꺼내 순차 발송한다(동시 발송 없음 → 순서 보장).
+- 운영에서만 큐를 사용한다. 테스트는 `RecordingEmailSender`를 직접 주입해 동기 검증한다(큐 미경유).
+
+### 감사 로그(필수)
+
+- 워커는 **발송할 때마다 감사 로그를 1건 남긴다** — 성공은 `email.sent`, 실패는 `email.failed`.
+- 항목: `actor_type=SYSTEM`, `target_type=email`, `target_id=<수신 이메일>`, `detail={to, subject, ok}`. [감사 로그 화면](09-admin-audit.md)에서 조회한다.
+- 도메인 감사(`account.create`, `user.password_reset_issued` 등)와 별개로 **이메일 전송 계층의 결과**를 별도로 추적한다.
+
+### 관련 파일
+
+| 파일 | 역할 |
+| --- | --- |
+| `app/notifications/email_queue.py` | `EmailQueue`(FIFO·단일 순차 워커·발송 감사로그) · `QueuedEmailSender`(적재 어댑터) |
+| `app/notifications/email_templates.py` | 트랜잭션 메일 HTML 템플릿(`render_action_email`) — CTA 버튼·브랜딩, 인라인 스타일. 비밀번호 재설정 메일이 사용 |
+| `app/main.py` | lifespan에서 `EmailQueue` 기동/정상 종료 · `app.state.email_sender = QueuedEmailSender(...)` |
+
+> 종료(shutdown) 시 워커는 적재된 메일을 (타임아웃 내) 모두 비우고 종료한다. 발송 실패는 핵심 처리와 분리되어 로깅·감사기록만 하고 흡수한다(워커는 어떤 예외에도 멈추지 않는다).

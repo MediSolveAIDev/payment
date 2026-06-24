@@ -41,13 +41,18 @@ def test_email_flash_qs_failure():
     assert qs == f"flash={quote(EMAIL_FAIL_MSG)}&flash_type=error"
 
 
-async def test_reset_password_success_flash(client, db, redis_client):
+async def test_reset_password_success_flash(client, db, redis_client, email_sender):
     csrf = await _admin(client, db, redis_client)
     target, _ = await create_user(db, role="SYSTEM_ADMIN")
     resp = await client.post(f"/admin/users/{target.id}/reset-password",
                              data={"csrf_token": csrf})
     assert resp.status_code == 303
-    assert quote("비밀번호 재설정 메일을 발송했습니다") in resp.headers["location"]
+    assert quote("비밀번호 재설정 메일 발송을 요청했습니다(대기열)") in resp.headers["location"]
+    # 재설정 메일은 CTA 버튼이 있는 HTML 메일(평문 대체 본문 동반)
+    msg = email_sender.sent[-1]
+    assert msg["to"] == target.email
+    assert msg["html"] and "비밀번호 재설정하기" in msg["html"]
+    assert "setup-password?token=" in msg["html"]
 
 
 async def test_reset_password_failure_flash(client, db, redis_client, email_sender):
@@ -72,7 +77,7 @@ async def test_create_account_success_flash(client, db, redis_client, cipher):
     location = resp.headers.get("location", "")
     # urlencode(+) / quote(%20) 방식 모두 대응: unquote_plus로 디코딩 후 확인
     decoded = unquote_plus(location)
-    assert "계정 설정 메일을 발송했습니다" in decoded
+    assert "계정 설정 메일 발송을 요청했습니다(대기열)" in decoded
     assert "saved" in location   # 완료 모달 트리거도 함께 전달
 
 

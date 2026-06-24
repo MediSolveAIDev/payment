@@ -22,7 +22,9 @@ from app.api.v1 import router as api_v1_router
 from app.core.config import Settings
 from app.core.crypto import AesGcmCipher
 from app.core.db import create_engine, create_session_factory
+from app.notifications.admin_notify import AdminNotifier, EmailAdminNotifier
 from app.notifications.email import ConsoleEmailSender, EmailSender, GmailEmailSender
+from app.notifications.email_queue import EmailQueue, QueuedEmailSender
 from app.notifications.service_notify import HttpServiceNotifier, ServiceNotifier
 from app.scheduler.runner import start_scheduler
 from app.toss.client import TossClient
@@ -212,6 +214,7 @@ def create_app(settings: Settings | None = None, *,
                toss_client: TossClient | None = None,
                email_sender: EmailSender | None = None,
                notifier: "ServiceNotifier | None" = None,
+               admin_notifier: "AdminNotifier | None" = None,
                engine: AsyncEngine | None = None) -> FastAPI:
     app_settings = settings or Settings()
     own_engine = engine is None
@@ -238,9 +241,21 @@ def create_app(settings: Settings | None = None, *,
         app.state.toss_provider = TossClientProvider(
             app.state.cipher, app_settings.toss_api_base_url,
             override_client=toss_client)
-        app.state.email_sender = email_sender or _default_email_sender(app_settings)
+        # 이메일 발송 — 테스트가 sender를 주입하면 그대로(동기 검증), 운영은 메모리 큐 경유.
+        # 운영: 실 발송기(Gmail/Console)를 EmailQueue가 감싸 한 건씩 순차 발송 + 감사로그.
+        #       QueuedEmailSender.send()는 큐 적재 후 즉시 반환하므로 요청이 발송을 기다리지 않는다.
+        if email_sender is not None:
+            app.state.email_sender = email_sender   # 테스트 주입(Recording 등) — 큐 미사용
+            app.state.email_queue = None
+        else:
+            app.state.email_queue = EmailQueue(
+                _default_email_sender(app_settings), app.state.session_factory)
+            app.state.email_queue.start()
+            app.state.email_sender = QueuedEmailSender(app.state.email_queue)
         # 서비스 알림 발송기(아웃고잉 웹훅) — 기본은 실 전송(HTTP), 테스트는 Recording 주입.
         app.state.notifier = notifier or HttpServiceNotifier(app.state.cipher)
+        # 관리자 이벤트 알림(메일) — 기본은 EmailAdminNotifier(메일발송기 재사용), 테스트는 Recording 주입.
+        app.state.admin_notifier = admin_notifier or EmailAdminNotifier(app.state.email_sender)
         scheduler = start_scheduler(app) if app_settings.scheduler_enabled else None
         yield
         # shutdown(wait=False)는 실행 중인 잡에 CancelledError를 주입한다.
@@ -248,6 +263,9 @@ def create_app(settings: Settings | None = None, *,
         # 잡 중도 취소 시 PENDING으로 남은 결제는 다음 주기 정산 스윕이 확정.
         if scheduler is not None:
             scheduler.shutdown(wait=False)
+        # 이메일 큐 워커 정상 종료 — 적재된 메일을 비우고(타임아웃 내) 종료
+        if getattr(app.state, "email_queue", None) is not None:
+            await app.state.email_queue.stop()
         await app.state.redis.aclose()
         # provider 캐시 내 모든 HttpTossClient를 정리한다(override는 provider가 소유하지 않으므로 건드리지 않음).
         # T7 컷오버: app.state.toss(전역 HttpTossClient) 제거 — aclose 블록도 삭제.

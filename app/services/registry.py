@@ -102,7 +102,8 @@ async def register_service(db: AsyncSession, cipher: AesGcmCipher,
                            cancellation_enabled: bool = True,
                            cancellation_fee_percent: int = 0,
                            toss_secret_key: str | None = None,   # 서비스별 토스 시크릿(선택; AES 암호화 저장)
-                           actor_user_id: uuid.UUID | None = None) -> IssuedCredentials:
+                           actor_user_id: uuid.UUID | None = None,
+                           admin_notifier=None) -> IssuedCredentials:
     """서비스 등록 + 자격증명 발급.
 
     흐름:
@@ -183,6 +184,11 @@ async def register_service(db: AsyncSession, cipher: AesGcmCipher,
                            target_id=str(service.id),
                            detail={"service_name": service.name})
     await db.commit()
+    # 시스템 관리자 전원에게 '새 서비스 등록' 알림 메일(best-effort, 커밋 후라 실패해도 무해)
+    if admin_notifier is not None:
+        await admin_notifier.service_created(
+            db, service=service, manager_emails=[u.email for u in managers],
+            actor_user_id=actor_user_id)
     return IssuedCredentials(service=service, api_key=api_key, hmac_secret=hmac_secret)
 
 

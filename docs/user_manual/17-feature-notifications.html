@@ -412,6 +412,115 @@ return RedirectResponse(
 <li><strong>best-effort를 깨지 말 것</strong> — 발송 경로에서 예외를 다시 던지면 결제/구독이 함께 실패한다. <code>send</code>의 광범위한 <code>except</code>(<code># noqa: BLE001</code>)는 의도된 것이다.</li>
 <li><strong>HMAC 시크릿 재사용</strong> — 알림 서명은 별도 시크릿이 아니라 서비스 API와 같은 <code>hmac_secret_encrypted</code>를 쓴다. 시크릿 로테이션 시 알림 검증도 함께 영향받는 점을 기억한다.</li>
 </ol>
+<h2 id="1710">17.10 관리자 이벤트 알림 메일(시스템 관리자)</h2>
+<p>서비스가 등록한 웹훅(위 17.1~17.9)과 별개로, <strong>운영 이벤트가 생기면 시스템 관리자에게 메일</strong>을 보낸다. 외부 서비스가 아니라 <strong>사내 운영자</strong>가 받는 알림이다.</p>
+<h3 id="_9">대상 이벤트·수신자</h3>
+<table>
+<thead>
+<tr>
+<th>이벤트</th>
+<th>발생 지점</th>
+<th>수신자</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>account.created</code> (새 관리자 계정 생성)</td>
+<td><code>app/services/accounts.py</code> <code>create_account</code></td>
+<td>활성(ACTIVE) <code>SYSTEM_ADMIN</code> 전원</td>
+</tr>
+<tr>
+<td><code>service.created</code> (새 서비스 등록)</td>
+<td><code>app/services/registry.py</code> <code>register_service</code></td>
+<td>〃</td>
+</tr>
+<tr>
+<td><code>plan.created</code> (새 구독 요금제 등록)</td>
+<td><code>app/services/plans.py</code> <code>create_plan</code></td>
+<td>〃</td>
+</tr>
+<tr>
+<td><code>subscription.created</code> (새 구독 생성 — <strong>모든 구독</strong>, 외부 API 포함)</td>
+<td><code>app/services/subscriptions.py</code> <code>create_subscription</code></td>
+<td>〃</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>수신자는 DB에서 <code>role=SYSTEM_ADMIN AND status=ACTIVE</code>인 계정 이메일을 조회한다(<code>admin_notify._active_admin_emails</code>). 활성 관리자가 없으면 발송을 생략한다.</li>
+<li>메일은 <strong>HTML 서식</strong>(상세 표) + 평문 대체 본문으로 보낸다(<code>EmailSender.send(..., html=...)</code>). 각 이벤트별로 핵심 항목(역할·담당 서비스·취소 정책·요금제 가격/주기/할인·청구 금액·구독 기간 등)을 표로 정리한다.</li>
+</ul>
+<h3 id="best-effort">발송 성질 — best-effort</h3>
+<ul>
+<li>본 처리(계정·서비스·구독 생성)가 <strong>커밋된 뒤</strong> 호출하므로, 메일 발송이 실패해도 트랜잭션은 영향받지 않는다.</li>
+<li>수신자 조회는 호출자의 DB 세션으로 즉시 수행하고, 각 수신처 메일을 <strong>이메일 발송 큐(§17.11)</strong> 에 적재한다. 적재는 즉시 반환되므로 API 응답이 SMTP를 기다리지 않는다(<code>EmailAdminNotifier._dispatch</code>).</li>
+</ul>
+<h3 id="_10">관련 파일</h3>
+<table>
+<thead>
+<tr>
+<th>파일</th>
+<th>역할</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>app/notifications/admin_notify.py</code></td>
+<td><code>AdminNotifier</code> 프로토콜 · <code>EmailAdminNotifier</code>(운영) · <code>RecordingAdminNotifier</code>(테스트) · HTML 템플릿</td>
+</tr>
+<tr>
+<td><code>app/notifications/email.py</code></td>
+<td><code>EmailSender.send(to, subject, body, html=None)</code> — <code>html</code> 인자로 멀티파트(text/plain+text/html) 발송</td>
+</tr>
+<tr>
+<td><code>app/main.py</code> · <code>app/core/deps.py</code></td>
+<td><code>app.state.admin_notifier</code> 등록 · <code>get_admin_notifier</code> 의존성(테스트는 Recording 주입)</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>유지보수: 새 관리자 이벤트를 추가하려면 <code>admin_notify.py</code>에 메서드·템플릿을 추가하고, 해당 도메인 서비스 함수가 커밋 후 <code>admin_notifier.&lt;event&gt;(...)</code>를 호출하게 한다. 테스트는 <code>RecordingAdminNotifier</code>로 호출 내역을 검사한다(실제 메일 없음).</p>
+</div></blockquote>
+<h2 id="1711">17.11 이메일 발송 큐(메모리·순차)·감사 로그</h2>
+<p>모든 이메일(계정 설정 메일, 비밀번호 재설정 메일, 관리자 이벤트 알림)은 <strong>메모리 큐에 먼저 적재</strong>되고 <strong>한 건씩 순서대로(FIFO)</strong> 발송된다.</p>
+<h3 id="_11">동작</h3>
+<ul>
+<li><code>QueuedEmailSender.send(...)</code>는 실제 발송 대신 <strong>메모리 큐(asyncio.Queue)에 적재만 하고 즉시 반환</strong>한다 → 요청 핸들러(계정 생성·비밀번호 재설정 등)는 SMTP 완료를 기다리지 않는다.</li>
+<li><strong>단일 워커 태스크</strong>가 큐에서 한 건씩 꺼내 순차 발송한다(동시 발송 없음 → 순서 보장).</li>
+<li>운영에서만 큐를 사용한다. 테스트는 <code>RecordingEmailSender</code>를 직접 주입해 동기 검증한다(큐 미경유).</li>
+</ul>
+<h3 id="_12">감사 로그(필수)</h3>
+<ul>
+<li>워커는 <strong>발송할 때마다 감사 로그를 1건 남긴다</strong> — 성공은 <code>email.sent</code>, 실패는 <code>email.failed</code>.</li>
+<li>항목: <code>actor_type=SYSTEM</code>, <code>target_type=email</code>, <code>target_id=&lt;수신 이메일&gt;</code>, <code>detail={to, subject, ok}</code>. <a href="09-admin-audit.html">감사 로그 화면</a>에서 조회한다.</li>
+<li>도메인 감사(<code>account.create</code>, <code>user.password_reset_issued</code> 등)와 별개로 <strong>이메일 전송 계층의 결과</strong>를 별도로 추적한다.</li>
+</ul>
+<h3 id="_13">관련 파일</h3>
+<table>
+<thead>
+<tr>
+<th>파일</th>
+<th>역할</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>app/notifications/email_queue.py</code></td>
+<td><code>EmailQueue</code>(FIFO·단일 순차 워커·발송 감사로그) · <code>QueuedEmailSender</code>(적재 어댑터)</td>
+</tr>
+<tr>
+<td><code>app/notifications/email_templates.py</code></td>
+<td>트랜잭션 메일 HTML 템플릿(<code>render_action_email</code>) — CTA 버튼·브랜딩, 인라인 스타일. 비밀번호 재설정 메일이 사용</td>
+</tr>
+<tr>
+<td><code>app/main.py</code></td>
+<td>lifespan에서 <code>EmailQueue</code> 기동/정상 종료 · <code>app.state.email_sender = QueuedEmailSender(...)</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote class="cal note"><span class="cal-i">💬</span><div class="cal-b">
+<p>종료(shutdown) 시 워커는 적재된 메일을 (타임아웃 내) 모두 비우고 종료한다. 발송 실패는 핵심 처리와 분리되어 로깅·감사기록만 하고 흡수한다(워커는 어떤 예외에도 멈추지 않는다).</p>
+</div></blockquote>
     </div>
     <div class="pager"><a class="pg prev" href="16-feature-payment.html"><small>← 이전</small><b>16. 일반결제·취소·정산 기능</b></a><a class="pg next" href="18-admin-screens.html"><small>다음 →</small><b>18. 어드민 화면별 설명</b></a></div>
   </article>
@@ -437,6 +546,14 @@ return RedirectResponse(
 <a class="toc-h3" href="#_8">서명 검증은 운영에서 필수</a>
 <a class="toc-h2" href="#178">17.8 제약·에러 처리</a>
 <a class="toc-h2" href="#179">17.9 유지보수 팁</a>
+<a class="toc-h2" href="#1710">17.10 관리자 이벤트 알림 메일(시스템 관리자)</a>
+<a class="toc-h3" href="#_9">대상 이벤트·수신자</a>
+<a class="toc-h3" href="#best-effort">발송 성질 — best-effort</a>
+<a class="toc-h3" href="#_10">관련 파일</a>
+<a class="toc-h2" href="#1711">17.11 이메일 발송 큐(메모리·순차)·감사 로그</a>
+<a class="toc-h3" href="#_11">동작</a>
+<a class="toc-h3" href="#_12">감사 로그(필수)</a>
+<a class="toc-h3" href="#_13">관련 파일</a>
   </aside>
 </main>
 <button class="top" id="topBtn" title="맨 위로" aria-label="맨 위로">↑</button>

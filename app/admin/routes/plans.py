@@ -18,7 +18,7 @@ from app.admin.filters import plan_name_options, service_options as build_servic
 from app.admin.export import xlsx_response
 from app.admin.pagination import PageParams, paginate
 from app.core.config import Settings
-from app.core.deps import get_db, get_notifier, get_settings
+from app.core.deps import get_admin_notifier, get_db, get_notifier, get_settings
 from app.core.errors import DomainError, InputValidationError, NotFoundError, PermissionDeniedError
 from app.models import Plan, Service, UserRole
 from app.services import plans as plan_service
@@ -245,7 +245,8 @@ async def plans_new(request: Request, ctx: AdminContext = Depends(require_manage
 @router.post("/plans")
 async def plans_create(request: Request, ctx: AdminContext = Depends(require_manager),
                        db: AsyncSession = Depends(get_db),
-                       settings: Settings = Depends(get_settings)):
+                       settings: Settings = Depends(get_settings),
+                       admin_notifier=Depends(get_admin_notifier)):
     """담당자가 본인의 주 서비스에 요금제 생성(기존 플로우)."""
     await validate_csrf(request, ctx)
     form = await request.form()
@@ -262,7 +263,7 @@ async def plans_create(request: Request, ctx: AdminContext = Depends(require_man
             cycle_days=int(cycle_days_raw) if cycle_days_raw else None,
             cycle_minutes=int(cycle_minutes_raw) if cycle_minutes_raw else None,
             environment=settings.environment,  # 비운영 가드 전달(Task 6)
-            actor_user_id=ctx.user.id, **fields)
+            actor_user_id=ctx.user.id, admin_notifier=admin_notifier, **fields)
     except DomainError as exc:
         # 에러 재렌더 시 is_prod 유지 — 분 옵션이 사라지지 않게(Task 6)
         return render(request, "plans/form.html", ctx=ctx, plan=None, error=exc.message,
@@ -299,7 +300,8 @@ async def service_plan_new(service_id: uuid.UUID, request: Request,
 async def service_plan_create(service_id: uuid.UUID, request: Request,
                               ctx: AdminContext = Depends(require_any),
                               db: AsyncSession = Depends(get_db),
-                              settings: Settings = Depends(get_settings)):
+                              settings: Settings = Depends(get_settings),
+                              admin_notifier=Depends(get_admin_notifier)):
     """서비스 상세에서 요금제 생성(관리자 또는 해당 서비스 담당자)."""
     if not _can_manage(ctx, service_id):
         raise PermissionDeniedError("권한이 없습니다")
@@ -318,7 +320,7 @@ async def service_plan_create(service_id: uuid.UUID, request: Request,
             cycle_days=int(cycle_days_raw) if cycle_days_raw else None,
             cycle_minutes=int(cycle_minutes_raw) if cycle_minutes_raw else None,
             environment=settings.environment,  # 비운영 가드 전달(Task 6)
-            actor_user_id=ctx.user.id, **fields)
+            actor_user_id=ctx.user.id, admin_notifier=admin_notifier, **fields)
     except DomainError as exc:
         service = await db.get(Service, service_id)
         # 에러 재렌더 시 is_prod 유지 — 분 옵션이 사라지지 않게(Task 6)

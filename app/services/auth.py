@@ -39,6 +39,7 @@ from app.core.config import Settings, default_settings
 from app.core.errors import AuthenticationError, ConflictError, InputValidationError
 from app.core.security import hash_password, sha256_hex, verify_password
 from app.models import PasswordSetupToken, User, UserRole, UserStatus
+from app.notifications.email_templates import render_action_email
 from app.services.app_settings import get_global_settings
 from app.services.audit import record_audit
 
@@ -307,7 +308,14 @@ async def issue_password_reset(db: AsyncSession, email_sender, *, user_id,
     await db.commit()
     if redis is not None:
         await destroy_user_sessions(redis, user.id)
+    # UI/UX 적용 — 평문 대신 CTA 버튼·브랜딩이 있는 HTML 메일(평문 대체 본문 동반).
+    reset_url = f"{base_url}/admin/setup-password?token={token}"
+    text, html = render_action_email(
+        title="비밀번호 재설정 안내",
+        intro="관리자 콘솔 계정의 비밀번호 재설정이 요청되었습니다. "
+              "아래 버튼을 눌러 새 비밀번호를 설정해 주세요.",
+        button_label="비밀번호 재설정하기",
+        button_url=reset_url,
+        note="이 링크는 발송 후 48시간 동안만 유효합니다.")
     return await email_sender.send(
-        user.email, "[결제시스템] 비밀번호 재설정 안내",
-        f"아래 링크에서 비밀번호를 다시 설정해주세요 (48시간 유효):\n"
-        f"{base_url}/admin/setup-password?token={token}")
+        user.email, "[결제시스템] 비밀번호 재설정 안내", text, html=html)

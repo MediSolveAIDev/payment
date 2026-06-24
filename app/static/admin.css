@@ -483,3 +483,52 @@ body.auth .content { max-width: none; padding: 0; }
   font: var(--t-small); line-height: 1.45; border-radius: var(--radius-sm);
   box-shadow: var(--shadow-pop); pointer-events: none;
 }
+
+/* ==========================================================================
+   Dark Mode — data-theme="dark" 토큰 오버라이드
+   컴포넌트 규칙이 전부 var(--*)를 참조하므로 토큰만 바꾸면 화면 전체가 전환된다.
+   (specificity: :root[data-theme="dark"] > :root 라 소스 순서와 무관하게 적용)
+   ========================================================================== */
+:root[data-theme="dark"] {
+  color-scheme: dark;                 /* 네이티브 컨트롤·스크롤바·날짜선택 다크 렌더 */
+  /* 표면 — 깊은 쿨 블랙 페이지 위에 살짝 떠 보이는 카드(고급스러운 단계감) */
+  --color-bg-page: #0d0f14; --bg-page: #0d0f14;
+  --color-bg-subtle: #12141b; --surface-1: #171a22; --surface-2: #171a22; --surface-3: #1e222c;
+  --color-bg-muted: #1e222c;
+  --white: #171a22;                   /* 카드/패널/입력 표면 */
+  /* 텍스트 — 또렷하지만 눈부시지 않은 오프화이트 계조 */
+  --color-text-primary: #ECEEF3; --color-text-secondary: #B3BBC9;
+  --color-text-disabled: #6B7283; --color-text-placeholder: #6B7283;
+  --black: #ECEEF3; --black-80: #B3BBC9; --black-40: #79808F;
+  /* 보더·그레이 스케일 — 은은한 라인(과하지 않게) */
+  --color-border-default: #242936; --border: #242936; --border-strong: #313747;
+  --black-20: #313747; --black-10: #242936; --black-5: #1e222c; --black-4: #171a22;
+  --gray-100: #171a22; --gray-200: #1e222c; --gray-300: #242936; --gray-400: #313747;
+  --gray-500: #475063; --gray-600: #79808F; --gray-700: #B3BBC9; --gray-800: #ECEEF3;
+  /* 강조색 — 다크에서 살짝 밝혀 또렷하고 고급스러운 블루 */
+  --color-primary: #6E8BFF; --accent-indigo: #6E8BFF; --accent-mint: #6E8BFF; --accent-green: #6E8BFF;
+  --brand: #6E8BFF; --status-online: #6E8BFF; --status-info: #6E8BFF; --color-border-focus: #6E8BFF;
+  /* 브랜드/상태 틴트 — 깊은 네이비/딥톤 배경 + 강조색 텍스트 */
+  --color-primary-100: #19203a; --color-primary-300: #2a3a66;
+  --color-red-100: #2c1a1e; --color-red-300: #3f2127;
+  --color-purple-100: #221a31;
+  --card-lavender: #19203a; --card-blue: #19203a; --card-mint: #19203a; --card-cyan: #102029;
+  /* 그림자 — 깊고 부드럽게(입체감) */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.5); --shadow-pop: 0 14px 40px rgba(0,0,0,.62);
+  /* 차트 — 축 라벨/격자/도넛 트랙(다크에서 보이도록) */
+  --chart-ink: rgba(236,238,243,.55); --chart-grid: rgba(236,238,243,.09);
+}
+
+/* 테마 토글 버튼 — 라이트면 달(다크로), 다크면 해(라이트로) 아이콘 노출.
+   lucide가 data-lucide span을 svg로 치환해도, 바깥 래퍼(.ic-*)는 건드리지 않아 안전하다. */
+.theme-toggle .ic-sun, .theme-toggle .ic-moon { display: inline-flex; align-items: center; }
+.theme-toggle .ic-sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .ic-sun { display: inline-flex; }
+:root[data-theme="dark"] .theme-toggle .ic-moon { display: none; }
+
+/* 차트 잉크/격자 — 테마 변수로 칠해 다크에서도 라벨·격자·도넛 트랙이 보인다.
+   var() 폴백값이 라이트 기본색(≈ 기존 rgba(28,28,28,...))이라 라이트 모드는 그대로 유지된다.
+   (클래스 CSS는 SVG presentation 속성보다 우선하므로 안전하게 덮어쓴다) */
+.chart-axis { fill: var(--chart-ink, rgba(28,28,28,.45)); }
+.chart-grid, .chart-track { stroke: var(--chart-grid, rgba(28,28,28,.07)); }
+.chart-total { fill: var(--black); }

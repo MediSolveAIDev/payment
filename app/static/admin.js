@@ -428,4 +428,20 @@
       }
     });
   }
+
+  // --- 다크/라이트 테마 토글 ---
+  // 초기 테마는 <head>의 인라인 스크립트가 이미 적용(깜빡임 방지). 여기선 클릭 전환만 담당.
+  // 아이콘(해/달) 표시는 CSS가 data-theme에 따라 전환하므로 JS 아이콘 재렌더가 필요 없다.
+  function setTheme(t) {
+    document.documentElement.setAttribute("data-theme", t);
+    try { localStorage.setItem("admin-theme", t); } catch (e) { /* 사파리 프라이빗 등 */ }
+  }
+  document.addEventListener("DOMContentLoaded", function () {
+    var btn = document.getElementById("theme-toggle");
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      var cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+      setTheme(cur === "dark" ? "light" : "dark");   // 선택할 때마다 즉시 전환
+    });
+  });
 })();

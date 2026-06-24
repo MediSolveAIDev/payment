@@ -32,16 +32,23 @@ class EmailSender(Protocol):
     send()는 발송 성공 시 True, 실패(예외 포함) 시 False를 반환한다.
     구현체는 예외를 외부로 전파하지 않아야 하며, 발송 실패가 호출 측의
     트랜잭션(결제, 계정 생성 등)을 중단시키지 않도록 한다.
+
+    html이 주어지면 멀티파트(text/plain + text/html) 메일로 보낸다 — body는
+    HTML 미지원 클라이언트용 대체(fallback) 본문이다. html=None이면 평문만 보낸다.
     """
 
-    async def send(self, to: str, subject: str, body: str) -> bool: ...
+    async def send(self, to: str, subject: str, body: str,
+                   html: str | None = None) -> bool: ...
 
 
 class ConsoleEmailSender:
     """개발/로컬용 — 콘솔(로그)로 출력. 운영 SMTP 구현체는 추후 교체."""
 
-    async def send(self, to: str, subject: str, body: str) -> bool:
-        logger.info("EMAIL to=%s subject=%s\n%s", to, subject, body)
+    async def send(self, to: str, subject: str, body: str,
+                   html: str | None = None) -> bool:
+        # html이 있어도 콘솔에는 평문 본문만 출력(가독성). 멀티파트 발송은 운영 구현체에서.
+        logger.info("EMAIL to=%s subject=%s html=%s\n%s",
+                    to, subject, bool(html), body)
         return True
 
 
@@ -60,13 +67,20 @@ class GmailEmailSender:
         self._password = password
         self._from_name = from_name
 
-    def _send_sync(self, to: str, subject: str, body: str) -> None:
-        """동기 SMTP 발송. asyncio.to_thread에서 별도 스레드로 실행된다."""
+    def _send_sync(self, to: str, subject: str, body: str,
+                   html: str | None = None) -> None:
+        """동기 SMTP 발송. asyncio.to_thread에서 별도 스레드로 실행된다.
+
+        html이 있으면 set_content(평문) 후 add_alternative(html, subtype="html")로
+        멀티파트(text/plain + text/html)를 구성한다 — HTML 미지원 클라이언트는 평문을 본다.
+        """
         msg = EmailMessage()
         msg["From"] = formataddr((self._from_name, self._username))
         msg["To"] = to
         msg["Subject"] = subject
-        msg.set_content(body)
+        msg.set_content(body)                      # 평문(대체 본문)
+        if html:
+            msg.add_alternative(html, subtype="html")  # HTML 본문(우선 표시)
         context = ssl.create_default_context()
         with smtplib.SMTP(self._host, self._port, timeout=15) as smtp:
             smtp.ehlo()
@@ -74,10 +88,11 @@ class GmailEmailSender:
             smtp.login(self._username, self._password)
             smtp.send_message(msg)
 
-    async def send(self, to: str, subject: str, body: str) -> bool:
+    async def send(self, to: str, subject: str, body: str,
+                   html: str | None = None) -> bool:
         """이메일을 비동기로 발송한다. 예외는 모두 잡아 False를 반환하므로 호출 측이 중단되지 않는다."""
         try:
-            await asyncio.to_thread(self._send_sync, to, subject, body)
+            await asyncio.to_thread(self._send_sync, to, subject, body, html)
             logger.info("EMAIL sent to=%s subject=%s", to, subject)
             return True
         except Exception:  # noqa: BLE001 — 발송 실패가 결제/계정 흐름을 깨면 안 됨
@@ -92,8 +107,9 @@ class RecordingEmailSender:
         self.sent: list[dict] = []
         self.fail = False
 
-    async def send(self, to: str, subject: str, body: str) -> bool:
+    async def send(self, to: str, subject: str, body: str,
+                   html: str | None = None) -> bool:
         if self.fail:
             return False
-        self.sent.append({"to": to, "subject": subject, "body": body})
+        self.sent.append({"to": to, "subject": subject, "body": body, "html": html})
         return True

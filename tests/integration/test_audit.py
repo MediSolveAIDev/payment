@@ -29,4 +29,5 @@ async def test_record_audit_actor_service_id(db):
 async def test_recording_email_sender():
     sender = RecordingEmailSender()
     await sender.send("a@b.com", "제목", "본문")
-    assert sender.sent == [{"to": "a@b.com", "subject": "제목", "body": "본문"}]
+    # html 기본 None(평문 전용) — HTML 멀티파트 지원 추가에 따라 html 키 포함
+    assert sender.sent == [{"to": "a@b.com", "subject": "제목", "body": "본문", "html": None}]

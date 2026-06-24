@@ -1,0 +1,21 @@
+{
+  "name": "payment",
+  "version": "0.1.0",
+  "description": "이 레포는 Medisolveai의 구독/결제를 관리하고 처리 하는 시스템",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MediSolveAIDev/mediness.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/MediSolveAIDev/mediness/issues"
+  },
+  "homepage": "https://github.com/MediSolveAIDev/mediness#readme"
+}

@@ -19,7 +19,7 @@ from app.admin.export import EXPORT_MAX_ROWS, xlsx_response
 from app.admin.pagination import PageParams, paginate
 from app.admin.filters import SUB_SORT, SVC_SORT, services_query, subscription_query
 from app.admin.routes.services_managers import service_managers
-from app.core.deps import get_cipher, get_db, get_notifier
+from app.core.deps import get_admin_notifier, get_cipher, get_db, get_notifier
 from app.core.clock import kst_format
 from app.core.crypto import AesGcmCipher
 from app.core.errors import DomainError, NotFoundError
@@ -96,7 +96,8 @@ async def services_new(request: Request, ctx: AdminContext = Depends(require_adm
 async def services_create(request: Request,
                           ctx: AdminContext = Depends(require_admin),
                           db: AsyncSession = Depends(get_db),
-                          cipher: AesGcmCipher = Depends(get_cipher)):
+                          cipher: AesGcmCipher = Depends(get_cipher),
+                          admin_notifier=Depends(get_admin_notifier)):
     """서비스 등록 처리.
 
     성공 시 생성된 API 키·HMAC 시크릿을 일회성으로 화면에 표시한다.
@@ -131,7 +132,8 @@ async def services_create(request: Request,
             cancellation_enabled=cancellation_enabled,
             cancellation_fee_percent=cancellation_fee_percent,
             toss_secret_key=toss_secret_key,
-            actor_user_id=ctx.user.id)
+            actor_user_id=ctx.user.id,
+            admin_notifier=admin_notifier)
     except DomainError as exc:
         return await form_error(exc.message)
     return render(request, "services/keys.html", ctx=ctx, service=creds.service,

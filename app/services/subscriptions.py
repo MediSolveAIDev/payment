@@ -147,7 +147,8 @@ async def _is_first_subscription(db: AsyncSession, *, service_id: uuid.UUID,
 async def create_subscription(db: AsyncSession, toss: TossClient, cipher: AesGcmCipher,
                               *, service: Service, plan_id: uuid.UUID,
                               external_user_id: str,
-                              trial: bool = False, notifier=None) -> Subscription:
+                              trial: bool = False, notifier=None,
+                              admin_notifier=None) -> Subscription:
     """구독 생성 — 등록 카드 조회 → PENDING 선커밋 → 첫 결제(체험 제외) → 확정.
 
     Task 7 변경: auth_key·customer_key 파라미터 제거. 빌링키는 사전 등록된 카드
@@ -321,6 +322,11 @@ async def create_subscription(db: AsyncSession, toss: TossClient, cipher: AesGcm
     await _notify(notifier, service, sub, event=EVENT_SUBSCRIPTION_CREATED,
                   status=sub.status, order_id=(payment.order_id if payment else ""),
                   desc=f"새 구독 생성(요금제 {plan.name})")
+    # 시스템 관리자 전원에게 '새 구독 생성' 알림 메일(모든 구독, best-effort — 구독은 이미 확정됨)
+    if admin_notifier is not None:
+        await admin_notifier.subscription_created(
+            db, service=service, sub=sub, plan=plan, amount=amount,
+            order_id=(payment.order_id if payment else ""), is_first=is_first)
     return sub
 
 

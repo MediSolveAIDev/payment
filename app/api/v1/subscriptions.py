@@ -17,7 +17,7 @@ from app.api.deps import (
     get_notifier,
     payment_rate_limit,
 )
-from app.core.deps import get_toss_provider  # 서비스별 토스 클라이언트 해석기(컷오버 T7)
+from app.core.deps import get_admin_notifier, get_toss_provider  # 서비스별 토스 클라이언트 해석기(컷오버 T7)
 from app.api.openapi import (
     AUTH_RESPONSES,
     CONFLICT_RESPONSE,
@@ -75,6 +75,7 @@ async def create_subscription(
     toss_provider: TossClientProvider = Depends(get_toss_provider),  # T7: 전역 toss 제거, 서비스별 해석기 사용
     cipher: AesGcmCipher = Depends(get_cipher),
     notifier=Depends(get_notifier),
+    admin_notifier=Depends(get_admin_notifier),
 ):
     """신규 구독을 생성한다.
 
@@ -89,7 +90,7 @@ async def create_subscription(
     sub = await subscription_service.create_subscription(
         db, toss, cipher, service=service, plan_id=payload.plan_id,
         external_user_id=payload.external_user_id,
-        trial=payload.trial, notifier=notifier)
+        trial=payload.trial, notifier=notifier, admin_notifier=admin_notifier)
     return await _to_response(db, sub)
 
 

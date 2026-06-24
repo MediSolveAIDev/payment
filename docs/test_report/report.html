@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>테스트 실행 리포트 — 2026-06-24 11:32:12 KST</title>
+<title>테스트 실행 리포트 — 2026-06-24 19:55:34 KST</title>
 <style>
  :root{--primary:#476CFF;--g200:#F3F3F3;--g300:#E3E3E3;--g600:#9F9F9F;--g800:#3E3E3E;
    --green:#1FA463;--red:#FF4E51;--font:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
@@ -25,11 +25,11 @@
  .ok{color:var(--green)}
 </style></head><body>
  <h1>테스트 실행 리포트</h1>
- <div class="sub">2026-06-24 11:32:12 KST · <span class="status bad">❌ 실패</span> (exit status 1)
-   · 소요시간 0.4s</div>
+ <div class="sub">2026-06-24 19:55:34 KST · <span class="status ok">✅ 성공</span> (exit status 0)
+   · 소요시간 65.2s</div>
  <div class="cards">
-   <div class="card"><div class="n">1</div><div class="l">전체</div></div>
-   <div class="card"><div class="n pass">1</div><div class="l">통과</div></div>
+   <div class="card"><div class="n">666</div><div class="l">전체</div></div>
+   <div class="card"><div class="n pass">666</div><div class="l">통과</div></div>
    <div class="card"><div class="n fail">0</div><div class="l">실패</div></div>
    <div class="card"><div class="n fail">0</div><div class="l">에러</div></div>
    <div class="card"><div class="n">0</div><div class="l">스킵</div></div>
@@ -39,6 +39,6 @@
  <h2>실패 / 에러 (0)</h2>
  <p class="ok">없음 — 전부 통과했습니다. 🎉</p>
  <h2>가장 느린 테스트 (상위 10)</h2>
- <table><tr><td>0.02s</td><td><code>tests/integration/test_payment_cancel.py::test_partial_cancel_exposed_in_api_response</code></td></tr></table>
+ <table><tr><td>0.37s</td><td><code>tests/e2e/test_full_flow.py::test_full_subscription_lifecycle</code></td></tr><tr><td>0.29s</td><td><code>tests/e2e/test_security_phase2.py::test_login_rate_limit_blocks_after_threshold</code></td></tr><tr><td>0.26s</td><td><code>tests/security/test_admin_security.py::test_lockout_via_http</code></td></tr><tr><td>0.25s</td><td><code>tests/e2e/test_admin_operations.py::test_reset_password_destroys_target_user_sessions</code></td></tr><tr><td>0.25s</td><td><code>tests/e2e/test_admin_operations.py::test_payment_detail_page_and_scope</code></td></tr><tr><td>0.23s</td><td><code>tests/integration/test_auth_service.py::test_lockout_after_5_failures</code></td></tr><tr><td>0.20s</td><td><code>tests/e2e/test_admin_operations.py::test_admin_payment_cancel_button_and_action</code></td></tr><tr><td>0.19s</td><td><code>tests/e2e/test_service_detail_page.py::test_detail_overview_has_no_manager_kv_and_shows_primary_badge</code></td></tr><tr><td>0.19s</td><td><code>tests/e2e/test_admin_flows.py::test_login_success_and_dashboard</code></td></tr><tr><td>0.18s</td><td><code>tests/e2e/test_admin_operations.py::test_audit_q_searches_actor_target_detail</code></td></tr></table>
  <p class="sub" style="margin-top:24px">생성: tests/conftest.py 의 리포트 훅 · 매 <code>uv run pytest</code> 실행 시 갱신</p>
 </body></html>

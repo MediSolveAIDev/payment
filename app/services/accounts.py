@@ -26,6 +26,7 @@ from app.models import (
     UserStatus,
 )
 from app.notifications.email import EmailSender
+from app.notifications.email_templates import render_action_email
 from app.services.audit import record_audit
 
 # 설정 링크 유효시간(.env: password_link_ttl_hours, 기본 48시간).
@@ -74,7 +75,8 @@ def _normalize_phone(phone: str | None) -> str | None:
 async def create_account(db: AsyncSession, email_sender: EmailSender, *,
                          email: str, role: str, service_ids: list[uuid.UUID],
                          base_url: str, phone: str | None = None,
-                         actor_user_id: uuid.UUID | None = None) -> tuple[User, bool]:
+                         actor_user_id: uuid.UUID | None = None,
+                         admin_notifier=None) -> tuple[User, bool]:
     """관리자 계정 생성(PENDING) + 비밀번호 설정 메일. 반환: (User, 메일 발송 성공 여부).
 
     SERVICE_MANAGER 서비스는 선택(0개 허용 — 서비스 등록 시 할당 가능). 첫 서비스=주, 나머지=추가부여.
@@ -132,11 +134,22 @@ async def create_account(db: AsyncSession, email_sender: EmailSender, *,
                        detail={"email": email, "role": role,
                                "service_count": len(service_ids)})
     await db.commit()
+    # UI/UX 적용 — 평문 대신 CTA 버튼·브랜딩이 있는 HTML 메일(평문 대체 본문 동반).
+    role_ko = "시스템 관리자" if role == UserRole.SYSTEM_ADMIN else "서비스 담당자"
+    setup_url = f"{base_url}/admin/setup-password?token={token}"
+    text, html = render_action_email(
+        title="관리자 계정 설정 안내",
+        intro=f"결제 관리 콘솔 {role_ko} 계정이 생성되었습니다. "
+              "아래 버튼을 눌러 비밀번호를 설정하면 로그인할 수 있습니다.",
+        button_label="비밀번호 설정하기",
+        button_url=setup_url,
+        note="이 링크는 발송 후 48시간 동안만 유효합니다.")
     sent = await email_sender.send(
-        email, "[결제시스템] 관리자 계정 설정 안내",
-        f"안녕하세요. 결제 관리 콘솔 계정({role})이 생성되었습니다.\n"
-        f"아래 링크에서 비밀번호를 설정해주세요 (48시간 유효):\n"
-        f"{base_url}/admin/setup-password?token={token}")
+        email, "[결제시스템] 관리자 계정 설정 안내", text, html=html)
+    # 시스템 관리자 전원에게 '새 계정 생성' 알림 메일(best-effort, 커밋 후라 실패해도 무해)
+    if admin_notifier is not None:
+        await admin_notifier.account_created(
+            db, user=user, actor_user_id=actor_user_id, service_ids=service_ids)
     return user, sent
 
 
